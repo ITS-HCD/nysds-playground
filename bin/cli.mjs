@@ -29,6 +29,7 @@ Options
   --preset <id>       Open a preset by id (for example: button)
   --deck <id>         Open a deck by id (for example: styling-levels)
   --present           Open in presentation mode
+  --dark              Use the dark editor theme (light is the default)
   --html <file>       Load an HTML file into the HTML tab
   --css <file>        Load a CSS file into the CSS tab
   --js <file>         Load a JavaScript file into the JS tab
@@ -41,7 +42,7 @@ Options
 Examples
   nysds-playground                          Open the library deck
   nysds-playground --preset modal           Open the modal preset
-  nysds-playground --deck styling-levels --present
+  nysds-playground --deck styling-levels --present --dark
   nysds-playground --html demo.html --css demo.css
   nysds-playground link --html demo.html    Print a shareable URL for demo.html
 `;
@@ -56,6 +57,7 @@ function parseCli(argv) {
       preset: {type: 'string'},
       deck: {type: 'string'},
       present: {type: 'boolean', default: false},
+      dark: {type: 'boolean', default: false},
       html: {type: 'string'},
       css: {type: 'string'},
       js: {type: 'string'},
@@ -91,6 +93,9 @@ async function buildLocation(options) {
   }
   if (options.present) {
     query.set('present', '1');
+  }
+  if (options.dark) {
+    query.set('theme', 'dark');
   }
   let hash = '';
   if (options.html || options.css || options.js) {

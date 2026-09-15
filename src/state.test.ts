@@ -11,6 +11,7 @@ import {deckUrl, decodeState, encodeState, parseHash, presentUrl, slugify} from 
 import {isTypingContext, routeKey} from './keys.ts';
 import {parseDeck, parsePreset} from './preset-schema.ts';
 import {chooseVersion} from './version-catalog.ts';
+import {otherTheme, readThemeParam, themeUrl} from './theme.ts';
 import {splitUserHtml, wrapUserHtml} from './wrapper.ts';
 
 /** Collects validation messages instead of writing them to the console. */
@@ -273,4 +274,23 @@ test('routeKey steps on Alt plus an arrow even while typing', () => {
 test('routeKey ignores browser and system shortcuts', () => {
   assert.equal(routeKey({...KEY, ctrlKey: true, key: 'ArrowRight'}, false), null);
   assert.equal(routeKey({...KEY, metaKey: true, key: 'ArrowRight'}, false), null);
+});
+
+test('routeKey toggles the editor theme with t when not typing', () => {
+  assert.equal(routeKey({...KEY, key: 't'}, false), 'toggle-theme');
+  assert.equal(routeKey({...KEY, key: 'T'}, false), 'toggle-theme');
+  assert.equal(routeKey({...KEY, key: 't'}, true), null);
+});
+
+test('readThemeParam accepts only light and dark', () => {
+  assert.equal(readThemeParam('?theme=dark'), 'dark');
+  assert.equal(readThemeParam('?present=1&theme=light'), 'light');
+  assert.equal(readThemeParam('?theme=blue'), null);
+  assert.equal(readThemeParam(''), null);
+});
+
+test('themeUrl sets the theme and keeps the rest of the URL', () => {
+  const url = themeUrl('dark', 'http://localhost/?deck=a&present=1#preset=x');
+  assert.equal(url, 'http://localhost/?deck=a&present=1&theme=dark#preset=x');
+  assert.equal(otherTheme('dark'), 'light');
 });

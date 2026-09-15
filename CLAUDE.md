@@ -17,6 +17,9 @@ assets load from jsDelivr at request time.
   `presets/*.json` (the implicit Library deck) and `decks/*.json` (named
   decks). Bad JSON reports through `console.error` or `console.warn`
   rather than failing the build.
+- `src/theme.ts`: light and dark editor themes (`t` key, `?theme=dark`,
+  remembered in localStorage). Only the editors change; the preview
+  always shows the design system as it is.
 - `src/present.ts` and `src/keys.ts`: presentation mode and its key
   routing. The preview stays live and editable during a presentation;
   `src/keys.ts` decides when a key changes slides versus reaching the

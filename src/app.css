@@ -30,6 +30,31 @@
   --playground-tab-bar-indicator-color: var(--nys-color-theme, #154973);
 }
 
+/* Dark editor theme. Only the editor pane changes: the preview keeps showing
+   the design system as it is, and the caption bar keeps the theme color. */
+body[data-editor-theme="dark"] {
+  --pg-editor-surface: #212121;
+  --pg-editor-border: #3a3a3a;
+  --playground-tab-bar-background: var(--pg-editor-surface);
+  --playground-tab-bar-foreground-color: #d0d0ce;
+  --playground-tab-bar-active-color: #ffffff;
+  --playground-tab-bar-indicator-color: #82aaff;
+  --playground-code-font-size: 15px;
+}
+
+body[data-editor-theme="dark"] .split__pane--editors {
+  background: var(--pg-editor-surface);
+  border-color: var(--pg-editor-border);
+}
+
+body[data-editor-theme="dark"] .editors__tabs {
+  border-bottom-color: var(--pg-editor-border);
+}
+
+body[data-editor-theme="dark"] .split__divider {
+  background: var(--pg-editor-border);
+}
+
 html,
 body {
   height: 100%;

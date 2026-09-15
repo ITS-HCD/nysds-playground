@@ -57,6 +57,10 @@ export function wrapUserHtml(userHtml: string, options: WrapperOptions): string 
     '<meta name="viewport" content="width=device-width, initial-scale=1">',
     `<title>${escapeHtmlText(title)}</title>`,
     `<link rel="stylesheet" href="${options.stylesHref}">`,
+    // The design system reset removes the body margin. Put the browser default
+    // back so a lone button doesn't sit against the edge. Deck base CSS and the
+    // CSS tab load later, so either can set `body { margin: 0 }` to remove it.
+    '<style>body{margin:8px}</style>',
     options.extraHeadHtml ?? '',
     options.baseCss ? `<style>${options.baseCss}</style>` : '',
     '<link rel="stylesheet" href="./styles.css">',

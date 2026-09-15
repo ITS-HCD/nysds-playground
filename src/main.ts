@@ -5,7 +5,6 @@ import '@nysds/components';
 import '@nysds/styles/full';
 import './app.css';
 
-import editorTheme from 'playground-elements/themes/eclipse.css.js';
 import type {PlaygroundProject} from 'playground-elements/playground-project.js';
 
 import type {Deck, Preset} from './decks';
@@ -25,10 +24,8 @@ import {
   writeCodeHash,
   writePresetHash,
 } from './state';
+import {applyEditorTheme, initialTheme} from './theme';
 import {isPrerelease, loadVersions, resolveVersion} from './versions';
-
-/** The CodeMirror theme class that matches the imported theme module. */
-const EDITOR_THEME_CLASS = 'playground-theme-eclipse';
 
 /** How long to wait after a keystroke before writing the URL. */
 const HASH_DEBOUNCE_MS = 300;
@@ -527,15 +524,6 @@ function setupSplitter(present: boolean): void {
   });
 }
 
-/** Applies the CodeMirror theme to the document so it reaches the editors. */
-function applyEditorTheme(): void {
-  const sheet = editorTheme.styleSheet;
-  if (sheet) {
-    document.adoptedStyleSheets = [...document.adoptedStyleSheets, sheet];
-  }
-  document.body.classList.add(EDITOR_THEME_CLASS);
-}
-
 /** Works out which deck and slide the URL asks for. */
 async function resolveInitialState(deck: Deck): Promise<{
   state: PlaygroundState;
@@ -565,7 +553,7 @@ async function resolveInitialState(deck: Deck): Promise<{
 
 async function main(): Promise<void> {
   const present = isPresentMode();
-  applyEditorTheme();
+  applyEditorTheme(initialTheme());
   setupSplitter(present);
 
   const deck = getDeck(readDeckId());

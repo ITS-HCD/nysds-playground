@@ -15,6 +15,7 @@ export type PresentationAction =
   | 'last'
   | 'toggle-code'
   | 'toggle-notes'
+  | 'toggle-theme'
   | 'exit';
 
 /** The parts of a `KeyboardEvent` that routing depends on. */
@@ -98,6 +99,9 @@ export function routeKey(event: KeyLike, typing: boolean): PresentationAction | 
     case 'n':
     case 'N':
       return 'toggle-notes';
+    case 't':
+    case 'T':
+      return 'toggle-theme';
     default:
       return null;
   }

@@ -10,6 +10,7 @@ import type {Deck, Preset} from './decks';
 import {presetIndex} from './decks';
 import type {PresentationAction} from './keys';
 import {isTypingContext, routeKey} from './keys';
+import {applyEditorTheme, initialTheme, otherTheme, themeUrl, writeTheme} from './theme';
 import {presentUrl} from './state';
 
 /** What presentation mode needs from the application shell. */
@@ -167,10 +168,22 @@ export class Presentation {
       case 'toggle-notes':
         this.toggleNotes();
         break;
+      case 'toggle-theme':
+        this.toggleTheme();
+        break;
       case 'exit':
         window.location.href = presentUrl(false);
         break;
     }
+  }
+
+  /** Switches the editors between light and dark and remembers the choice. */
+  private toggleTheme(): void {
+    const next = otherTheme(initialTheme());
+    applyEditorTheme(next);
+    writeTheme(next);
+    window.history.replaceState(null, '', themeUrl(next, window.location.href));
+    this.takeFocus();
   }
 
   private toggleCode(): void {
@@ -249,7 +262,7 @@ export class Presentation {
 
 /** Builds the on-screen hint, leaving out notes when the slide has none. */
 export function hintText(hasNotes: boolean): string {
-  const parts = ['← → or Alt+← → to change slides', 'c code'];
+  const parts = ['← → or Alt+← → to change slides', 'c code', 't theme'];
   if (hasNotes) {
     parts.push('n notes');
   }

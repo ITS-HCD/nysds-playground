@@ -23,7 +23,10 @@ opens a browser tab. See Use the CLI for other ways to run it.
 
 - **HTML, CSS, and JS tabs**: edit the body markup, styles, and an ES
   module script. The app wraps your HTML with the head markup that loads
-  NYSDS, so you write only the content.
+  NYSDS, so you write only the content. The preview body keeps the
+  browser's default 8px margin, so a lone component doesn't touch the
+  edge. Set `body { margin: 0 }` in the CSS tab or a deck's base CSS to
+  remove it.
 - **Deck select**: appears in the toolbar once a named deck exists
   alongside the built-in Library. Switches which set of slides the
   preset picker and presentation mode step through.
@@ -51,6 +54,7 @@ runnable through `npx nysds-playground` or the `npm start` and
 | `nysds-playground` | Start the dev server and open the Library deck. |
 | `nysds-playground --preset button` | Open a specific preset by id. |
 | `nysds-playground --deck styling-levels --present` | Open a deck in presentation mode. |
+| `nysds-playground --deck styling-levels --present --dark` | Same, with the dark editor theme for screen recordings. |
 | `nysds-playground --html demo.html --css demo.css` | Load local files into the editors. |
 | `nysds-playground link --html demo.html` | Print a shareable URL for a local file without starting a server. |
 | `nysds-playground --built` | Serve the production build in `dist/` with `vite preview`, instead of the dev server. |
@@ -81,6 +85,7 @@ server.
 | `#preset=<id>` | Loads an unmodified preset or deck slide by its id. |
 | `?deck=<id>` | Selects a named deck. Omit it for the Library deck. |
 | `?present=1` | Opens in presentation mode. |
+| `?theme=dark` | Uses the dark editor theme. `?theme=light` forces light. Without it, the playground remembers your last choice and defaults to light. |
 
 ## Presentation mode
 
@@ -100,6 +105,7 @@ restores the original preset.
 | Alt+arrow | Change slides even while the cursor is in an editor |
 | `c` | Collapse or expand the editor pane |
 | `n` | Show or hide presenter notes, when the slide has any |
+| `t` | Switch the editors between the light and dark theme |
 | Escape | Close presenter notes, then exit presentation mode |
 
 Plain arrow keys, Home, End, and the letter keys move between slides only
@@ -111,6 +117,12 @@ session; reloading or reopening the link restores the original preset.
 The URL's `#preset=<id>` updates on each step, so a link copied mid-talk
 resumes there. Share still produces a `#code=` link and keeps
 `present=1` if it was set.
+
+The editors default to a light theme because projectors wash out dark
+backgrounds. For screen recordings, press `t` or open the link with
+`?theme=dark` (or the CLI's `--dark` flag) to frame the light preview
+with a dark editor. The preview itself never changes theme. The choice
+is remembered in the browser.
 
 ## Add a preset or a deck
 
