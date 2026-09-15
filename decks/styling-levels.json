@@ -21,7 +21,11 @@
       "notes": "Type the CSS live. Nothing changes. The component exposes no CSS custom properties and its styles live in shadow DOM. That's the point.",
       "html": "<nys-globalheader\n  appName=\"Design System Playground\"\n  agencyName=\"Office of Information Technology Services\"\n  homepageLink=\"/\"\n  nysLogo>\n  <ul>\n    <li><a href=\"/components\">Components</a></li>\n    <li><a href=\"/tokens\">Tokens</a></li>\n    <li><a href=\"/guidance\">Guidance</a></li>\n  </ul>\n</nys-globalheader>",
       "css": "/* Let's make it red. */\nnys-globalheader {\n  background: crimson;\n  font-family: \"Comic Sans MS\", cursive;\n}\n\nnys-globalheader a {\n  color: yellow;\n  text-decoration: underline wavy;\n}\n\n/* ...nothing happens. */",
-      "js": ""
+      "js": "",
+      "editors": [
+        "html",
+        "css"
+      ]
     },
     {
       "id": "03-button-default",
@@ -39,7 +43,11 @@
       "notes": "Three custom properties, all documented on the component. Color only — nothing else is exposed. Add the class to the first button in the HTML, then type the CSS.",
       "html": "<div class=\"stage\">\n  <nys-button class=\"danger\" label=\"Delete application\" variant=\"filled\"></nys-button>\n  <nys-button label=\"Save draft\" variant=\"outline\"></nys-button>\n</div>",
       "css": "/* Documented on nys-button. Color is the only thing you can change. */\n.danger {\n  --nys-button-background-color: var(--nys-color-danger);\n  --nys-button-background-color--hover: var(--nys-color-danger-strong);\n  --nys-button-background-color--active: var(--nys-color-danger-strongest);\n}",
-      "js": ""
+      "js": "",
+      "editors": [
+        "html",
+        "css"
+      ]
     },
     {
       "id": "05-system-change-flows-through",
@@ -48,7 +56,11 @@
       "notes": "Simulate next quarter's release: change the UI font and the radius at the token level. Both buttons update. The red one stays red and still gets the new font and radius. Verify which radius token nys-button consumes before recording (see README note).",
       "html": "<div class=\"stage\">\n  <nys-button class=\"danger\" label=\"Delete application\" variant=\"filled\"></nys-button>\n  <nys-button label=\"Save draft\" variant=\"outline\"></nys-button>\n</div>",
       "css": ".danger {\n  --nys-button-background-color: var(--nys-color-danger);\n  --nys-button-background-color--hover: var(--nys-color-danger-strong);\n  --nys-button-background-color--active: var(--nys-color-danger-strongest);\n}\n\n/* Pretend this is the next release of @nysds/styles. */\n:root {\n  --nys-font-family-ui: var(--nys-font-family-serif);\n  --nys-radius-xl: var(--nys-radius-round);\n}",
-      "js": ""
+      "js": "",
+      "editors": [
+        "html",
+        "css"
+      ]
     },
     {
       "id": "06-guidance-tokens",
@@ -57,7 +69,11 @@
       "notes": "Two cards. Same visual result. One uses tokens and will track the system; one is hard-coded and won't. Nothing in the system stops the second one. Toggle the :root change from step 5 back on to show the difference.",
       "html": "<div class=\"stage\">\n  <article class=\"card card--tokens\">\n    <h3>Uses tokens</h3>\n    <p>Spacing, color, radius, and type all reference the system.</p>\n  </article>\n  <article class=\"card card--hardcoded\">\n    <h3>Hard-coded</h3>\n    <p>Looks identical today. Drifts on the next release.</p>\n  </article>\n</div>",
       "css": ".card { width: 20rem; }\n\n/* What the guidance asks for */\n.card--tokens {\n  padding: var(--nys-space-400);\n  border: var(--nys-border-width-sm) solid var(--nys-color-neutral-300);\n  border-radius: var(--nys-radius-xl);\n  background: var(--nys-color-surface);\n  font-family: var(--nys-font-family-ui);\n}\n\n/* What the guidance can't prevent */\n.card--hardcoded {\n  padding: 24px;\n  border: 1px solid #ccc;\n  border-radius: 12px;\n  background: #fff;\n  font-family: \"Proxima Nova\", Arial, sans-serif;\n}\n\n/* Uncomment to \"release\" a system change:\n:root {\n  --nys-font-family-ui: var(--nys-font-family-serif);\n  --nys-radius-xl: var(--nys-radius-round);\n}\n*/",
-      "js": ""
+      "js": "",
+      "editors": [
+        "html",
+        "css"
+      ]
     },
     {
       "id": "07-ai-three-levels",

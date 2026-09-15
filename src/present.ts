@@ -8,8 +8,11 @@
  */
 import type {Deck, Preset} from './decks';
 import {presetIndex} from './decks';
+import type {EditorPanes} from './editor-panes';
+import type {PaneId} from './editors';
+import {PANE_IDS} from './editors';
 import type {PresentationAction} from './keys';
-import {isTypingContext, routeKey} from './keys';
+import {hintText, isTypingContext, routeKey} from './keys';
 import {applyEditorTheme, initialTheme, otherTheme, themeUrl, writeTheme} from './theme';
 import {presentUrl} from './state';
 
@@ -44,11 +47,17 @@ export class Presentation {
   private readonly notes: HTMLElement;
   private readonly notesBody: HTMLElement;
   private readonly notesButton: HTMLElement;
+  private readonly panes: EditorPanes;
   private collapsed = false;
   private notesOpen = false;
 
-  constructor(target: PresentationTarget, root: Document | HTMLElement = document) {
+  constructor(
+    target: PresentationTarget,
+    panes: EditorPanes,
+    root: Document | HTMLElement = document,
+  ) {
     this.target = target;
+    this.panes = panes;
     this.app = required(root, '#app');
     this.caption = required(root, '#caption');
     this.group = required(root, '#caption-group');
@@ -103,7 +112,7 @@ export class Presentation {
     if (!notes) {
       this.closeNotes();
     }
-    this.hint.textContent = hintText(notes !== '');
+    this.hint.textContent = hintText(notes !== '', this.panes.layout === 'columns');
   }
 
   /** Moves to the slide at `index`, clamped to the deck. */
@@ -133,7 +142,7 @@ export class Presentation {
 
   private onKeyDown(event: KeyboardEvent): void {
     const typing = isTypingContext(tagNamesFor(event));
-    const action = routeKey(event, typing);
+    const action = routeKey(event, typing, this.panes.layout === 'columns');
     if (action === null) {
       return;
     }
@@ -168,12 +177,25 @@ export class Presentation {
       case 'toggle-notes':
         this.toggleNotes();
         break;
+      case 'toggle-layout':
+        this.panes.toggleLayout();
+        this.refresh();
+        this.takeFocus();
+        break;
       case 'toggle-theme':
         this.toggleTheme();
         break;
       case 'exit':
         window.location.href = presentUrl(false);
         break;
+      default: {
+        const pane = paneFor(action);
+        if (pane) {
+          this.panes.togglePane(pane);
+          this.takeFocus();
+        }
+        break;
+      }
     }
   }
 
@@ -260,14 +282,14 @@ export class Presentation {
   }
 }
 
-/** Builds the on-screen hint, leaving out notes when the slide has none. */
-export function hintText(hasNotes: boolean): string {
-  const parts = ['← → or Alt+← → to change slides', 'c code', 't theme'];
-  if (hasNotes) {
-    parts.push('n notes');
+/** Returns the column a `toggle-pane:` action names, or `undefined`. */
+function paneFor(action: PresentationAction): PaneId | undefined {
+  const prefix = 'toggle-pane:';
+  if (typeof action !== 'string' || !action.startsWith(prefix)) {
+    return undefined;
   }
-  parts.push('Esc exit');
-  return parts.join(' · ');
+  const pane = action.slice(prefix.length);
+  return PANE_IDS.find((candidate) => candidate === pane);
 }
 
 /** Returns the lowercase tag names on a key event's composed path. */

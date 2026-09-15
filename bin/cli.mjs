@@ -30,6 +30,9 @@ Options
   --deck <id>         Open a deck by id (for example: styling-levels)
   --present           Open in presentation mode
   --dark              Use the dark editor theme (light is the default)
+  --columns           Show the HTML, CSS, and JS editors side by side
+  --font <size>       Editor font size: small, medium, or large
+  --update <mode>     When the preview rebuilds: typing, pause, or manual
   --html <file>       Load an HTML file into the HTML tab
   --css <file>        Load a CSS file into the CSS tab
   --js <file>         Load a JavaScript file into the JS tab
@@ -58,6 +61,9 @@ function parseCli(argv) {
       deck: {type: 'string'},
       present: {type: 'boolean', default: false},
       dark: {type: 'boolean', default: false},
+      columns: {type: 'boolean', default: false},
+      font: {type: 'string'},
+      update: {type: 'string'},
       html: {type: 'string'},
       css: {type: 'string'},
       js: {type: 'string'},
@@ -96,6 +102,21 @@ async function buildLocation(options) {
   }
   if (options.dark) {
     query.set('theme', 'dark');
+  }
+  if (options.columns) {
+    query.set('editors', 'columns');
+  }
+  if (options.font) {
+    if (!['small', 'medium', 'large'].includes(options.font)) {
+      throw new Error(`--font must be small, medium, or large (got "${options.font}").`);
+    }
+    query.set('font', options.font);
+  }
+  if (options.update) {
+    if (!['typing', 'pause', 'manual'].includes(options.update)) {
+      throw new Error(`--update must be typing, pause, or manual (got "${options.update}").`);
+    }
+    query.set('update', options.update);
   }
   let hash = '';
   if (options.html || options.css || options.js) {

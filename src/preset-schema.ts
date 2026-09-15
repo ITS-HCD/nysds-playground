@@ -5,6 +5,12 @@
  * under `node --test`.
  */
 
+/** One of the three editor columns. */
+export type PaneId = 'html' | 'css' | 'js';
+
+/** The editor columns, in the order they appear. */
+export const PANE_IDS: readonly PaneId[] = ['html', 'css', 'js'];
+
 /** One playground example. */
 export interface Preset {
   /** The id used in `#preset=`. */
@@ -25,6 +31,15 @@ export interface Preset {
   js: string;
   /** The design system version to switch to, or `latest`. */
   version: string;
+  /**
+   * Which editor columns to expand when this example loads, as any of
+   * `"html"`, `"css"`, and `"js"`.
+   *
+   * It applies only to the side-by-side layout, and every column not listed is
+   * collapsed. An empty array collapses all three. `null` means the file left
+   * the field out, which leaves the current columns as they are.
+   */
+  editors: PaneId[] | null;
 }
 
 /** An ordered set of examples that presentation mode steps through. */
@@ -78,6 +93,44 @@ function readString(
   return fallback;
 }
 
+/**
+ * Reads an optional `editors` array.
+ *
+ * Returns `null` when the field is absent. Entries that are not pane ids are
+ * reported and dropped, so one typo does not cost the whole example.
+ */
+function readPanes(
+  record: Record<string, unknown>,
+  path: string,
+  report: Report,
+): PaneId[] | null {
+  const value = record['editors'];
+  if (value === undefined) {
+    return null;
+  }
+  if (!Array.isArray(value)) {
+    report(
+      `Preset "${path}" has an "editors" field of type ${typeof value}. ` +
+        'Expected an array of "html", "css", or "js".',
+    );
+    return null;
+  }
+  const panes: PaneId[] = [];
+  for (const entry of value) {
+    if (typeof entry === 'string' && (PANE_IDS as readonly string[]).includes(entry)) {
+      if (!panes.includes(entry as PaneId)) {
+        panes.push(entry as PaneId);
+      }
+    } else {
+      report(
+        `Preset "${path}" lists ${JSON.stringify(entry)} in "editors". ` +
+          'Expected "html", "css", or "js". Ignoring it.',
+      );
+    }
+  }
+  return panes;
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
@@ -121,6 +174,7 @@ export function parsePreset(
     css: readString(raw, 'css', path, '', report),
     js: readString(raw, 'js', path, '', report),
     version: readString(raw, 'version', path, 'latest', report) || 'latest',
+    editors: readPanes(raw, path, report),
   };
 }
 

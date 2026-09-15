@@ -21,6 +21,7 @@ Each file in this directory is a JSON object with these fields.
 | `group` | string | no | A section label shown in the caption, such as `1. Lock it down`. |
 | `notes` | string | no | Presenter notes. Press `n` in presentation mode to read them. Never shown in the preview. |
 | `version` | string | no | An NYSDS version to pin this preset to. Omit it, or use `latest`, to follow the app's default version. |
+| `editors` | string array | no | Which columns to expand in the side-by-side layout, for example `["html", "css"]`. Columns left out start collapsed. Ignored in the tabs layout. |
 
 Don't put an `id` field in a file in this directory. The id comes from
 the filename instead.
@@ -98,3 +99,12 @@ preset** to get its JSON, add an `id`, and append it to the deck's
 - Keep examples short. Presentation mode puts the editors below the
   preview, and a slide that needs scrolling to read from the back of a
   room is too long.
+
+## Icons
+
+NYSDS ships only a curated subset of Material Symbols. An icon name
+outside that set renders as empty space. Check the list at
+https://designsystem.ny.gov/components/icon/ (mirrored in
+`src/icon-names.ts`) before using `icon`, `prefixIcon`, `suffixIcon`,
+or `<nys-icon name>`. `npm test` fails on unknown icon names in any
+preset or deck.

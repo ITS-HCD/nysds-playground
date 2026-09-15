@@ -8,8 +8,19 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import {deckUrl, decodeState, encodeState, parseHash, presentUrl, slugify} from './state.ts';
-import {isTypingContext, routeKey} from './keys.ts';
+import {hintText, isTypingContext, routeKey} from './keys.ts';
 import {parseDeck, parsePreset} from './preset-schema.ts';
+import {collapsedForPreset, layoutUrl, readLayoutParam} from './editors.ts';
+import {createQuietDebounce} from './debounce.ts';
+import {
+  FONT_SIZES,
+  UPDATE_DELAYS,
+  clampRatio,
+  readFontParam,
+  readUpdateParam,
+  settingUrl,
+} from './settings.ts';
+import {isBuildShortcut} from './keys.ts';
 import {chooseVersion} from './version-catalog.ts';
 import {otherTheme, readThemeParam, themeUrl} from './theme.ts';
 import {splitUserHtml, wrapUserHtml} from './wrapper.ts';
@@ -139,6 +150,7 @@ test('parsePreset fills in defaults and keeps the new optional fields', () => {
     css: '',
     js: '',
     version: 'latest',
+    editors: null,
   });
   assert.deepEqual(messages, []);
 });
@@ -293,4 +305,217 @@ test('themeUrl sets the theme and keeps the rest of the URL', () => {
   const url = themeUrl('dark', 'http://localhost/?deck=a&present=1#preset=x');
   assert.equal(url, 'http://localhost/?deck=a&present=1&theme=dark#preset=x');
   assert.equal(otherTheme('dark'), 'light');
+});
+
+/* Editor layout and columns --------------------------------------------- */
+
+test('parsePreset reads the editors field and drops bad entries', () => {
+  const {messages, report} = collector();
+  const preset = parsePreset(
+    '../presets/01-button.json',
+    {title: 'Button', html: 'x', editors: ['html', 'css', 'html', 'scss', 7]},
+    'button',
+    report,
+  );
+  assert.deepEqual(preset?.editors, ['html', 'css']);
+  assert.equal(messages.length, 2);
+  assert.match(messages.join('\n'), /"scss"/);
+  assert.match(messages.join('\n'), /01-button\.json/);
+});
+
+test('parsePreset treats a missing editors field as "leave the columns alone"', () => {
+  const preset = parsePreset('../presets/a.json', {title: 'A', html: 'x'}, 'a', () => {});
+  assert.equal(preset?.editors, null);
+});
+
+test('parsePreset accepts an empty editors array', () => {
+  const {messages, report} = collector();
+  const preset = parsePreset('../presets/a.json', {title: 'A', html: 'x', editors: []}, 'a', report);
+  assert.deepEqual(preset?.editors, []);
+  assert.deepEqual(messages, []);
+});
+
+test('parsePreset reports an editors field that is not an array', () => {
+  const {messages, report} = collector();
+  const preset = parsePreset(
+    '../presets/a.json',
+    {title: 'A', html: 'x', editors: 'html'},
+    'a',
+    report,
+  );
+  assert.equal(preset?.editors, null);
+  assert.match(messages.join('\n'), /"editors"/);
+});
+
+test('collapsedForPreset collapses whatever the slide leaves out', () => {
+  assert.deepEqual([...(collapsedForPreset(['html', 'css']) ?? [])], ['js']);
+  assert.deepEqual([...(collapsedForPreset([]) ?? [])], ['html', 'css', 'js']);
+  assert.deepEqual([...(collapsedForPreset(['html', 'css', 'js']) ?? [])], []);
+  assert.equal(collapsedForPreset(null), null);
+});
+
+test('readLayoutParam and layoutUrl handle the editors query parameter', () => {
+  assert.equal(readLayoutParam('?editors=columns'), 'columns');
+  assert.equal(readLayoutParam('?editors=tabs'), 'tabs');
+  assert.equal(readLayoutParam('?editors=grid'), null);
+  assert.equal(readLayoutParam(''), null);
+  assert.equal(
+    layoutUrl('columns', 'https://example.com/?deck=d&theme=dark#preset=p'),
+    'https://example.com/?deck=d&theme=dark&editors=columns#preset=p',
+  );
+});
+
+test('routeKey toggles the layout with e from anywhere but the editor', () => {
+  assert.equal(routeKey({...KEY, key: 'e'}, false), 'toggle-layout');
+  assert.equal(routeKey({...KEY, key: 'E'}, false), 'toggle-layout');
+  assert.equal(routeKey({...KEY, key: 'e'}, true), null);
+});
+
+test('routeKey maps 1, 2, and 3 to columns only in the columns layout', () => {
+  assert.equal(routeKey({...KEY, key: '1'}, false, true), 'toggle-pane:html');
+  assert.equal(routeKey({...KEY, key: '2'}, false, true), 'toggle-pane:css');
+  assert.equal(routeKey({...KEY, key: '3'}, false, true), 'toggle-pane:js');
+  assert.equal(routeKey({...KEY, key: '4'}, false, true), null);
+  assert.equal(routeKey({...KEY, key: '1'}, false, false), null);
+  assert.equal(routeKey({...KEY, key: '1'}, true, true), null);
+});
+
+test('hintText names the column shortcuts only in the columns layout', () => {
+  const tabs = hintText(true, false);
+  assert.ok(tabs.includes('e layout'));
+  assert.ok(!tabs.includes('1 2 3 panes'));
+  const columns = hintText(false, true);
+  assert.ok(columns.includes('1 2 3 panes'));
+  assert.ok(!columns.includes('n notes'));
+});
+
+/* Settings --------------------------------------------------------------- */
+
+test('readFontParam and readUpdateParam accept only known values', () => {
+  assert.equal(readFontParam('?font=small'), 'small');
+  assert.equal(readFontParam('?font=medium'), 'medium');
+  assert.equal(readFontParam('?font=large'), 'large');
+  assert.equal(readFontParam('?font=huge'), null);
+  assert.equal(readFontParam(''), null);
+
+  assert.equal(readUpdateParam('?update=typing'), 'typing');
+  assert.equal(readUpdateParam('?update=pause'), 'pause');
+  assert.equal(readUpdateParam('?update=manual'), 'manual');
+  assert.equal(readUpdateParam('?update=never'), null);
+  assert.equal(readUpdateParam('?theme=dark'), null);
+});
+
+test('the font sizes and update delays are the documented ones', () => {
+  assert.deepEqual(FONT_SIZES, {small: '13px', medium: '15px', large: '18px'});
+  assert.deepEqual(UPDATE_DELAYS, {typing: 800, pause: 2000, manual: null});
+});
+
+test('clampRatio keeps a pane inside its range', () => {
+  assert.equal(clampRatio(50, 15, 85), 50);
+  assert.equal(clampRatio(2, 15, 85), 15);
+  assert.equal(clampRatio(99, 15, 85), 85);
+  assert.equal(clampRatio(Number.NaN, 15, 85), 15);
+});
+
+test('settingUrl sets one parameter and keeps the rest of the URL', () => {
+  assert.equal(
+    settingUrl('font', 'large', 'https://example.com/?deck=d&theme=dark#preset=p'),
+    'https://example.com/?deck=d&theme=dark&font=large#preset=p',
+  );
+});
+
+test('isBuildShortcut matches Cmd/Ctrl plus Enter or S only', () => {
+  assert.equal(isBuildShortcut({key: 'Enter', altKey: false, ctrlKey: true, metaKey: false}), true);
+  assert.equal(isBuildShortcut({key: 'Enter', altKey: false, ctrlKey: false, metaKey: true}), true);
+  assert.equal(isBuildShortcut({key: 's', altKey: false, ctrlKey: false, metaKey: true}), true);
+  assert.equal(isBuildShortcut({key: 'S', altKey: false, ctrlKey: true, metaKey: false}), true);
+  assert.equal(isBuildShortcut({key: 'Enter', altKey: false, ctrlKey: false, metaKey: false}), false);
+  assert.equal(isBuildShortcut({key: 'a', altKey: false, ctrlKey: true, metaKey: false}), false);
+});
+
+/* Preview rebuild debounce ----------------------------------------------- */
+
+/** A clock whose time only moves when a test says so. */
+function fakeClock() {
+  let now = 0;
+  let nextHandle = 1;
+  const timers = new Map<number, {at: number; handler: () => void}>();
+  return {
+    clock: {
+      setTimeout(handler: () => void, delay: number): number {
+        const handle = nextHandle++;
+        timers.set(handle, {at: now + delay, handler});
+        return handle;
+      },
+      clearTimeout(handle: number): void {
+        timers.delete(handle);
+      },
+    },
+    advance(ms: number): void {
+      now += ms;
+      for (const [handle, timer] of [...timers]) {
+        if (timer.at <= now) {
+          timers.delete(handle);
+          timer.handler();
+        }
+      }
+    },
+  };
+}
+
+test('the debounce waits for a pause instead of firing on every edit', () => {
+  const {clock, advance} = fakeClock();
+  let builds = 0;
+  const build = createQuietDebounce(() => builds++, 800, clock);
+
+  build.schedule();
+  advance(400);
+  build.schedule();
+  advance(400);
+  assert.equal(builds, 0, 'a steady stream of edits must not rebuild');
+  assert.equal(build.pending, true);
+
+  advance(800);
+  assert.equal(builds, 1, 'the pause rebuilds once');
+  assert.equal(build.pending, false);
+});
+
+test('the debounce never fires on its own when the delay is null', () => {
+  const {clock, advance} = fakeClock();
+  let builds = 0;
+  const build = createQuietDebounce(() => builds++, null, clock);
+
+  build.schedule();
+  advance(10000);
+  assert.equal(builds, 0);
+  assert.equal(build.pending, true);
+
+  build.flush();
+  assert.equal(builds, 1);
+  assert.equal(build.pending, false);
+});
+
+test('changing the delay reschedules a waiting build', () => {
+  const {clock, advance} = fakeClock();
+  let builds = 0;
+  const build = createQuietDebounce(() => builds++, 800, clock);
+
+  build.schedule();
+  advance(500);
+  build.setDelay(2000);
+  advance(1000);
+  assert.equal(builds, 0, 'the longer pause has not elapsed yet');
+  advance(1100);
+  assert.equal(builds, 1);
+});
+
+test('cancel drops a waiting build without running it', () => {
+  const {clock, advance} = fakeClock();
+  let builds = 0;
+  const build = createQuietDebounce(() => builds++, 800, clock);
+  build.schedule();
+  build.cancel();
+  advance(5000);
+  assert.equal(builds, 0);
+  assert.equal(build.pending, false);
 });

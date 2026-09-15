@@ -24,17 +24,31 @@ import {
   writeCodeHash,
   writePresetHash,
 } from './state';
-import {applyEditorTheme, initialTheme} from './theme';
+import {EditorPanes} from './editor-panes';
+import type {EditorLayout} from './editors';
+import {collapsedForPreset, layoutUrl} from './editors';
+import {isBuildShortcut} from './keys';
+import type {FontSize, UpdateMode} from './settings';
+import {
+  DEFAULTS,
+  STORAGE_KEYS,
+  applyFontSize,
+  clearAllSettings,
+  initialFontSize,
+  initialUpdateMode,
+  readPrereleases,
+  readRatio,
+  settingUrl,
+  writeKey,
+  writePrereleases,
+  writeRatio,
+} from './settings';
+import type {EditorTheme} from './theme';
+import {applyEditorTheme, initialTheme, writeTheme} from './theme';
 import {isPrerelease, loadVersions, resolveVersion} from './versions';
 
 /** How long to wait after a keystroke before writing the URL. */
 const HASH_DEBOUNCE_MS = 300;
-
-/** Where the split ratio is remembered between visits. */
-const SPLIT_STORAGE_KEY = 'nysds-playground:split-ratio';
-
-/** Where the presentation editor pane's size is remembered. */
-const PRESENT_SPLIT_STORAGE_KEY = 'nysds-playground:present-editor-size';
 
 /** How long a toast stays on screen, in milliseconds. */
 const TOAST_DURATION_MS = 2600;
@@ -50,6 +64,7 @@ const EMPTY_PRESET: Preset = {
   css: '',
   js: '',
   version: 'latest',
+  editors: null,
 };
 
 /** The three editable files of one slide. */
@@ -66,6 +81,13 @@ class PlaygroundApp {
   private readonly presetSelect: HTMLElement;
   private readonly versionSelect: HTMLElement;
   private readonly prereleaseToggle: HTMLElement & {checked?: boolean};
+  private readonly columnsToggle: HTMLElement & {checked?: boolean};
+  private readonly themeToggle: HTMLElement & {checked?: boolean};
+  private readonly fontSizeSelect: HTMLElement;
+  private readonly updateModeSelect: HTMLElement;
+  private readonly settingsModal: HTMLElement & {open?: boolean};
+  private readonly buildButton: HTMLElement;
+  private readonly panes: EditorPanes;
   private readonly toast: HTMLElement;
   private readonly deck: Deck;
   private readonly present: boolean;
@@ -81,7 +103,10 @@ class PlaygroundApp {
   private version: string;
   private activePresetId: string | null;
   private modified: boolean;
-  private showPrereleases = PLAYGROUND_CONFIG.showPrereleasesByDefault;
+  private showPrereleases = readPrereleases();
+  private fontSize: FontSize = initialFontSize();
+  private updateMode: UpdateMode = initialUpdateMode();
+  private theme: EditorTheme = initialTheme();
   private toastTimer: number | undefined;
   private presentation: Presentation | undefined;
 
@@ -93,7 +118,9 @@ class PlaygroundApp {
     initial: PlaygroundState,
     presetId: string | null,
     present: boolean,
+    panes: EditorPanes,
   ) {
+    this.panes = panes;
     this.deck = deck;
     this.present = present;
     this.version = initial.version;
@@ -103,17 +130,29 @@ class PlaygroundApp {
     this.presetSelect = required('#preset-select');
     this.versionSelect = required('#version-select');
     this.prereleaseToggle = required('#prerelease-toggle');
+    this.columnsToggle = required('#columns-toggle');
+    this.themeToggle = required('#theme-toggle');
+    this.fontSizeSelect = required('#font-size-select');
+    this.updateModeSelect = required('#update-mode-select');
+    this.settingsModal = required('#settings-modal');
+    this.buildButton = required('#build-button');
     this.toast = required('#toast');
     this.host = new PlaygroundHost(project, initial, deck.baseCss);
+    this.host.setUpdateMode(this.updateMode);
     this.host.onEdit(() => this.handleEdit());
+    this.host.onPendingChange((pending) => this.renderBuildButton(pending));
   }
 
   /** Renders the toolbar, binds every control, and sets the page title. */
   async start(): Promise<void> {
     this.renderDeckOptions();
     this.renderPresetOptions();
+    this.syncSettingsControls();
     this.bindToolbar();
+    this.bindSettings();
+    this.renderBuildButton(false);
     this.updateTitle();
+    this.applyPresetPanes(this.activePresetId);
     if (this.activePresetId) {
       // Name the slide in the URL so a refresh stays put.
       writePresetHash(this.activePresetId);
@@ -149,9 +188,112 @@ class PlaygroundApp {
     );
     this.setSelectValue(this.versionSelect, version);
     this.renderPresetOptions();
+    this.applyPresetPanes(preset.id);
     this.syncHash.cancel();
     writePresetHash(preset.id);
     this.updateTitle();
+  }
+
+  /** Expands the columns a slide asks for and collapses the rest. */
+  private applyPresetPanes(presetId: string | null): void {
+    const preset = getPreset(this.deck, presetId);
+    if (preset) {
+      this.panes.applyCollapsed(collapsedForPreset(preset.editors));
+    }
+  }
+
+  /** Keeps the settings controls in step with the state they describe. */
+  syncColumnsToggle(): void {
+    this.columnsToggle.checked = this.panes.layout === 'columns';
+  }
+
+  private syncSettingsControls(): void {
+    this.syncColumnsToggle();
+    this.themeToggle.checked = this.theme === 'dark';
+    this.prereleaseToggle.checked = this.showPrereleases;
+    this.setSelectValue(this.fontSizeSelect, this.fontSize);
+    this.setSelectValue(this.updateModeSelect, this.updateMode);
+  }
+
+  private bindSettings(): void {
+    bindClick('#settings-button', () => {
+      this.syncSettingsControls();
+      this.settingsModal.open = true;
+    });
+    bindClick('#settings-done-button', () => {
+      this.settingsModal.open = false;
+    });
+    bindClick('#build-button', () => this.host.buildNow());
+
+    this.themeToggle.addEventListener('nys-change', () => {
+      this.setTheme(this.themeToggle.checked === true ? 'dark' : 'light');
+    });
+
+    this.fontSizeSelect.addEventListener('nys-change', (event) => {
+      const value = detailValue(event);
+      if (value === 'small' || value === 'medium' || value === 'large') {
+        this.setFontSize(value);
+      }
+    });
+
+    this.updateModeSelect.addEventListener('nys-change', (event) => {
+      const value = detailValue(event);
+      if (value === 'typing' || value === 'pause' || value === 'manual') {
+        this.setUpdateMode(value);
+      }
+    });
+
+    bindClick('#reset-settings-button', () => this.resetSettings());
+  }
+
+  private setTheme(theme: EditorTheme): void {
+    this.theme = theme;
+    applyEditorTheme(theme);
+    writeTheme(theme);
+    replaceQuery('theme', theme);
+  }
+
+  private setFontSize(size: FontSize): void {
+    this.fontSize = size;
+    applyFontSize(size);
+    writeKey(STORAGE_KEYS.fontSize, size);
+    replaceQuery('font', size);
+  }
+
+  private setUpdateMode(mode: UpdateMode): void {
+    this.updateMode = mode;
+    this.host.setUpdateMode(mode);
+    writeKey(STORAGE_KEYS.updateMode, mode);
+    replaceQuery('update', mode);
+    this.renderBuildButton(this.host.hasPendingChanges);
+  }
+
+  /** Clears every remembered setting and reapplies the defaults in place. */
+  private resetSettings(): void {
+    clearAllSettings();
+    this.setTheme(DEFAULTS.theme);
+    this.setFontSize(DEFAULTS.fontSize);
+    this.setUpdateMode(DEFAULTS.updateMode);
+    this.showPrereleases = DEFAULTS.prereleases;
+    void this.renderVersionOptions();
+    this.panes.reset();
+    this.syncSettingsControls();
+    this.showToast('success', 'Settings reset', 'The playground is back to its defaults.');
+  }
+
+  /** Shows the manual update button, and marks it when a build is waiting. */
+  private renderBuildButton(pending: boolean): void {
+    this.buildButton.hidden = this.updateMode !== 'manual';
+    this.buildButton.classList.toggle('preview__build--pending', pending);
+    this.buildButton.setAttribute(
+      'label',
+      pending ? 'Update preview (changes pending)' : 'Update preview',
+    );
+  }
+
+  /** Rebuilds the preview now, whatever the update mode is. */
+  buildNow(): void {
+    this.host.buildNow();
   }
 
   /** Discards this session's edits to the current slide. */
@@ -314,8 +456,14 @@ class PlaygroundApp {
       this.writeHash();
     });
 
+    this.columnsToggle.addEventListener('nys-change', () => {
+      const layout: EditorLayout = this.columnsToggle.checked === true ? 'columns' : 'tabs';
+      this.panes.setLayout(layout);
+    });
+
     this.prereleaseToggle.addEventListener('nys-change', () => {
       this.showPrereleases = this.prereleaseToggle.checked === true;
+      writePrereleases(this.showPrereleases);
       void this.renderVersionOptions();
     });
 
@@ -426,6 +574,11 @@ function bindClick(selector: string, handler: () => void): void {
   required(selector).addEventListener('nys-click', handler);
 }
 
+/** Records a setting in the URL so a copied link opens the same way. */
+function replaceQuery(name: string, value: string): void {
+  window.history.replaceState(null, '', settingUrl(name, value, window.location.href));
+}
+
 /**
  * Makes the divider draggable and remembers the ratio.
  *
@@ -435,7 +588,7 @@ function bindClick(selector: string, handler: () => void): void {
 function setupSplitter(present: boolean): void {
   const split = required('#split');
   const divider = required('#divider');
-  const storageKey = present ? PRESENT_SPLIT_STORAGE_KEY : SPLIT_STORAGE_KEY;
+  const storageKey = present ? STORAGE_KEYS.presentEditorSize : STORAGE_KEYS.splitRatio;
   const property = present ? '--pg-present-editor-size' : '--pg-split-ratio';
   if (present) {
     divider.setAttribute('aria-orientation', 'horizontal');
@@ -446,19 +599,12 @@ function setupSplitter(present: boolean): void {
     split.style.setProperty(property, `${ratio.toFixed(2)}%`);
   };
 
-  let stored: number | undefined;
-  try {
-    const raw = window.localStorage.getItem(storageKey);
-    const parsed = raw === null ? Number.NaN : Number.parseFloat(raw);
-    if (Number.isFinite(parsed)) {
-      stored = parsed;
-    }
-  } catch {
-    // Private browsing can block storage. The default ratio is fine.
-  }
-  if (stored !== undefined) {
-    apply(stored);
-  }
+  // While presenting the editors overlay the slide, so the drawer can cover
+  // most of it without reflowing the example.
+  const min = present ? 15 : 15;
+  const max = present ? 85 : 85;
+  const fallback = present ? DEFAULTS.presentEditorSize : DEFAULTS.splitRatio;
+  apply(readRatio(storageKey, fallback, min, max));
 
   let dragging = false;
   const move = (clientX: number, clientY: number): void => {
@@ -472,15 +618,9 @@ function setupSplitter(present: boolean): void {
     const fraction = present
       ? (rect.bottom - clientY) / span
       : (clientX - rect.left) / span;
-    const min = present ? 10 : 15;
-    const max = present ? 40 : 85;
     const ratio = Math.min(Math.max(fraction * 100, min), max);
     apply(ratio);
-    try {
-      window.localStorage.setItem(storageKey, ratio.toFixed(2));
-    } catch {
-      // Storage is optional.
-    }
+    writeRatio(storageKey, ratio);
   };
 
   divider.addEventListener('pointerdown', (event) => {
@@ -551,19 +691,43 @@ async function resolveInitialState(deck: Deck): Promise<{
   };
 }
 
+/** Binds the always-on shortcut that rebuilds the preview immediately. */
+function bindBuildShortcut(build: () => void): void {
+  window.addEventListener(
+    'keydown',
+    (event) => {
+      if (!isBuildShortcut(event)) {
+        return;
+      }
+      // Cmd+S would otherwise open the browser's save dialog.
+      event.preventDefault();
+      build();
+    },
+    true,
+  );
+}
+
 async function main(): Promise<void> {
   const present = isPresentMode();
   applyEditorTheme(initialTheme());
+  applyFontSize(initialFontSize());
   setupSplitter(present);
 
   const deck = getDeck(readDeckId());
   const project = required<PlaygroundProject>('#project');
   const {state, presetId} = await resolveInitialState(deck);
-  const app = new PlaygroundApp(project, deck, state, presetId, present);
+  let app: PlaygroundApp | undefined;
+  const panes = new EditorPanes((layout) => {
+    // Keep `?editors=` accurate so a copied link opens the same way.
+    window.history.replaceState(null, '', layoutUrl(layout, window.location.href));
+    app?.syncColumnsToggle();
+  });
+  app = new PlaygroundApp(project, deck, state, presetId, present, panes);
   await app.start();
+  bindBuildShortcut(() => app?.buildNow());
 
   if (present) {
-    const presentation = new Presentation(app);
+    const presentation = new Presentation(app, panes);
     app.attachPresentation(presentation);
     presentation.start();
   }

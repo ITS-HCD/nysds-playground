@@ -20,16 +20,31 @@ assets load from jsDelivr at request time.
 - `src/theme.ts`: light and dark editor themes (`t` key, `?theme=dark`,
   remembered in localStorage). Only the editors change; the preview
   always shows the design system as it is.
+- `src/editors.ts` and `src/editor-panes.ts`: the tabs and side-by-side
+  editor layouts (`e` key, `?editors=columns`), and the collapsible HTML,
+  CSS, and JS columns (`1`/`2`/`3` in presentation mode, or a preset's
+  `editors` field).
+- `src/settings.ts`: owns every remembered setting and its URL query
+  parameter — theme, layout, font size, update mode, prereleases, and
+  every pane size. `clearAllSettings` powers "Reset settings" in the
+  settings modal.
 - `src/present.ts` and `src/keys.ts`: presentation mode and its key
   routing. The preview stays live and editable during a presentation;
   `src/keys.ts` decides when a key changes slides versus reaching the
   code editor.
+- `src/playground.ts` and `src/debounce.ts`: wire `playground-elements`
+  to the playground's state and decide when the preview rebuilds. The
+  quiet-period debounce in `src/debounce.ts` backs the Update preview
+  setting (`typing`, `pause`, `manual`).
 - `src/version-catalog.ts` and `src/versions.ts`: resolve a requested
   version, including `latest` or one the CDN doesn't list, to a version
   the preview can load.
+- `src/icon-names.ts` and `src/icons.test.ts`: the icon allowlist and the
+  test that enforces it. See Icons, below.
 - `bin/cli.mjs`: the `nysds-playground` command (`npm start`,
   `npm run present`). Builds the same `#code=`/`#preset=` URLs as
-  `src/state.ts` from flags and local files.
+  `src/state.ts` from flags and local files, and is the source of truth
+  for every CLI flag.
 - `presets/*.json`: bundled example code, loaded through
   `import.meta.glob` at build time. See `presets/README.md` for the
   schema.
@@ -65,6 +80,17 @@ attributes, and utility classes. Never read `node_modules/@nysds` for
 documentation — the MCP server is the authoritative source. NYSDS themes
 are set with the `data-nys-theme` attribute, not `data-theme`.
 
+`nys-radiogroup` did not reflect a programmatically set selection, so the
+settings modal uses `nys-select` for multi-option settings instead.
+- Icons: NYSDS ships a curated subset of Material Symbols (82 names). Any
+  other name renders as empty space. Check
+  https://designsystem.ny.gov/components/icon/ or `src/icon-names.ts`
+  before using `icon`, `prefixIcon`, `suffixIcon`, or `<nys-icon name>`.
+  `src/icons.test.ts` fails the test run on unknown names in `index.html`,
+  `presets/`, and `decks/`. There is no gear icon; use `refresh` for
+  reset, `chevron_*` for collapse and navigation, `more_vert` for
+  overflow menus, and a text label when nothing fits.
+
 ## Add or edit a preset or deck
 
 1. Build the example in the running app.
@@ -92,10 +118,11 @@ are set with the `data-nys-theme` attribute, not `data-theme`.
 
 A change isn't done until `npm run build` passes. After touching
 `src/state.ts`, `src/decks.ts`, `src/preset-schema.ts`, `src/present.ts`,
-`src/keys.ts`, `bin/cli.mjs`, `vite.config.ts`, or the HTML wrapper the
-app injects around user code, check the preview in a browser — URL state
-encoding, deck loading, and presentation key routing are easy to break in
-ways `tsc` won't catch.
+`src/keys.ts`, `src/editors.ts`, `src/editor-panes.ts`, `src/settings.ts`,
+`bin/cli.mjs`, `vite.config.ts`, or the HTML wrapper the app injects
+around user code, check the preview in a browser — URL state encoding,
+deck loading, editor layout switching, and presentation key routing are
+easy to break in ways `tsc` won't catch.
 
 ## Deployment
 

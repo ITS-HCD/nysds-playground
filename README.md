@@ -23,10 +23,11 @@ opens a browser tab. See Use the CLI for other ways to run it.
 
 - **HTML, CSS, and JS tabs**: edit the body markup, styles, and an ES
   module script. The app wraps your HTML with the head markup that loads
-  NYSDS, so you write only the content. The preview body keeps the
-  browser's default 8px margin, so a lone component doesn't touch the
-  edge. Set `body { margin: 0 }` in the CSS tab or a deck's base CSS to
-  remove it.
+  NYSDS, so you write only the content.
+- **Editor layout**: switch between tabs, which show one file at a time,
+  and side-by-side columns, which show all three at once. Each column has
+  a collapse button; a collapsed column becomes a thin labeled strip you
+  click to expand.
 - **Deck select**: appears in the toolbar once a named deck exists
   alongside the built-in Library. Switches which set of slides the
   preset picker and presentation mode step through.
@@ -34,14 +35,53 @@ opens a browser tab. See Use the CLI for other ways to run it.
   list comes from the jsDelivr data API at runtime, with a hardcoded
   fallback if that request fails. Choosing `latest`, or a version the
   CDN doesn't list, resolves to the newest stable release.
+- **Settings**: opens a modal with dark editor theme, side-by-side
+  editors, editor font size, when the preview updates, and whether the
+  version selector lists prereleases. See Settings, below.
 - **Share**: copies a URL that encodes your current HTML, CSS, JS, and
   selected version, so anyone who opens it sees exactly what you built.
 - **Export preset**: downloads your current editor state as a JSON file
   in the preset schema, ready to drop into `presets/`.
-- **Reset**: reloads the current preset's starting HTML, CSS, and JS,
-  discarding your edits.
+- **Reset**: clears the editors back to a blank starting point.
 - **Present**: enters presentation mode for showing presets to an
   audience.
+
+## Settings
+
+The **Settings** button at the right of the toolbar opens a modal with
+these controls. Changes apply immediately, and **Done** closes the
+modal.
+
+| Setting | What it does |
+| --- | --- |
+| Dark editor | Switches the code editors between a light and a dark theme. The preview always shows the design system as it is. |
+| Side by side editors | Switches between the tabs layout and the three-column layout. |
+| Editor font size | Small (13px), medium (15px), or large (18px). |
+| Update preview | How soon an edit reaches the preview: on every pause in typing, only after a longer pause, or only when you ask. See Preview updates, below. |
+| Show prerelease versions | Includes prerelease versions in the version selector. |
+| Reset settings | Clears every remembered setting, back to the defaults. |
+
+Each setting also has a URL query parameter, so a link can open the
+playground configured a particular way. A parameter in the URL wins over
+a remembered setting.
+
+| Parameter | Values |
+| --- | --- |
+| `?theme=` | `light`, `dark` |
+| `?editors=` | `tabs`, `columns` |
+| `?font=` | `small`, `medium`, `large` |
+| `?update=` | `typing`, `pause`, `manual` |
+
+## Preview updates
+
+By default, the preview rebuilds 800 milliseconds after you stop typing.
+Set **Update preview** to a longer pause (2 seconds) when you want to
+keep typing through small mistakes, or to manual to control every
+rebuild yourself. Pressing Cmd+Enter or Ctrl+Enter, or Cmd+S or Ctrl+S,
+rebuilds immediately in any mode, even in the middle of an edit. In
+manual mode, an **Update preview** button appears in the corner of the
+preview and reads "Update preview (changes pending)" once you have
+unsaved edits.
 
 ## Use the CLI
 
@@ -53,16 +93,18 @@ runnable through `npx nysds-playground` or the `npm start` and
 | --- | --- |
 | `nysds-playground` | Start the dev server and open the Library deck. |
 | `nysds-playground --preset button` | Open a specific preset by id. |
-| `nysds-playground --deck styling-levels --present` | Open a deck in presentation mode. |
-| `nysds-playground --deck styling-levels --present --dark` | Same, with the dark editor theme for screen recordings. |
+| `nysds-playground --deck styling-levels --present --dark` | Open a deck in presentation mode, with the dark editor theme. |
 | `nysds-playground --html demo.html --css demo.css` | Load local files into the editors. |
 | `nysds-playground link --html demo.html` | Print a shareable URL for a local file without starting a server. |
 | `nysds-playground --built` | Serve the production build in `dist/` with `vite preview`, instead of the dev server. |
 | `nysds-playground --help` | List every command and flag. |
 
 Other flags: `--js <file>`, `--version <v>` (used with `--html`,
-`--css`, or `--js`; defaults to `latest`), `--port <n>`, `--no-open`, and
-`--base <url>` (the origin `link` builds the URL against).
+`--css`, or `--js`; defaults to `latest`), `--columns` (side-by-side
+editors), `--font small|medium|large`, `--update typing|pause|manual`,
+`--port <n>`, `--no-open`, and `--base <url>` (the origin `link` builds
+the URL against). `bin/cli.mjs` is the source of truth for every flag;
+run `nysds-playground --help` to see it.
 
 Run `npm link` from the repository to make `nysds-playground` available
 globally on your machine.
@@ -85,16 +127,20 @@ server.
 | `#preset=<id>` | Loads an unmodified preset or deck slide by its id. |
 | `?deck=<id>` | Selects a named deck. Omit it for the Library deck. |
 | `?present=1` | Opens in presentation mode. |
-| `?theme=dark` | Uses the dark editor theme. `?theme=light` forces light. Without it, the playground remembers your last choice and defaults to light. |
+
+`?theme=`, `?editors=`, `?font=`, and `?update=` also work on any link.
+See Settings, above.
 
 ## Presentation mode
 
-Open the playground with `?present=1` to put the preview across roughly
-the top two-thirds of the screen, with the HTML, CSS, and JS editors
-below it, still live and editable. A caption bar shows the slide's
-group and title, its position as `n / N`, previous and next buttons, and
-a **Reset slide** button that discards edits made during the session and
-restores the original preset.
+Open the playground with `?present=1` to fill most of the screen with the
+preview. The editors float in a drawer over the bottom of the slide,
+still live and editable, so the presenter can change a slide without
+leaving the deck. Drag the divider to resize the drawer, from 15% to 85%
+of the slide's height; resizing the drawer never reflows the slide
+itself. A caption bar shows the slide's group and title, its position as
+`n / N`, previous and next buttons, and a **Reset slide** button that
+discards edits made during the session and restores the original preset.
 
 | Key | Action |
 | --- | --- |
@@ -103,9 +149,11 @@ restores the original preset.
 | Home | Go to the first slide |
 | End | Go to the last slide |
 | Alt+arrow | Change slides even while the cursor is in an editor |
-| `c` | Collapse or expand the editor pane |
+| `c` | Collapse or expand the editor drawer |
+| `e` | Switch between the tabs and side-by-side editor layouts |
+| `1`, `2`, `3` | Collapse or expand the HTML, CSS, or JS column (side-by-side layout only, and only when focus is outside the editors) |
+| `t` | Switch the editor theme between light and dark |
 | `n` | Show or hide presenter notes, when the slide has any |
-| `t` | Switch the editors between the light and dark theme |
 | Escape | Close presenter notes, then exit presentation mode |
 
 Plain arrow keys, Home, End, and the letter keys move between slides only
@@ -117,12 +165,6 @@ session; reloading or reopening the link restores the original preset.
 The URL's `#preset=<id>` updates on each step, so a link copied mid-talk
 resumes there. Share still produces a `#code=` link and keeps
 `present=1` if it was set.
-
-The editors default to a light theme because projectors wash out dark
-backgrounds. For screen recordings, press `t` or open the link with
-`?theme=dark` (or the CLI's `--dark` flag) to frame the light preview
-with a dark editor. The preview itself never changes theme. The choice
-is remembered in the browser.
 
 ## Add a preset or a deck
 
@@ -141,6 +183,7 @@ time, so adding either one means adding a file and rebuilding.
 | `group` | string | no | A section label shown in the caption. |
 | `notes` | string | no | Presenter notes, shown when you press `n`. |
 | `version` | string | no | An NYSDS version to pin this preset to. |
+| `editors` | string array | no | Which columns to expand in the side-by-side layout, for example `["html", "css"]`. Columns left out start collapsed. Ignored in the tabs layout. |
 
 Name preset files `NN-slug.json`, for example `03-alert.json`. The
 numeric prefix sets the display order, and the slug becomes the preset's
@@ -151,8 +194,11 @@ links, and each slide inside the deck's `presets` array needs its own
 
 To create a preset, build the example in the running app, select
 **Export preset**, rename the downloaded file to `NN-slug.json`, move it
-into `presets/`, and rebuild. See `presets/README.md` for the full
-authoring guide, including the deck format and a worked example.
+into `presets/`, and rebuild. Check every icon name you use against the
+list at https://designsystem.ny.gov/components/icon/, mirrored in
+`src/icon-names.ts` and enforced by `npm test`. See `presets/README.md`
+for the full authoring guide, including the deck format and a worked
+example.
 
 ## Configure for another design system
 

@@ -38,14 +38,6 @@
             width="md"
           ></nys-select>
 
-          <nys-toggle
-            id="prerelease-toggle"
-            class="toolbar__toggle"
-            size="sm"
-            label="Prereleases"
-            name="prereleases"
-            value="on"
-          ></nys-toggle>
         </div>
 
         <div class="toolbar__actions">
@@ -62,32 +54,134 @@
             size="sm"
             variant="outline"
             label="Reset"
-            prefixIcon="restart_alt"
+            prefixIcon="refresh"
           ></nys-button>
           <nys-button
             id="present-button"
             size="sm"
             variant="ghost"
             label="Present"
-            prefixIcon="slideshow"
+            prefixIcon="visibility"
+          ></nys-button>
+          <nys-button
+            id="settings-button"
+            size="sm"
+            variant="ghost"
+            label="Settings"
+            prefixIcon="more_vert"
           ></nys-button>
         </div>
       </header>
 
       <main class="split" id="split">
         <section class="split__pane split__pane--editors" id="editors" aria-label="Code editors">
-          <playground-tab-bar
-            project="project"
-            editor="file-editor"
-            class="editors__tabs"
-          ></playground-tab-bar>
-          <playground-file-editor
-            id="file-editor"
-            project="project"
-            line-numbers
-            line-wrapping
-            class="editors__editor"
-          ></playground-file-editor>
+          <div class="editors__layout editors__layout--tabs" id="tabs-layout">
+            <playground-tab-bar
+              project="project"
+              editor="file-editor"
+              class="editors__tabs"
+            ></playground-tab-bar>
+            <playground-file-editor
+              id="file-editor"
+              project="project"
+              line-numbers
+              line-wrapping
+              class="editors__editor"
+            ></playground-file-editor>
+          </div>
+
+          <div class="editors__layout editors__layout--columns" id="columns-layout" hidden>
+            <section class="column" id="column-html" data-pane="html">
+              <header class="column__header">
+                <button
+                  type="button"
+                  class="column__label"
+                  id="column-html-label"
+                  aria-expanded="true"
+                  aria-controls="column-html-editor"
+                >
+                  HTML
+                </button>
+                <nys-button
+                  class="column__collapse"
+                  id="column-html-collapse"
+                  circle
+                  size="sm"
+                  variant="ghost"
+                  icon="chevron_left"
+                  label="Collapse HTML"
+                ></nys-button>
+              </header>
+              <playground-file-editor
+                id="column-html-editor"
+                class="column__editor"
+                project="project"
+                filename="index.html"
+                line-numbers
+                line-wrapping
+              ></playground-file-editor>
+            </section>
+            <section class="column" id="column-css" data-pane="css">
+              <header class="column__header">
+                <button
+                  type="button"
+                  class="column__label"
+                  id="column-css-label"
+                  aria-expanded="true"
+                  aria-controls="column-css-editor"
+                >
+                  CSS
+                </button>
+                <nys-button
+                  class="column__collapse"
+                  id="column-css-collapse"
+                  circle
+                  size="sm"
+                  variant="ghost"
+                  icon="chevron_left"
+                  label="Collapse CSS"
+                ></nys-button>
+              </header>
+              <playground-file-editor
+                id="column-css-editor"
+                class="column__editor"
+                project="project"
+                filename="styles.css"
+                line-numbers
+                line-wrapping
+              ></playground-file-editor>
+            </section>
+            <section class="column" id="column-js" data-pane="js">
+              <header class="column__header">
+                <button
+                  type="button"
+                  class="column__label"
+                  id="column-js-label"
+                  aria-expanded="true"
+                  aria-controls="column-js-editor"
+                >
+                  JS
+                </button>
+                <nys-button
+                  class="column__collapse"
+                  id="column-js-collapse"
+                  circle
+                  size="sm"
+                  variant="ghost"
+                  icon="chevron_left"
+                  label="Collapse JS"
+                ></nys-button>
+              </header>
+              <playground-file-editor
+                id="column-js-editor"
+                class="column__editor"
+                project="project"
+                filename="script.js"
+                line-numbers
+                line-wrapping
+              ></playground-file-editor>
+            </section>
+          </div>
         </section>
 
         <div
@@ -106,6 +200,15 @@
             html-file="index.html"
             class="preview"
           ></playground-preview>
+          <nys-button
+            class="preview__build"
+            id="build-button"
+            size="sm"
+            variant="outline"
+            label="Update preview"
+            prefixIcon="refresh"
+            hidden
+          ></nys-button>
         </section>
       </main>
 
@@ -145,7 +248,7 @@
           size="sm"
           variant="outline"
           label="Reset slide"
-          prefixIcon="restart_alt"
+          prefixIcon="refresh"
         ></nys-button>
         <nys-button
           inverted
@@ -153,7 +256,7 @@
           size="sm"
           variant="ghost"
           label="Notes"
-          prefixIcon="sticky_note_2"
+          prefixIcon="info"
         ></nys-button>
         <nys-button
           inverted
@@ -167,6 +270,74 @@
       </footer>
 
       <p class="present-hint" id="present-hint" hidden></p>
+
+      <nys-modal id="settings-modal" heading="Settings" width="md">
+        <div class="settings">
+          <nys-toggle
+            id="theme-toggle"
+            class="settings__field"
+            size="sm"
+            label="Dark editor"
+            description="Changes the code editors only. The preview always shows the design system as it is."
+            name="editor-theme"
+            value="dark"
+          ></nys-toggle>
+
+          <nys-toggle
+            id="columns-toggle"
+            class="settings__field"
+            size="sm"
+            label="Side by side editors"
+            description="Shows HTML, CSS, and JavaScript in three columns instead of tabs."
+            name="editor-layout"
+            value="columns"
+          ></nys-toggle>
+
+          <nys-select
+            id="font-size-select"
+            class="settings__field"
+            width="md"
+            label="Editor font size"
+          >
+            <option value="small" label="Small (13px)"></option>
+            <option value="medium" label="Medium (15px)"></option>
+            <option value="large" label="Large (18px)"></option>
+          </nys-select>
+
+          <nys-select
+            id="update-mode-select"
+            class="settings__field"
+            width="lg"
+            label="Update preview"
+            description="How soon an edit reaches the preview. Cmd or Ctrl plus Enter updates it at once."
+          >
+            <option value="typing" label="While typing"></option>
+            <option value="pause" label="After a longer pause"></option>
+            <option value="manual" label="Manually"></option>
+          </nys-select>
+
+          <nys-toggle
+            id="prerelease-toggle"
+            class="settings__field"
+            size="sm"
+            label="Show prerelease versions"
+            name="prereleases"
+            value="on"
+          ></nys-toggle>
+
+          <nys-button
+            id="reset-settings-button"
+            class="settings__reset"
+            size="sm"
+            variant="outline"
+            label="Reset settings"
+            prefixIcon="refresh"
+          ></nys-button>
+        </div>
+        <div slot="actions">
+          <nys-button id="settings-done-button" label="Done"></nys-button>
+        </div>
+      </nys-modal>
 
       <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
     </div>

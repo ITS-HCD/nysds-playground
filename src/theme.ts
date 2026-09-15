@@ -8,14 +8,13 @@
 import lightTheme from 'playground-elements/themes/eclipse.css.js';
 import darkTheme from 'playground-elements/themes/material-darker.css.js';
 
+import {DEFAULTS, STORAGE_KEYS, readKey, writeKey} from './settings.ts';
+
 /** The two editor themes the playground offers. */
 export type EditorTheme = 'light' | 'dark';
 
 /** The query parameter that picks the editor theme, as in `?theme=dark`. */
 export const THEME_PARAM = 'theme';
-
-/** Where the chosen theme is remembered between visits. */
-const THEME_STORAGE_KEY = 'nysds-playground:editor-theme';
 
 /** The CodeMirror theme class each choice maps to. */
 const THEME_CLASSES: Record<EditorTheme, string> = {
@@ -50,15 +49,11 @@ export function initialTheme(search: string = window.location.search): EditorThe
   if (fromUrl) {
     return fromUrl;
   }
-  try {
-    const stored = window.localStorage.getItem(THEME_STORAGE_KEY);
-    if (stored === 'dark' || stored === 'light') {
-      return stored;
-    }
-  } catch {
-    // Private browsing can block storage. Light is fine.
+  const stored = readKey(STORAGE_KEYS.theme);
+  if (stored === 'dark' || stored === 'light') {
+    return stored;
   }
-  return 'light';
+  return DEFAULTS.theme;
 }
 
 let sheetsAdopted = false;
@@ -80,9 +75,5 @@ export function applyEditorTheme(theme: EditorTheme): void {
 
 /** Remembers the theme for the next visit. */
 export function writeTheme(theme: EditorTheme): void {
-  try {
-    window.localStorage.setItem(THEME_STORAGE_KEY, theme);
-  } catch {
-    // Private browsing can block storage. The URL still works.
-  }
+  writeKey(STORAGE_KEYS.theme, theme);
 }
