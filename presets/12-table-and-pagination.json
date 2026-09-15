@@ -1,0 +1,7 @@
+{
+  "title": "Table and pagination",
+  "description": "A sortable table paired with pagination that updates a caption on page change.",
+  "html": "<nys-table id=\"peaks-table\" sortable striped bordered class=\"nys-margin-b-300\">\n  <table>\n    <caption>New York State high peaks</caption>\n    <tr><th>Mountain</th><th>Peak height (ft)</th><th>Hike name</th></tr>\n    <tr><td>Marcy</td><td>5,344</td><td>Van Hoevenberg Trail</td></tr>\n    <tr><td>Algonquin</td><td>5,114</td><td>Northeast Trail</td></tr>\n    <tr><td>Haystack</td><td>4,960</td><td>Johns Brook Trail</td></tr>\n    <tr><td>Skylight</td><td>4,926</td><td>Lake Tear Trail</td></tr>\n  </table>\n</nys-table>\n\n<nys-pagination id=\"peaks-pagination\" currentPage=\"1\" totalPages=\"5\"></nys-pagination>\n<p id=\"page-caption\">Showing page 1 of 5.</p>\n",
+  "css": "",
+  "js": "const pagination = document.getElementById('peaks-pagination');\nconst caption = document.getElementById('page-caption');\n\npagination.addEventListener('nys-change', (e) => {\n  caption.textContent = `Showing page ${e.detail.page} of ${pagination.totalPages}.`;\n});\n"
+}

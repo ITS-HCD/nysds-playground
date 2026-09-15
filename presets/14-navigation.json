@@ -1,0 +1,7 @@
+{
+  "title": "Navigation",
+  "description": "Breadcrumbs, a vertical navigation menu with a collapsible group, and a process list.",
+  "html": "<nys-breadcrumbs class=\"nys-margin-b-400\">\n  <ol>\n    <li><a href=\"/\">Home</a></li>\n    <li><a href=\"/government\">Government</a></li>\n    <li>Parks &amp; Recreation</li>\n  </ol>\n</nys-breadcrumbs>\n\n<div class=\"nys-grid-row nys-grid-gap-400 nys-margin-b-400\">\n  <div class=\"nys-grid-col-12 nys-desktop:nys-grid-col-4\">\n    <nys-verticalnav heading=\"Freshwater fishing\" headingLevel=\"h2\">\n      <ul>\n        <li><a href=\"/\">Home</a></li>\n        <li><a href=\"/services\">Services</a></li>\n        <li>\n          <nys-verticalnavgroup label=\"Regulations\">\n            <ul>\n              <li><a href=\"\">Places to fish</a></li>\n              <li><a href=\"\">Learn to fish</a></li>\n              <li><a href=\"\">Ice fishing</a></li>\n            </ul>\n          </nys-verticalnavgroup>\n        </li>\n      </ul>\n    </nys-verticalnav>\n  </div>\n</div>\n\n<nys-processlist id=\"application-steps\">\n  <nys-processlistitem label=\"Gather your documents\" description=\"Recent pay stubs and a current property tax bill.\"></nys-processlistitem>\n  <nys-processlistitem label=\"Complete the application\" description=\"Most applicants finish in about 20 minutes.\"></nys-processlistitem>\n  <nys-processlistitem label=\"Submit and await review\"></nys-processlistitem>\n</nys-processlist>\n",
+  "css": "",
+  "js": ""
+}

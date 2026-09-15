@@ -1,0 +1,7 @@
+{
+  "title": "Button",
+  "description": "Compare button variants, sizes, and states, including an icon-only button.",
+  "html": "<div class=\"nys-display-flex nys-flex-wrap nys-flex-gap-200 nys-margin-b-300\">\n  <nys-button id=\"log-button\" label=\"Filled\" variant=\"filled\"></nys-button>\n  <nys-button label=\"Outline\" variant=\"outline\"></nys-button>\n  <nys-button label=\"Ghost\" variant=\"ghost\"></nys-button>\n  <nys-button label=\"Text\" variant=\"text\"></nys-button>\n</div>\n\n<div class=\"nys-display-flex nys-flex-align-center nys-flex-gap-200 nys-margin-b-300\">\n  <nys-button label=\"Small\" size=\"sm\"></nys-button>\n  <nys-button label=\"Medium\" size=\"md\"></nys-button>\n  <nys-button label=\"Large\" size=\"lg\"></nys-button>\n  <nys-button circle icon=\"close\" label=\"Close dialog\"></nys-button>\n  <nys-button label=\"Disabled\" disabled></nys-button>\n</div>\n\n<p id=\"log\">Click the filled button to see the log update here.</p>\n",
+  "css": "",
+  "js": "const logButton = document.getElementById('log-button');\nconst log = document.getElementById('log');\nlet clickCount = 0;\n\nlogButton.addEventListener('nys-click', () => {\n  clickCount += 1;\n  log.textContent = `Filled button clicked ${clickCount} time${clickCount === 1 ? '' : 's'}.`;\n});\n"
+}

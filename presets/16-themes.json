@@ -1,0 +1,7 @@
+{
+  "title": "Agency themes",
+  "description": "The same button, alert, and card under different agency themes. Themes come from the data-nys-theme attribute.",
+  "html": "<nys-select id=\"theme-select\" label=\"Select an agency theme\" class=\"nys-margin-b-300\">\n  <option value=\"default\" label=\"Default (NY.gov)\" selected></option>\n  <option value=\"admin\" label=\"Administration\"></option>\n  <option value=\"health\" label=\"Health\"></option>\n  <option value=\"transportation\" label=\"Transportation\"></option>\n  <option value=\"environment\" label=\"Environment\"></option>\n</nys-select>\n\n<div id=\"theme-wrapper\">\n  <div class=\"nys-display-flex nys-flex-column nys-flex-gap-300\">\n    <nys-button label=\"Primary action\"></nys-button>\n    <nys-alert type=\"info\" heading=\"Themed alert\" text=\"This alert's color follows the selected theme.\"></nys-alert>\n    <nys-card heading=\"Themed card\" description=\"Card accents follow the theme color too.\"></nys-card>\n  </div>\n</div>\n",
+  "css": "",
+  "js": "const themeSelect = document.getElementById('theme-select');\nconst themeWrapper = document.getElementById('theme-wrapper');\n\nthemeSelect.addEventListener('nys-change', (e) => {\n  themeWrapper.setAttribute('data-nys-theme', e.detail.value);\n});\n"
+}

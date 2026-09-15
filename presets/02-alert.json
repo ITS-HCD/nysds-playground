@@ -1,0 +1,7 @@
+{
+  "title": "Alert",
+  "description": "See every alert type, plus a dismissible alert that spawns a new one.",
+  "html": "<div class=\"nys-display-flex nys-flex-column nys-flex-gap-200 nys-margin-b-300\">\n  <nys-alert type=\"info\" heading=\"Info alert type\"></nys-alert>\n  <nys-alert type=\"success\" heading=\"Success alert type\"></nys-alert>\n  <nys-alert type=\"warning\" heading=\"Warning alert type\"></nys-alert>\n  <nys-alert type=\"danger\" heading=\"Danger alert type\"></nys-alert>\n  <nys-alert type=\"emergency\" heading=\"Emergency alert type\"></nys-alert>\n</div>\n\n<nys-alert\n  id=\"dismiss-alert\"\n  type=\"info\"\n  heading=\"You can dismiss this alert\"\n  text=\"Close it with the X in the corner. A new alert appears after you do.\"\n  dismissible\n></nys-alert>\n\n<div id=\"alert-host\"></div>\n",
+  "css": "",
+  "js": "const dismissAlert = document.getElementById('dismiss-alert');\nconst host = document.getElementById('alert-host');\n\ndismissAlert.addEventListener('nys-close', () => {\n  const newAlert = document.createElement('nys-alert');\n  newAlert.setAttribute('type', 'success');\n  newAlert.setAttribute('heading', 'You dismissed the alert');\n  newAlert.setAttribute('text', 'This new alert replaced it.');\n  newAlert.classList.add('nys-margin-t-300');\n  host.appendChild(newAlert);\n});\n"
+}

@@ -1,0 +1,7 @@
+{
+  "title": "Badge and avatar",
+  "description": "Badges across every intent and size, plus avatars with an image, initials, and an icon.",
+  "html": "<div class=\"nys-display-flex nys-flex-wrap nys-flex-align-center nys-flex-gap-200 nys-margin-b-300\">\n  <nys-badge label=\"Base\" prefixIcon></nys-badge>\n  <nys-badge label=\"Info\" intent=\"info\" prefixIcon></nys-badge>\n  <nys-badge label=\"Success\" intent=\"success\" prefixIcon></nys-badge>\n  <nys-badge label=\"Warning\" intent=\"warning\" prefixIcon></nys-badge>\n  <nys-badge label=\"Danger\" intent=\"danger\" prefixIcon></nys-badge>\n  <nys-badge label=\"Emergency\" intent=\"emergency\" prefixIcon></nys-badge>\n  <nys-badge label=\"Small\" size=\"sm\"></nys-badge>\n</div>\n\n<div class=\"nys-display-flex nys-flex-align-center nys-flex-gap-300\">\n  <nys-avatar\n    image=\"https://placehold.co/64x64\"\n    ariaLabel=\"Jane Smith\"\n  ></nys-avatar>\n  <nys-avatar initials=\"JS\" ariaLabel=\"Jane Smith\"></nys-avatar>\n  <nys-avatar icon=\"account_circle\" ariaLabel=\"Guest account\"></nys-avatar>\n</div>\n",
+  "css": "",
+  "js": ""
+}

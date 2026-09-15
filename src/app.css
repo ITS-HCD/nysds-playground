@@ -1,0 +1,379 @@
+/*
+ * Shell styling for the playground.
+ *
+ * The design system supplies the reset, the type scale, and the color
+ * variables. Everything here covers the split-pane layout, the presentation
+ * chrome, and the playground editor theming, which the design system does not
+ * ship.
+ */
+
+:root {
+  --pg-toolbar-height: auto;
+  --pg-divider-width: 10px;
+  --pg-split-ratio: 50%;
+  --pg-surface: var(--nys-color-ink-reverse, #ffffff);
+  --pg-border: var(--nys-color-neutral-100, #d0d0ce);
+  --pg-muted: var(--nys-color-text-weaker, #62666a);
+
+  /* Playground editor theming. Larger than the default so code reads from
+     the back of a room. */
+  --playground-code-font-size: 15px;
+  --playground-code-line-height: 1.55;
+  --playground-code-font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas,
+    "Liberation Mono", monospace;
+  --playground-code-padding: 12px 8px;
+  --playground-preview-width: 100%;
+  --playground-bar-height: 40px;
+  --playground-tab-bar-font-size: 14px;
+  --playground-tab-bar-background: var(--pg-surface);
+  --playground-tab-bar-active-color: var(--nys-color-theme, #154973);
+  --playground-tab-bar-indicator-color: var(--nys-color-theme, #154973);
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--pg-surface);
+  overflow: hidden;
+}
+
+.app {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  height: 100dvh;
+}
+
+/* Toolbar -------------------------------------------------------------- */
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 16px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--pg-border);
+  background: var(--pg-surface);
+}
+
+.toolbar__title {
+  margin: 0;
+  font-size: 1.125rem;
+  line-height: 1.2;
+  align-self: center;
+  white-space: nowrap;
+}
+
+.toolbar__controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px;
+}
+
+.toolbar__select {
+  min-width: 180px;
+}
+
+/*
+ * Design system components set `display` on their `:host`, which beats the
+ * browser's `[hidden] { display: none }` rule. Restore it so the `hidden`
+ * property still works on them.
+ */
+nys-button[hidden],
+nys-select[hidden],
+nys-toggle[hidden] {
+  display: none !important;
+}
+
+.toolbar__toggle {
+  padding-bottom: 6px;
+}
+
+.toolbar__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-inline-start: auto;
+}
+
+/* Split pane ----------------------------------------------------------- */
+
+.split {
+  display: flex;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.split__pane {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.split__pane--editors {
+  flex: 0 0 var(--pg-split-ratio);
+  border-inline-end: 1px solid var(--pg-border);
+}
+
+.split__pane--preview {
+  flex: 1 1 auto;
+  background: #ffffff;
+}
+
+.editors__tabs {
+  flex: 0 0 auto;
+  border-bottom: 1px solid var(--pg-border);
+}
+
+.editors__editor {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.preview {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.split__divider {
+  flex: 0 0 var(--pg-divider-width);
+  cursor: col-resize;
+  background: var(--pg-border);
+  background-clip: content-box;
+  border-inline: 4px solid var(--pg-surface);
+  touch-action: none;
+}
+
+.split__divider:focus-visible {
+  outline: 2px solid var(--nys-color-focus, #004dd1);
+  outline-offset: 1px;
+}
+
+/* Presentation mode ---------------------------------------------------- */
+
+.app--present .toolbar {
+  display: none;
+}
+
+/*
+ * The preview stacks above the editors. `column-reverse` reuses the document
+ * order (editors, divider, preview) without moving anything in the markup, so
+ * the tab order still reaches the editors first.
+ */
+.app--present .split {
+  flex-direction: column-reverse;
+}
+
+.app--present .split__pane--editors {
+  flex: 0 0 var(--pg-present-editor-size, 32%);
+  max-height: 40vh;
+  border-inline-end: none;
+  border-top: 1px solid var(--pg-border);
+}
+
+.app--present .split__pane--preview {
+  flex: 1 1 auto;
+  min-height: 60vh;
+}
+
+.app--present .split__divider {
+  flex: 0 0 var(--pg-divider-width);
+  cursor: row-resize;
+  border-inline: none;
+  border-block: 4px solid var(--pg-surface);
+}
+
+.app--present.app--code-collapsed .split__pane--editors,
+.app--present.app--code-collapsed .split__divider {
+  display: none;
+}
+
+/* Hide the preview's own header bar so the slide fills the screen. The custom
+   property has to land on the element itself: playground-preview sets a
+   default on :host, which beats an inherited value. */
+.app--present .preview {
+  --playground-bar-height: 0px;
+}
+
+.caption {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 16px;
+  border-top: 1px solid var(--nys-color-theme-strong);
+  background: var(--nys-color-theme);
+  color: var(--nys-color-text-reverse);
+}
+
+.caption[hidden] {
+  display: none;
+}
+
+/* The caption takes programmatic focus after every step, so it needs no
+   focus ring of its own. Its buttons still show theirs. */
+.caption:focus,
+.caption:focus-visible {
+  outline: none;
+}
+
+.caption__text {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.caption__title {
+  margin: 0;
+  font-size: 1.0625rem;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.caption__group {
+  color: var(--nys-color-text-reverse-weak);
+  font-weight: 400;
+}
+
+.caption__group:not(:empty)::after {
+  content: " · ";
+}
+
+.caption__description {
+  margin: 2px 0 0;
+  font-size: 0.9375rem;
+  line-height: 1.35;
+  color: var(--nys-color-text-reverse-weak);
+}
+
+.caption__description:empty {
+  display: none;
+}
+
+.caption__count {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+  font-size: 0.9375rem;
+  color: var(--nys-color-text-reverse-weak);
+  white-space: nowrap;
+}
+
+/* Presenter notes ------------------------------------------------------ */
+
+.notes {
+  position: fixed;
+  inset-inline: 16px;
+  inset-block-end: 72px;
+  z-index: 25;
+  max-width: 900px;
+  margin-inline: auto;
+  padding: 16px 20px;
+  border: 1px solid var(--pg-border);
+  border-radius: 8px;
+  background: var(--pg-surface);
+  box-shadow: 0 8px 28px rgb(0 0 0 / 22%);
+}
+
+.notes[hidden] {
+  display: none;
+}
+
+.notes__heading {
+  margin: 0 0 6px;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--pg-muted);
+}
+
+.notes__body {
+  margin: 0 0 12px;
+  font-size: 1rem;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  max-height: 40vh;
+  overflow: auto;
+}
+
+.present-hint {
+  position: fixed;
+  inset-block-start: 16px;
+  inset-inline-end: 16px;
+  z-index: 20;
+  margin: 0;
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: rgba(20, 20, 20, 0.86);
+  color: #ffffff;
+  font-size: 0.875rem;
+  transition: opacity 600ms ease;
+}
+
+.present-hint[hidden] {
+  display: none;
+}
+
+.present-hint--fading {
+  opacity: 0;
+}
+
+/* Toast ---------------------------------------------------------------- */
+
+.toast {
+  position: fixed;
+  inset-block-end: 24px;
+  inset-inline-end: 24px;
+  z-index: 30;
+  max-width: 320px;
+}
+
+.toast[hidden] {
+  display: none;
+}
+
+/* Narrow screens ------------------------------------------------------- */
+
+@media (max-width: 720px) {
+  body {
+    overflow: auto;
+  }
+
+  .app {
+    height: auto;
+    min-height: 100dvh;
+  }
+
+  .split {
+    flex-direction: column;
+  }
+
+  .split__pane--editors,
+  .split__pane--preview {
+    flex: 0 0 auto;
+    min-height: 50vh;
+    border-inline-end: none;
+  }
+
+  .app--present .split__pane--editors {
+    max-height: none;
+  }
+
+  .split__pane--editors {
+    border-bottom: 1px solid var(--pg-border);
+  }
+
+  .split__divider {
+    display: none;
+  }
+
+  .toolbar__actions {
+    margin-inline-start: 0;
+  }
+}

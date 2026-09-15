@@ -1,0 +1,7 @@
+{
+  "title": "Tabs",
+  "description": "A tab group with three panels of related content.",
+  "html": "<nys-tabgroup>\n  <nys-tab label=\"Marcy\"></nys-tab>\n  <nys-tab label=\"Algonquin\"></nys-tab>\n  <nys-tab label=\"Haystack\"></nys-tab>\n  <nys-tabpanel>\n    <p>Mount Marcy is the tallest peak in the Adirondacks, at 5,344 feet.</p>\n  </nys-tabpanel>\n  <nys-tabpanel>\n    <p>Algonquin Peak is the second tallest, at 5,114 feet.</p>\n  </nys-tabpanel>\n  <nys-tabpanel>\n    <p>Mount Haystack is the third tallest, at 4,960 feet.</p>\n  </nys-tabpanel>\n</nys-tabgroup>\n",
+  "css": "",
+  "js": ""
+}

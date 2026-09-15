@@ -1,0 +1,7 @@
+{
+  "title": "Modal",
+  "description": "A button opens a modal dialog with two action buttons that close it.",
+  "html": "<nys-button id=\"open-modal\" label=\"Open modal\"></nys-button>\n\n<nys-modal id=\"demo-modal\" heading=\"Update password?\">\n  <p>You are about to update your account password. This cannot be undone.</p>\n  <div slot=\"actions\">\n    <nys-button id=\"cancel-modal\" label=\"Not now\" variant=\"outline\"></nys-button>\n    <nys-button id=\"confirm-modal\" label=\"Update\"></nys-button>\n  </div>\n</nys-modal>\n",
+  "css": "",
+  "js": "const modal = document.getElementById('demo-modal');\n\ndocument.getElementById('open-modal').addEventListener('nys-click', () => {\n  modal.open = true;\n});\n\ndocument.getElementById('cancel-modal').addEventListener('nys-click', () => {\n  modal.open = false;\n});\n\ndocument.getElementById('confirm-modal').addEventListener('nys-click', () => {\n  modal.open = false;\n});\n"
+}

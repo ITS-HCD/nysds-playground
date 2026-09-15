@@ -1,0 +1,7 @@
+{
+  "title": "Tooltip and dropdown menu",
+  "description": "A tooltip attached to a button, and a dropdown menu of actions.",
+  "html": "<div class=\"nys-display-flex nys-flex-align-center nys-flex-gap-300 nys-margin-b-400\">\n  <nys-tooltip for=\"info-button\" text=\"This action cannot be undone.\"></nys-tooltip>\n  <nys-button id=\"info-button\" label=\"Delete account\" variant=\"outline\"></nys-button>\n</div>\n\n<nys-button id=\"menu-trigger\" label=\"Open menu\"></nys-button>\n<nys-dropdownmenu id=\"account-menu\" for=\"menu-trigger\">\n  <nys-dropdownmenuitem label=\"Profile\" href=\"/profile\"></nys-dropdownmenuitem>\n  <nys-dropdownmenuitem label=\"Settings\" href=\"/settings\"></nys-dropdownmenuitem>\n  <nys-dropdownmenuitem label=\"Sign out\" href=\"/logout\"></nys-dropdownmenuitem>\n</nys-dropdownmenu>\n",
+  "css": "",
+  "js": ""
+}

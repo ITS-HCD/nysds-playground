@@ -1,0 +1,8 @@
+{
+  "title": "Welcome",
+  "description": "A tour of the three editor tabs, the version menu, and the share link.",
+  "html": "<h1>Welcome to the NYSDS Playground</h1>\n\n<p class=\"intro\">\n  Edit the <strong>HTML</strong>, <strong>CSS</strong>, and <strong>JS</strong> tabs on the left.\n  The preview reloads as you type. Choose <strong>Share</strong> in the toolbar to copy a link that\n  carries your code, so anyone who opens it sees exactly what you see.\n</p>\n\n<nys-alert\n  type=\"info\"\n  heading=\"Pick a version\"\n  text=\"The version menu switches which release of the design system the preview loads, so you can compare behavior across releases.\"\n></nys-alert>\n\n<div class=\"actions\">\n  <nys-button label=\"Save draft\" variant=\"filled\"></nys-button>\n  <nys-button label=\"Cancel\" variant=\"outline\"></nys-button>\n</div>\n",
+  "css": ".intro {\n  max-width: 60ch;\n}\n\n.actions {\n  display: flex;\n  flex-wrap: wrap;\n  gap: 1rem;\n  margin-block-start: 1.5rem;\n}\n",
+  "js": "// Every NYSDS component fires its own events. Listen for them here.\ndocument.querySelectorAll('nys-button').forEach((button) => {\n  button.addEventListener('nys-click', () => {\n    console.log('You chose:', button.getAttribute('label'));\n  });\n});\n",
+  "version": "latest"
+}

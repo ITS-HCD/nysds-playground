@@ -1,0 +1,81 @@
+{
+  "title": "Three levels of strictness",
+  "description": "How much a design system locks down, configures, or merely documents its components.",
+  "boilerplate": {
+    "baseCss": "body { margin: 0; padding: 2rem; display: grid; gap: 2rem; font-family: var(--nys-font-family-body); }\n.stage { display: flex; gap: 1.5rem; align-items: center; flex-wrap: wrap; }"
+  },
+  "presets": [
+    {
+      "id": "01-header-drop-in",
+      "group": "1. Lock it down",
+      "title": "Drop in the header",
+      "notes": "One tag. Nothing else. Let it render before you say anything.",
+      "html": "<nys-globalheader\n  appName=\"Design System Playground\"\n  agencyName=\"Office of Information Technology Services\"\n  homepageLink=\"/\"\n  nysLogo>\n  <ul>\n    <li><a href=\"/components\">Components</a></li>\n    <li><a href=\"/tokens\">Tokens</a></li>\n    <li><a href=\"/guidance\">Guidance</a></li>\n  </ul>\n</nys-globalheader>",
+      "css": "",
+      "js": ""
+    },
+    {
+      "id": "02-header-try-to-style",
+      "group": "1. Lock it down",
+      "title": "Try to restyle it",
+      "notes": "Type the CSS live. Nothing changes. The component exposes no CSS custom properties and its styles live in shadow DOM. That's the point.",
+      "html": "<nys-globalheader\n  appName=\"Design System Playground\"\n  agencyName=\"Office of Information Technology Services\"\n  homepageLink=\"/\"\n  nysLogo>\n  <ul>\n    <li><a href=\"/components\">Components</a></li>\n    <li><a href=\"/tokens\">Tokens</a></li>\n    <li><a href=\"/guidance\">Guidance</a></li>\n  </ul>\n</nys-globalheader>",
+      "css": "/* Let's make it red. */\nnys-globalheader {\n  background: crimson;\n  font-family: \"Comic Sans MS\", cursive;\n}\n\nnys-globalheader a {\n  color: yellow;\n  text-decoration: underline wavy;\n}\n\n/* ...nothing happens. */",
+      "js": ""
+    },
+    {
+      "id": "03-button-default",
+      "group": "2. Make it configurable",
+      "title": "The button, as shipped",
+      "notes": "Someone asks for a red button. Here's what we have.",
+      "html": "<div class=\"stage\">\n  <nys-button label=\"Submit application\" variant=\"filled\"></nys-button>\n  <nys-button label=\"Save draft\" variant=\"outline\"></nys-button>\n</div>",
+      "css": "",
+      "js": ""
+    },
+    {
+      "id": "04-button-override",
+      "group": "2. Make it configurable",
+      "title": "Add the sanctioned override",
+      "notes": "Three custom properties, all documented on the component. Color only — nothing else is exposed. Add the class to the first button in the HTML, then type the CSS.",
+      "html": "<div class=\"stage\">\n  <nys-button class=\"danger\" label=\"Delete application\" variant=\"filled\"></nys-button>\n  <nys-button label=\"Save draft\" variant=\"outline\"></nys-button>\n</div>",
+      "css": "/* Documented on nys-button. Color is the only thing you can change. */\n.danger {\n  --nys-button-background-color: var(--nys-color-danger);\n  --nys-button-background-color--hover: var(--nys-color-danger-strong);\n  --nys-button-background-color--active: var(--nys-color-danger-strongest);\n}",
+      "js": ""
+    },
+    {
+      "id": "05-system-change-flows-through",
+      "group": "2. Make it configurable",
+      "title": "Roll out a system change",
+      "notes": "Simulate next quarter's release: change the UI font and the radius at the token level. Both buttons update. The red one stays red and still gets the new font and radius. Verify which radius token nys-button consumes before recording (see README note).",
+      "html": "<div class=\"stage\">\n  <nys-button class=\"danger\" label=\"Delete application\" variant=\"filled\"></nys-button>\n  <nys-button label=\"Save draft\" variant=\"outline\"></nys-button>\n</div>",
+      "css": ".danger {\n  --nys-button-background-color: var(--nys-color-danger);\n  --nys-button-background-color--hover: var(--nys-color-danger-strong);\n  --nys-button-background-color--active: var(--nys-color-danger-strongest);\n}\n\n/* Pretend this is the next release of @nysds/styles. */\n:root {\n  --nys-font-family-ui: var(--nys-font-family-serif);\n  --nys-radius-xl: var(--nys-radius-round);\n}",
+      "js": ""
+    },
+    {
+      "id": "06-guidance-tokens",
+      "group": "3. Write it down and hope",
+      "title": "Guidance, not enforcement",
+      "notes": "Two cards. Same visual result. One uses tokens and will track the system; one is hard-coded and won't. Nothing in the system stops the second one. Toggle the :root change from step 5 back on to show the difference.",
+      "html": "<div class=\"stage\">\n  <article class=\"card card--tokens\">\n    <h3>Uses tokens</h3>\n    <p>Spacing, color, radius, and type all reference the system.</p>\n  </article>\n  <article class=\"card card--hardcoded\">\n    <h3>Hard-coded</h3>\n    <p>Looks identical today. Drifts on the next release.</p>\n  </article>\n</div>",
+      "css": ".card { width: 20rem; }\n\n/* What the guidance asks for */\n.card--tokens {\n  padding: var(--nys-space-400);\n  border: var(--nys-border-width-sm) solid var(--nys-color-neutral-300);\n  border-radius: var(--nys-radius-xl);\n  background: var(--nys-color-surface);\n  font-family: var(--nys-font-family-ui);\n}\n\n/* What the guidance can't prevent */\n.card--hardcoded {\n  padding: 24px;\n  border: 1px solid #ccc;\n  border-radius: 12px;\n  background: #fff;\n  font-family: \"Proxima Nova\", Arial, sans-serif;\n}\n\n/* Uncomment to \"release\" a system change:\n:root {\n  --nys-font-family-ui: var(--nys-font-family-serif);\n  --nys-radius-xl: var(--nys-radius-round);\n}\n*/",
+      "js": ""
+    },
+    {
+      "id": "07-ai-three-levels",
+      "group": "The AI part",
+      "title": "Three levels, one agent",
+      "notes": "Split view. Each column is a level; the caption is the one-liner from the script. The JS just cycles which caption is highlighted if you press a key, so you can walk them one at a time.",
+      "html": "<div class=\"levels\">\n  <section>\n    <nys-globalheader appName=\"Locked\" agencyName=\"Zero decisions\" nysLogo></nys-globalheader>\n    <p class=\"caption\">Uses it. No decisions.</p>\n  </section>\n  <section>\n    <div class=\"stage\">\n      <nys-button label=\"Default\" variant=\"filled\"></nys-button>\n      <nys-button class=\"danger\" label=\"Override\" variant=\"filled\"></nys-button>\n    </div>\n    <p class=\"caption\">Defaults, with guarded exits.</p>\n  </section>\n  <section>\n    <pre class=\"doc\">## Using tokens\n\nPrefer <code>var(--nys-*)</code> over\nhard-coded values so your UI\ntracks system updates.</pre>\n    <p class=\"caption\">Hopefully it read the docs.</p>\n  </section>\n</div>",
+      "css": ".levels { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--nys-space-600); align-items: start; }\n.levels section { display: grid; gap: var(--nys-space-300); }\n.caption { font: var(--nys-font-weight-semibold) var(--nys-font-size-ui-lg) var(--nys-font-family-ui); color: var(--nys-color-text); margin: 0; }\n.caption.is-dim { opacity: 0.35; }\n.doc { padding: var(--nys-space-400); border: var(--nys-border-width-sm) solid var(--nys-color-neutral-300); border-radius: var(--nys-radius-xl); background: var(--nys-color-surface); font-family: var(--nys-font-family-monospace); font-size: var(--nys-font-size-sm); margin: 0; }\n.danger {\n  --nys-button-background-color: var(--nys-color-danger);\n  --nys-button-background-color--hover: var(--nys-color-danger-strong);\n  --nys-button-background-color--active: var(--nys-color-danger-strongest);\n}",
+      "js": "// Press Space to reveal captions one at a time.\nconst captions = [...document.querySelectorAll('.caption')];\ncaptions.forEach(c => c.classList.add('is-dim'));\nlet i = 0;\ndocument.addEventListener('keydown', (e) => {\n  if (e.code !== 'Space') return;\n  e.preventDefault();\n  if (captions[i]) captions[i].classList.remove('is-dim');\n  i += 1;\n});"
+    },
+    {
+      "id": "08-spectrum",
+      "group": "Close",
+      "title": "The spectrum",
+      "notes": "Static closing frame. 'How strict should this component be' — not the system.",
+      "html": "<figure class=\"spectrum\">\n  <div class=\"line\"></div>\n  <ol>\n    <li style=\"--x: 8%\"><span>Locked</span><small>nys-globalheader</small></li>\n    <li style=\"--x: 50%\"><span>Configurable</span><small>nys-button + overrides</small></li>\n    <li style=\"--x: 92%\"><span>Guided</span><small>tokens + guidance</small></li>\n  </ol>\n  <figcaption>Pick a spot per component, not per system.</figcaption>\n</figure>",
+      "css": ".spectrum { position: relative; margin: 4rem 0 0; padding: 0 2rem; font-family: var(--nys-font-family-ui); }\n.line { height: var(--nys-border-width-md); background: var(--nys-color-neutral-400); border-radius: var(--nys-radius-round); }\n.spectrum ol { list-style: none; margin: 0; padding: 0; position: relative; height: 5rem; }\n.spectrum li { position: absolute; left: var(--x); top: 0; transform: translateX(-50%); text-align: center; display: grid; gap: var(--nys-space-100); }\n.spectrum li::before { content: ''; width: 1rem; height: 1rem; border-radius: var(--nys-radius-round); background: var(--nys-color-theme); justify-self: center; margin-top: -0.6rem; }\n.spectrum span { font-weight: var(--nys-font-weight-bold); font-size: var(--nys-font-size-ui-xl); }\n.spectrum small { color: var(--nys-color-text-weak); font-family: var(--nys-font-family-monospace); }\nfigcaption { margin-top: var(--nys-space-800); text-align: center; font-size: var(--nys-font-size-h4); color: var(--nys-color-text); }",
+      "js": ""
+    }
+  ]
+}

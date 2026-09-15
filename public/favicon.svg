@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="NYSDS Playground">
+  <rect width="32" height="32" rx="6" fill="#154973" />
+  <path
+    d="M11.8 9.6 7 16l4.8 6.4"
+    fill="none"
+    stroke="#ffffff"
+    stroke-width="2.6"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+  <path
+    d="M20.2 9.6 25 16l-4.8 6.4"
+    fill="none"
+    stroke="#ffffff"
+    stroke-width="2.6"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+  <path d="M17.6 8.4 14.4 23.6" fill="none" stroke="#f5a623" stroke-width="2.6" stroke-linecap="round" />
+</svg>

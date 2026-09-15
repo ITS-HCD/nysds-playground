@@ -1,0 +1,7 @@
+{
+  "title": "Utility classes",
+  "description": "A layout built only with NYSDS utility classes: grid, flex, spacing, and typography, with responsive prefixes.",
+  "html": "<div class=\"nys-grid-container\">\n  <div class=\"nys-grid-row nys-grid-gap-300\">\n    <div class=\"nys-grid-col-12 nys-tablet:nys-grid-col-6 nys-desktop:nys-grid-col-4 nys-padding-300\">\n      <p class=\"nys-font-h4\">Stacks on mobile</p>\n      <p class=\"nys-font-body-sm\">This column is full width on mobile, half width on tablet, and a third on desktop.</p>\n    </div>\n    <div class=\"nys-grid-col-12 nys-tablet:nys-grid-col-6 nys-desktop:nys-grid-col-4 nys-padding-300\">\n      <p class=\"nys-font-h4\">Responsive by design</p>\n      <p class=\"nys-font-body-sm\">Prefix any utility class with a breakpoint, such as nys-desktop, to change it at that size.</p>\n    </div>\n    <div class=\"nys-grid-col-12 nys-desktop:nys-grid-col-4 nys-padding-300\">\n      <p class=\"nys-font-h4\">No custom CSS</p>\n      <p class=\"nys-font-body-sm\">Every rule on this page comes from a utility class, not a stylesheet.</p>\n    </div>\n  </div>\n\n  <div class=\"nys-display-flex nys-flex-column nys-tablet:nys-flex-row nys-flex-justify-space-between nys-flex-gap-200 nys-margin-t-400\">\n    <span class=\"nys-font-ui-md\">Stacks on mobile, row on tablet</span>\n    <span class=\"nys-font-ui-md\">Flex utilities control direction and gap</span>\n  </div>\n</div>\n",
+  "css": "",
+  "js": ""
+}

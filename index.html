@@ -1,0 +1,178 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" href="./favicon.svg" type="image/svg+xml" />
+    <meta
+      name="description"
+      content="Edit HTML, CSS, and JavaScript against the New York State Design System and share the result with a link."
+    />
+    <title>NYSDS Playground</title>
+  </head>
+  <body>
+    <div id="app" class="app">
+      <header class="toolbar" id="toolbar">
+        <h1 class="toolbar__title" id="app-title">NYSDS Playground</h1>
+
+        <div class="toolbar__controls">
+          <nys-select
+            id="deck-select"
+            class="toolbar__select"
+            label="Deck"
+            width="md"
+            hidden
+          ></nys-select>
+
+          <nys-select
+            id="preset-select"
+            class="toolbar__select"
+            label="Example"
+            width="md"
+          ></nys-select>
+
+          <nys-select
+            id="version-select"
+            class="toolbar__select"
+            label="Version"
+            width="md"
+          ></nys-select>
+
+          <nys-toggle
+            id="prerelease-toggle"
+            class="toolbar__toggle"
+            size="sm"
+            label="Prereleases"
+            name="prereleases"
+            value="on"
+          ></nys-toggle>
+        </div>
+
+        <div class="toolbar__actions">
+          <nys-button id="share-button" size="sm" label="Share" prefixIcon="link"></nys-button>
+          <nys-button
+            id="export-button"
+            size="sm"
+            variant="outline"
+            label="Export preset"
+            prefixIcon="download"
+          ></nys-button>
+          <nys-button
+            id="reset-button"
+            size="sm"
+            variant="outline"
+            label="Reset"
+            prefixIcon="restart_alt"
+          ></nys-button>
+          <nys-button
+            id="present-button"
+            size="sm"
+            variant="ghost"
+            label="Present"
+            prefixIcon="slideshow"
+          ></nys-button>
+        </div>
+      </header>
+
+      <main class="split" id="split">
+        <section class="split__pane split__pane--editors" id="editors" aria-label="Code editors">
+          <playground-tab-bar
+            project="project"
+            editor="file-editor"
+            class="editors__tabs"
+          ></playground-tab-bar>
+          <playground-file-editor
+            id="file-editor"
+            project="project"
+            line-numbers
+            line-wrapping
+            class="editors__editor"
+          ></playground-file-editor>
+        </section>
+
+        <div
+          class="split__divider"
+          id="divider"
+          role="separator"
+          aria-orientation="vertical"
+          aria-label="Resize the editors and the preview"
+          tabindex="0"
+        ></div>
+
+        <section class="split__pane split__pane--preview" aria-label="Live preview">
+          <playground-preview
+            id="preview"
+            project="project"
+            html-file="index.html"
+            class="preview"
+          ></playground-preview>
+        </section>
+      </main>
+
+      <div class="notes" id="notes" role="dialog" aria-labelledby="notes-heading" hidden>
+        <h2 class="notes__heading" id="notes-heading">Presenter notes</h2>
+        <div class="notes__body" id="notes-body"></div>
+        <nys-button
+          id="notes-close"
+          size="sm"
+          variant="ghost"
+          label="Close notes"
+          prefixIcon="close"
+        ></nys-button>
+      </div>
+
+      <footer class="caption" id="caption" tabindex="-1" hidden>
+        <nys-button
+          inverted
+          id="prev-button"
+          size="sm"
+          variant="outline"
+          circle
+          icon="chevron_left"
+          label="Previous slide"
+        ></nys-button>
+        <div class="caption__text">
+          <p class="caption__title">
+            <span class="caption__group" id="caption-group"></span>
+            <span id="caption-title"></span>
+          </p>
+          <p class="caption__description" id="caption-description"></p>
+        </div>
+        <p class="caption__count" id="caption-count"></p>
+        <nys-button
+          inverted
+          id="reset-slide-button"
+          size="sm"
+          variant="outline"
+          label="Reset slide"
+          prefixIcon="restart_alt"
+        ></nys-button>
+        <nys-button
+          inverted
+          id="notes-button"
+          size="sm"
+          variant="ghost"
+          label="Notes"
+          prefixIcon="sticky_note_2"
+        ></nys-button>
+        <nys-button
+          inverted
+          id="next-button"
+          size="sm"
+          variant="outline"
+          circle
+          icon="chevron_right"
+          label="Next slide"
+        ></nys-button>
+      </footer>
+
+      <p class="present-hint" id="present-hint" hidden></p>
+
+      <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+    </div>
+
+    <playground-project id="project"></playground-project>
+
+    <script type="module" src="./src/main.ts"></script>
+  </body>
+</html>

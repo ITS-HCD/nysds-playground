@@ -1,0 +1,7 @@
+{
+  "title": "Accordion",
+  "description": "A bordered accordion with several items, expanding one at a time.",
+  "html": "<nys-accordion bordered singleSelect>\n  <nys-accordionitem heading=\"How do I apply?\" expanded>\n    <p>Visit ny.gov and complete the online application.</p>\n  </nys-accordionitem>\n  <nys-accordionitem heading=\"What documents do I need?\">\n    <p>You will need a valid ID and proof of residency.</p>\n  </nys-accordionitem>\n  <nys-accordionitem heading=\"How long does review take?\">\n    <p>Most applications are reviewed within 10 business days.</p>\n  </nys-accordionitem>\n</nys-accordion>\n",
+  "css": "",
+  "js": ""
+}

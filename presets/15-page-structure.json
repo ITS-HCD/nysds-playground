@@ -1,0 +1,7 @@
+{
+  "title": "Page structure",
+  "description": "The required NYSDS page skeleton: skip navigation, universal header, agency header, main content, back to top, and footers.",
+  "html": "<nys-skipnav></nys-skipnav>\n\n<nys-unavheader hideSearch hideTranslate></nys-unavheader>\n\n<nys-globalheader appName=\"Sample Application\" agencyName=\"Office of Information Technology Services\" homepageLink=\"/\">\n  <ul>\n    <li><a href=\"/services\">Services</a></li>\n    <li><a href=\"/help\">Help center</a></li>\n    <li><a href=\"/about\">About us</a></li>\n  </ul>\n</nys-globalheader>\n\n<main id=\"main-content\">\n  <div class=\"nys-grid-container nys-padding-y-400\">\n    <h1>Page title</h1>\n    <p>This is the main content area. Every page places its primary content inside a single main landmark.</p>\n  </div>\n</main>\n\n<nys-backtotop visible></nys-backtotop>\n\n<footer>\n  <nys-globalfooter agencyName=\"Office of Information Technology Services\" homepageLink=\"/\">\n    <ul>\n      <li><a href=\"/accessibility\">Accessibility</a></li>\n      <li><a href=\"/privacy\">Privacy policy</a></li>\n    </ul>\n  </nys-globalfooter>\n  <nys-unavfooter></nys-unavfooter>\n</footer>\n",
+  "css": "",
+  "js": ""
+}
