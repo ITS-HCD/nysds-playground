@@ -7,8 +7,17 @@ import './app.css';
 
 import type {PlaygroundProject} from 'playground-elements/playground-project.js';
 
-import type {Deck, Preset} from './decks';
-import {DECKS, LIBRARY_DECK_ID, firstPreset, getDeck, getPreset} from './decks';
+import type {Slide, StoredDeck} from './deck-model';
+import {
+  BLANK_SLIDE_HTML,
+  getSlide,
+  makeSlide,
+  nextSlideId,
+  slideIndex,
+  toDeckFile,
+} from './deck-model';
+import * as store from './deck-store';
+import {HomeView} from './home';
 import {PLAYGROUND_CONFIG, componentsUrl, stylesUrl} from './playground.config';
 import {PlaygroundHost} from './playground';
 import {Presentation} from './present';
@@ -16,11 +25,9 @@ import type {PlaygroundState} from './state';
 import {
   debounce,
   deckUrl,
+  encodeState,
   isPresentMode,
-  presentUrl,
-  readDeckId,
   readLocation,
-  slugify,
   writeCodeHash,
   writePresetHash,
 } from './state';
@@ -53,19 +60,31 @@ const HASH_DEBOUNCE_MS = 300;
 /** How long a toast stays on screen, in milliseconds. */
 const TOAST_DURATION_MS = 2600;
 
-/** The state used when a deck turns out to be empty. */
-const EMPTY_PRESET: Preset = {
-  id: 'blank',
-  title: 'Blank',
-  description: '',
-  group: '',
-  notes: '',
-  html: '<nys-button label="Save"></nys-button>\n',
-  css: '',
-  js: '',
-  version: 'latest',
-  editors: null,
-};
+/** How long to wait after a keystroke before writing to the store. */
+const SAVE_DEBOUNCE_MS = 500;
+
+/** The deck the scratch pad pretends to be, so the slide bar still works. */
+function scratchDeck(state?: PlaygroundState): StoredDeck {
+  const stamp = new Date(0).toISOString();
+  return {
+    id: '',
+    title: 'Scratch pad',
+    description: '',
+    baseCss: '',
+    slides: [
+      makeSlide({
+        id: 'scratch',
+        title: 'Scratch pad',
+        html: state?.html ?? BLANK_SLIDE_HTML,
+        css: state?.css ?? '',
+        js: state?.js ?? '',
+        version: state?.version ?? 'latest',
+      }),
+    ],
+    createdAt: stamp,
+    updatedAt: stamp,
+  };
+}
 
 /** The three editable files of one slide. */
 interface SlideEdits {
@@ -77,7 +96,6 @@ interface SlideEdits {
 /** Ties the toolbar, the editors, and the URL together. */
 class PlaygroundApp {
   private readonly host: PlaygroundHost;
-  private readonly deckSelect: HTMLElement;
   private readonly presetSelect: HTMLElement;
   private readonly versionSelect: HTMLElement;
   private readonly prereleaseToggle: HTMLElement & {checked?: boolean};
@@ -89,8 +107,12 @@ class PlaygroundApp {
   private readonly buildButton: HTMLElement;
   private readonly panes: EditorPanes;
   private readonly toast: HTMLElement;
-  private readonly deck: Deck;
-  private readonly present: boolean;
+  private readonly savedIndicator: HTMLElement;
+  private deck: StoredDeck;
+  /** True when the deck came from the store rather than the scratch pad. */
+  private readonly hasDeck: boolean;
+  private present: boolean;
+  private savedTimer: number | undefined;
 
   /**
    * This session's edits, keyed by slide id.
@@ -112,9 +134,11 @@ class PlaygroundApp {
 
   private readonly syncHash = debounce(() => this.writeHash(), HASH_DEBOUNCE_MS);
 
+  private readonly saveSoon = debounce(() => void this.persist(), SAVE_DEBOUNCE_MS);
+
   constructor(
     project: PlaygroundProject,
-    deck: Deck,
+    deck: StoredDeck,
     initial: PlaygroundState,
     presetId: string | null,
     present: boolean,
@@ -122,11 +146,11 @@ class PlaygroundApp {
   ) {
     this.panes = panes;
     this.deck = deck;
+    this.hasDeck = deck.id !== '';
     this.present = present;
     this.version = initial.version;
     this.activePresetId = presetId;
     this.modified = presetId === null;
-    this.deckSelect = required('#deck-select');
     this.presetSelect = required('#preset-select');
     this.versionSelect = required('#version-select');
     this.prereleaseToggle = required('#prerelease-toggle');
@@ -136,6 +160,7 @@ class PlaygroundApp {
     this.updateModeSelect = required('#update-mode-select');
     this.settingsModal = required('#settings-modal');
     this.buildButton = required('#build-button');
+    this.savedIndicator = required('#saved-indicator');
     this.toast = required('#toast');
     this.host = new PlaygroundHost(project, initial, deck.baseCss);
     this.host.setUpdateMode(this.updateMode);
@@ -145,7 +170,8 @@ class PlaygroundApp {
 
   /** Renders the toolbar, binds every control, and sets the page title. */
   async start(): Promise<void> {
-    this.renderDeckOptions();
+    document.querySelector('#app')?.classList.toggle('app--deck', this.hasDeck);
+    this.renderDeckChrome();
     this.renderPresetOptions();
     this.syncSettingsControls();
     this.bindToolbar();
@@ -161,7 +187,7 @@ class PlaygroundApp {
   }
 
   /** The deck being presented. */
-  getDeck(): Deck {
+  getDeck(): StoredDeck {
     return this.deck;
   }
 
@@ -171,7 +197,7 @@ class PlaygroundApp {
   }
 
   /** Loads a slide, restoring any edits made to it earlier in the session. */
-  loadPreset(preset: Preset): void {
+  loadPreset(preset: Slide): void {
     this.activePresetId = preset.id;
     const remembered = this.edits.get(preset.id);
     this.modified = remembered !== undefined;
@@ -192,11 +218,12 @@ class PlaygroundApp {
     this.syncHash.cancel();
     writePresetHash(preset.id);
     this.updateTitle();
+    this.presentation?.refresh();
   }
 
   /** Expands the columns a slide asks for and collapses the rest. */
   private applyPresetPanes(presetId: string | null): void {
-    const preset = getPreset(this.deck, presetId);
+    const preset = getSlide(this.deck, presetId);
     if (preset) {
       this.panes.applyCollapsed(collapsedForPreset(preset.editors));
     }
@@ -244,6 +271,47 @@ class PlaygroundApp {
     });
 
     bindClick('#reset-settings-button', () => this.resetSettings());
+
+    bindClick('#rename-deck-button', () => this.openDeckSettings());
+    bindClick('#deck-modal-done', () => {
+      required<HTMLElement & {open?: boolean}>('#deck-modal').open = false;
+      void this.applyDeckSettings();
+    });
+
+    bindClick('#add-slide-button', () => void this.addSlide());
+    bindClick('#slide-settings-button', () => this.openSlideSettings());
+    bindClick('#move-slide-back-button', () => void this.moveSlide(-1));
+    bindClick('#move-slide-forward-button', () => void this.moveSlide(1));
+    bindClick('#duplicate-slide-button', () => void this.duplicateSlide());
+    bindClick('#delete-slide-button', () => this.deleteSlide());
+    bindClick('#slide-modal-done', () => {
+      required<HTMLElement & {open?: boolean}>('#slide-modal').open = false;
+      void this.applySlideSettings();
+    });
+
+    bindClick('#share-deck-link', () => {
+      required<HTMLElement & {open?: boolean}>('#share-modal').open = false;
+      void this.copyDeckLink();
+    });
+    bindClick('#share-code-link', () => {
+      required<HTMLElement & {open?: boolean}>('#share-modal').open = false;
+      void this.copyStandaloneLink();
+    });
+    bindClick('#share-modal-done', () => {
+      required<HTMLElement & {open?: boolean}>('#share-modal').open = false;
+    });
+
+    bindClick('#save-as-deck-button', () => void this.saveAsDeck());
+    bindClick('#home-button', () => {
+      void this.flushSave().then(() => {
+        window.location.href = './';
+      });
+    });
+
+    // A reload or a closed tab must not lose the last keystrokes.
+    window.addEventListener('beforeunload', () => {
+      void this.flushSave();
+    });
   }
 
   private setTheme(theme: EditorTheme): void {
@@ -298,7 +366,7 @@ class PlaygroundApp {
 
   /** Discards this session's edits to the current slide. */
   resetSlide(): void {
-    const preset = getPreset(this.deck, this.activePresetId) ?? firstPreset(this.deck);
+    const preset = getSlide(this.deck, this.activePresetId) ?? this.deck.slides[0];
     if (!preset) {
       return;
     }
@@ -306,9 +374,282 @@ class PlaygroundApp {
     this.loadPreset(preset);
   }
 
-  /** Attaches presentation mode. */
+  /** Attaches the slide bar controller. */
   attachPresentation(presentation: Presentation): void {
     this.presentation = presentation;
+  }
+
+  /**
+   * Records whether the playground is presenting.
+   *
+   * Edits made while presenting are a demo, not a change to the deck, so
+   * leaving presentation mode drops them and puts the saved slide back. Going
+   * the other way commits anything still waiting to be written.
+   */
+  setPresent(present: boolean): void {
+    const wasPresenting = this.present;
+    if (present && !wasPresenting) {
+      void this.flushSave();
+    }
+    this.present = present;
+    if (!present && wasPresenting && this.hasDeck) {
+      this.edits.clear();
+      const slide = getSlide(this.deck, this.activePresetId);
+      if (slide) {
+        this.loadPreset(slide);
+      }
+    }
+    this.renderPresetOptions();
+    this.updateTitle();
+    this.syncHash.cancel();
+    this.writeHash();
+  }
+
+  /* Deck editing ------------------------------------------------------- */
+
+  /**
+   * Writes the current slide back to the store.
+   *
+   * Presentation mode never reaches this: edits made while presenting stay in
+   * the session so a demo cannot damage the deck.
+   */
+  private async persist(): Promise<void> {
+    if (!this.hasDeck || this.present || !this.activePresetId) {
+      return;
+    }
+    const index = slideIndex(this.deck, this.activePresetId);
+    if (index === -1) {
+      return;
+    }
+    const state = this.host.getState();
+    const slides = [...this.deck.slides];
+    slides[index] = {...slides[index]!, html: state.html, css: state.css, js: state.js};
+    this.deck = await store.saveDeck({...this.deck, slides});
+    this.showSaved();
+  }
+
+  /** Writes anything pending right away. */
+  async flushSave(): Promise<void> {
+    this.saveSoon.cancel();
+    await this.persist();
+  }
+
+  /** Replaces the deck in the store and redraws everything that shows it. */
+  private async updateDeck(deck: StoredDeck): Promise<void> {
+    this.deck = await store.saveDeck(deck);
+    this.renderDeckChrome();
+    this.renderPresetOptions();
+    this.updateTitle();
+    this.presentation?.refresh();
+    this.showSaved();
+  }
+
+  private showSaved(): void {
+    this.savedIndicator.textContent = 'Saved';
+    this.savedIndicator.classList.add('toolbar__saved--on');
+    if (this.savedTimer !== undefined) {
+      window.clearTimeout(this.savedTimer);
+    }
+    this.savedTimer = window.setTimeout(() => {
+      this.savedIndicator.classList.remove('toolbar__saved--on');
+    }, 1400);
+  }
+
+  /** Adds a slide after the current one and opens its settings. */
+  private async addSlide(): Promise<void> {
+    await this.flushSave();
+    const title = `Slide ${this.deck.slides.length + 1}`;
+    const slide = makeSlide({
+      id: nextSlideId(title, this.deck.slides),
+      title,
+      html: BLANK_SLIDE_HTML,
+    });
+    const at = slideIndex(this.deck, this.activePresetId);
+    const slides = [...this.deck.slides];
+    slides.splice(at === -1 ? slides.length : at + 1, 0, slide);
+    await this.updateDeck({...this.deck, slides});
+    this.loadPreset(slide);
+    this.openSlideSettings();
+  }
+
+  /** Moves the current slide one place earlier or later. */
+  private async moveSlide(delta: number): Promise<void> {
+    await this.flushSave();
+    const from = slideIndex(this.deck, this.activePresetId);
+    const to = from + delta;
+    if (from === -1 || to < 0 || to >= this.deck.slides.length) {
+      return;
+    }
+    const slides = [...this.deck.slides];
+    const [slide] = slides.splice(from, 1);
+    slides.splice(to, 0, slide!);
+    await this.updateDeck({...this.deck, slides});
+  }
+
+  /** Copies the current slide in place. */
+  private async duplicateSlide(): Promise<void> {
+    await this.flushSave();
+    const current = getSlide(this.deck, this.activePresetId);
+    if (!current) {
+      return;
+    }
+    const title = `${current.title} copy`;
+    const copy = makeSlide({...current, id: nextSlideId(title, this.deck.slides), title});
+    const slides = [...this.deck.slides];
+    slides.splice(slideIndex(this.deck, current.id) + 1, 0, copy);
+    await this.updateDeck({...this.deck, slides});
+    this.loadPreset(copy);
+  }
+
+  /** Removes the current slide. A deck always keeps at least one. */
+  private deleteSlide(): void {
+    const current = getSlide(this.deck, this.activePresetId);
+    if (!current) {
+      return;
+    }
+    if (this.deck.slides.length === 1) {
+      this.showToast('warning', 'Keep one slide', 'A deck needs at least one slide.');
+      return;
+    }
+    confirmAction(`Delete the slide "${current.title}"? This cannot be undone.`, async () => {
+      this.saveSoon.cancel();
+      const index = slideIndex(this.deck, current.id);
+      const slides = this.deck.slides.filter((slide) => slide.id !== current.id);
+      // Move to the survivor first so nothing redraws against a slide that is
+      // no longer in the deck.
+      const next = slides[Math.min(index, slides.length - 1)];
+      this.activePresetId = next?.id ?? null;
+      await this.updateDeck({...this.deck, slides});
+      if (next) {
+        this.loadPreset(next);
+      }
+      this.presentation?.refresh();
+    });
+  }
+
+  /** Opens the deck settings modal, which also renames the deck. */
+  openDeckSettings(): void {
+    const modal = required<HTMLElement & {open?: boolean}>('#deck-modal');
+    setFieldValue('#deck-title-input', this.deck.title);
+    setFieldValue('#deck-description-input', this.deck.description);
+    setFieldValue('#deck-base-css-input', this.deck.baseCss);
+    modal.open = true;
+  }
+
+  private async applyDeckSettings(): Promise<void> {
+    const title = fieldValue('#deck-title-input').trim() || this.deck.title;
+    await this.updateDeck({
+      ...this.deck,
+      title,
+      description: fieldValue('#deck-description-input'),
+      baseCss: fieldValue('#deck-base-css-input'),
+    });
+    // The base CSS lives in the hidden head, so the preview has to be rebuilt.
+    this.host.load(this.currentState(), this.deck.baseCss);
+  }
+
+  /** Opens the inspector for the current slide. */
+  private openSlideSettings(): void {
+    const slide = getSlide(this.deck, this.activePresetId);
+    if (!slide) {
+      return;
+    }
+    setFieldValue('#slide-title-input', slide.title);
+    setFieldValue('#slide-group-input', slide.group);
+    setFieldValue('#slide-description-input', slide.description);
+    setFieldValue('#slide-notes-input', slide.notes);
+    setFieldValue('#slide-version-input', slide.version);
+    for (const pane of ['html', 'css', 'js'] as const) {
+      const box = required<HTMLElement & {checked?: boolean}>(`#slide-editor-${pane}`);
+      box.checked = slide.editors?.includes(pane) ?? false;
+    }
+    required<HTMLElement & {open?: boolean}>('#slide-modal').open = true;
+  }
+
+  private async applySlideSettings(): Promise<void> {
+    const index = slideIndex(this.deck, this.activePresetId);
+    const slide = this.deck.slides[index];
+    if (!slide) {
+      return;
+    }
+    const chosen = (['html', 'css', 'js'] as const).filter(
+      (pane) =>
+        required<HTMLElement & {checked?: boolean}>(`#slide-editor-${pane}`).checked === true,
+    );
+    const slides = [...this.deck.slides];
+    slides[index] = {
+      ...slide,
+      title: fieldValue('#slide-title-input').trim() || slide.title,
+      group: fieldValue('#slide-group-input'),
+      description: fieldValue('#slide-description-input'),
+      notes: fieldValue('#slide-notes-input'),
+      version: fieldValue('#slide-version-input').trim() || 'latest',
+      editors: chosen.length > 0 ? [...chosen] : null,
+    };
+    await this.updateDeck({...this.deck, slides});
+  }
+
+  /** Downloads the deck as a JSON file. */
+  private async exportDeck(): Promise<void> {
+    await this.flushSave();
+    download(`${this.deck.id || 'deck'}.json`, `${JSON.stringify(toDeckFile(this.deck), null, 2)}\n`);
+    this.showToast('success', 'Deck exported', 'Import the file to open it in another browser.');
+  }
+
+  /** Turns the scratch pad into a deck of its own. */
+  private async saveAsDeck(): Promise<void> {
+    const state = this.currentState();
+    const deck = await store.createDeck('Scratch deck');
+    const slides = [
+      makeSlide({
+        ...deck.slides[0]!,
+        html: state.html,
+        css: state.css,
+        js: state.js,
+        version: state.version,
+      }),
+    ];
+    const saved = await store.saveDeck({...deck, slides});
+    window.location.href = deckUrl(saved.id, slides[0]!.id, '');
+  }
+
+  /* Share --------------------------------------------------------------- */
+
+  private openShare(): void {
+    this.syncHash.cancel();
+    if (!this.hasDeck) {
+      void this.copyStandaloneLink();
+      return;
+    }
+    required<HTMLElement & {open?: boolean}>('#share-modal').open = true;
+  }
+
+  private async copyDeckLink(): Promise<void> {
+    await this.flushSave();
+    const url = deckUrl(this.deck.id, this.activePresetId ?? '', '');
+    await this.copy(url, 'Deck link copied', 'It opens this slide in this browser.');
+  }
+
+  private async copyStandaloneLink(): Promise<void> {
+    const state = this.currentState();
+    const url = new URL(window.location.href);
+    url.searchParams.delete('deck');
+    url.searchParams.delete('present');
+    url.hash = `#code=${encodeState(state)}`;
+    await this.copy(url.toString(), 'Standalone link copied', 'It carries the code, so it opens anywhere.');
+  }
+
+  private async copy(text: string, heading: string, detail: string): Promise<void> {
+    try {
+      await navigator.clipboard.writeText(text);
+      this.showToast('success', heading, detail);
+    } catch {
+      this.showToast(
+        'warning',
+        'Copy the link yourself',
+        'The browser blocked clipboard access. Copy the URL from the address bar.',
+      );
+    }
   }
 
   private handleEdit(): void {
@@ -322,15 +663,22 @@ class PlaygroundApp {
       // so the link has to carry the code rather than a preset id.
       this.renderPresetOptions();
       this.updateTitle();
+      this.saveSoon();
     }
     this.syncHash();
     this.presentation?.refresh();
   }
 
   private writeHash(): void {
-    // While presenting, the readable `#preset=` link stays put even after an
-    // edit, so a refresh returns to the same slide.
-    if (this.activePresetId && (this.present || !this.modified)) {
+    // The scratch pad has nowhere to save, so its URL has to carry the code.
+    if (!this.hasDeck) {
+      writeCodeHash(this.currentState());
+      return;
+    }
+    // A deck keeps the readable `#preset=` link: edits are saved to the deck,
+    // so the slide id still describes what is on screen. The same holds while
+    // presenting.
+    if (this.activePresetId) {
       writePresetHash(this.activePresetId);
       return;
     }
@@ -342,29 +690,21 @@ class PlaygroundApp {
   }
 
   private updateTitle(): void {
-    const preset = this.customCode() ? undefined : getPreset(this.deck, this.activePresetId);
+    const preset = this.customCode() ? undefined : getSlide(this.deck, this.activePresetId);
     document.title = preset
-      ? `${preset.title} · ${PLAYGROUND_CONFIG.title}`
+      ? `${preset.title} · ${this.deck.title}`
       : PLAYGROUND_CONFIG.title;
   }
 
   /** Whether the toolbar should present the session as edited code. */
   private customCode(): boolean {
-    return this.modified && !this.present;
+    return this.modified && !this.present && !this.hasDeck;
   }
 
   /* Toolbar ------------------------------------------------------------ */
 
-  private renderDeckOptions(): void {
-    if (DECKS.length < 2) {
-      this.deckSelect.hidden = true;
-      return;
-    }
-    this.deckSelect.hidden = false;
-    this.deckSelect.innerHTML = DECKS.map((deck) =>
-      option(deck.id, deck.title, deck.id === this.deck.id),
-    ).join('');
-    this.setSelectValue(this.deckSelect, this.deck.id);
+  private renderDeckChrome(): void {
+    required('#deck-title').textContent = this.deck.title;
   }
 
   private renderPresetOptions(): void {
@@ -374,7 +714,7 @@ class PlaygroundApp {
     }
     // Group consecutive slides that share a `group` label.
     let openGroup: string | null = null;
-    for (const preset of this.deck.presets) {
+    for (const preset of this.deck.slides) {
       const group = preset.group;
       if (group !== openGroup) {
         if (openGroup) {
@@ -423,25 +763,14 @@ class PlaygroundApp {
   }
 
   private bindToolbar(): void {
-    this.deckSelect.addEventListener('nys-change', (event) => {
-      const value = detailValue(event);
-      if (!value || value === this.deck.id) {
-        return;
-      }
-      const next = getDeck(value);
-      const slide = firstPreset(next);
-      window.location.href = deckUrl(next.id, slide?.id ?? '', LIBRARY_DECK_ID);
-    });
-
     this.presetSelect.addEventListener('nys-change', (event) => {
       const value = detailValue(event);
       if (!value || value === '__custom__') {
         return;
       }
-      const preset = getPreset(this.deck, value);
+      const preset = getSlide(this.deck, value);
       if (preset) {
         this.loadPreset(preset);
-        this.presentation?.refresh();
       }
     });
 
@@ -467,60 +796,12 @@ class PlaygroundApp {
       void this.renderVersionOptions();
     });
 
-    bindClick('#share-button', () => void this.share());
-    bindClick('#export-button', () => this.exportPreset());
-    bindClick('#reset-button', () => this.resetSlide());
+    bindClick('#share-button', () => this.openShare());
+    bindClick('#export-button', () => void this.exportDeck());
     bindClick('#present-button', () => {
       this.syncHash.flush();
-      window.location.href = presentUrl(true);
+      this.presentation?.enter();
     });
-  }
-
-  private async share(): Promise<void> {
-    this.syncHash.cancel();
-    // A share link always carries the code, even while presenting, so the
-    // person who opens it sees the slide as it looks right now.
-    writeCodeHash(this.currentState());
-    const url = window.location.href;
-    if (this.present && this.activePresetId) {
-      writePresetHash(this.activePresetId);
-    }
-    try {
-      await navigator.clipboard.writeText(url);
-      this.showToast('success', 'Link copied', 'The share link is on your clipboard.');
-    } catch {
-      this.showToast(
-        'warning',
-        'Copy the link yourself',
-        'The browser blocked clipboard access. Copy the URL from the address bar.',
-      );
-    }
-  }
-
-  private exportPreset(): void {
-    const state = this.currentState();
-    const preset = getPreset(this.deck, this.activePresetId);
-    const title = preset?.title ?? 'Untitled example';
-    const payload = {
-      title,
-      description: preset?.description ?? '',
-      ...(preset?.group ? {group: preset.group} : {}),
-      ...(preset?.notes ? {notes: preset.notes} : {}),
-      html: state.html,
-      css: state.css,
-      js: state.js,
-      version: state.version,
-    };
-    const blob = new Blob([`${JSON.stringify(payload, null, 2)}\n`], {
-      type: 'application/json',
-    });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `${slugify(title)}.json`;
-    link.click();
-    URL.revokeObjectURL(url);
-    this.showToast('success', 'Preset exported', 'Move the file into presets/ to keep it.');
   }
 
   private showToast(type: string, heading: string, text: string): void {
@@ -574,53 +855,84 @@ function bindClick(selector: string, handler: () => void): void {
   required(selector).addEventListener('nys-click', handler);
 }
 
+/** Reads the value of a design system text field. */
+function fieldValue(selector: string): string {
+  return required<HTMLElement & {value?: string}>(selector).value ?? '';
+}
+
+/** Writes the value of a design system text field. */
+function setFieldValue(selector: string, value: string): void {
+  required<HTMLElement & {value?: string}>(selector).value = value;
+}
+
+/**
+ * Asks before doing something destructive.
+ *
+ * It uses the design system modal rather than `window.confirm`, which blocks
+ * the page and the automated checks along with it.
+ */
+function confirmAction(message: string, onConfirm: () => void): void {
+  const modal = required<HTMLElement & {open?: boolean}>('#confirm-modal');
+  required('#confirm-message').textContent = message;
+  const ok = required('#confirm-ok');
+  const cancel = required('#confirm-cancel');
+  const close = (): void => {
+    modal.open = false;
+    ok.removeEventListener('nys-click', accept);
+    cancel.removeEventListener('nys-click', close);
+  };
+  const accept = (): void => {
+    close();
+    onConfirm();
+  };
+  ok.addEventListener('nys-click', accept);
+  cancel.addEventListener('nys-click', close);
+  modal.open = true;
+}
+
+/** Hands the browser a file to save. */
+function download(filename: string, text: string): void {
+  const blob = new Blob([text], {type: 'application/json'});
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
 /** Records a setting in the URL so a copied link opens the same way. */
 function replaceQuery(name: string, value: string): void {
   window.history.replaceState(null, '', settingUrl(name, value, window.location.href));
 }
 
 /**
- * Makes the divider draggable and remembers the ratio.
+ * Makes the drawer divider draggable and remembers its height.
  *
- * The panes sit side by side normally and stack while presenting, so the drag
- * follows the pointer's X or Y depending on the mode.
+ * The drawer sits over the bottom of the stage, so a larger pointer Y means a
+ * shorter drawer.
  */
-function setupSplitter(present: boolean): void {
-  const split = required('#split');
+function setupSplitter(): void {
+  const stage = required('#split');
   const divider = required('#divider');
-  const storageKey = present ? STORAGE_KEYS.presentEditorSize : STORAGE_KEYS.splitRatio;
-  const property = present ? '--pg-present-editor-size' : '--pg-split-ratio';
-  if (present) {
-    divider.setAttribute('aria-orientation', 'horizontal');
-    divider.setAttribute('aria-label', 'Resize the preview and the editors');
-  }
+  const MIN = 15;
+  const MAX = 85;
 
   const apply = (ratio: number): void => {
-    split.style.setProperty(property, `${ratio.toFixed(2)}%`);
+    stage.style.setProperty('--pg-drawer-size', `${ratio.toFixed(2)}%`);
   };
 
-  // While presenting the editors overlay the slide, so the drawer can cover
-  // most of it without reflowing the example.
-  const min = present ? 15 : 15;
-  const max = present ? 85 : 85;
-  const fallback = present ? DEFAULTS.presentEditorSize : DEFAULTS.splitRatio;
-  apply(readRatio(storageKey, fallback, min, max));
+  apply(readRatio(STORAGE_KEYS.drawerSize, DEFAULTS.drawerSize, MIN, MAX));
 
   let dragging = false;
-  const move = (clientX: number, clientY: number): void => {
-    const rect = split.getBoundingClientRect();
-    // While presenting the editors sit below the preview, so a larger pointer
-    // Y means a smaller editor pane.
-    const span = present ? rect.height : rect.width;
-    if (span === 0) {
+  const move = (clientY: number): void => {
+    const rect = stage.getBoundingClientRect();
+    if (rect.height === 0) {
       return;
     }
-    const fraction = present
-      ? (rect.bottom - clientY) / span
-      : (clientX - rect.left) / span;
-    const ratio = Math.min(Math.max(fraction * 100, min), max);
+    const ratio = Math.min(Math.max(((rect.bottom - clientY) / rect.height) * 100, MIN), MAX);
     apply(ratio);
-    writeRatio(storageKey, ratio);
+    writeRatio(STORAGE_KEYS.drawerSize, ratio);
   };
 
   divider.addEventListener('pointerdown', (event) => {
@@ -630,7 +942,7 @@ function setupSplitter(present: boolean): void {
   });
   divider.addEventListener('pointermove', (event) => {
     if (dragging) {
-      move(event.clientX, event.clientY);
+      move(event.clientY);
     }
   });
   const stop = (event: PointerEvent): void => {
@@ -647,25 +959,18 @@ function setupSplitter(present: boolean): void {
   divider.addEventListener('pointerup', stop);
   divider.addEventListener('pointercancel', stop);
   divider.addEventListener('keydown', (event) => {
-    const back = present ? 'ArrowDown' : 'ArrowLeft';
-    const forward = present ? 'ArrowUp' : 'ArrowRight';
-    const step = event.key === back ? -2 : event.key === forward ? 2 : 0;
+    const step = event.key === 'ArrowDown' ? -2 : event.key === 'ArrowUp' ? 2 : 0;
     if (step === 0) {
       return;
     }
     event.preventDefault();
-    const rect = split.getBoundingClientRect();
-    const dividerRect = divider.getBoundingClientRect();
-    if (present) {
-      move(0, dividerRect.top - (step / 100) * rect.height);
-    } else {
-      move(dividerRect.left + (step / 100) * rect.width, 0);
-    }
+    const rect = stage.getBoundingClientRect();
+    move(divider.getBoundingClientRect().top - (step / 100) * rect.height);
   });
 }
 
-/** Works out which deck and slide the URL asks for. */
-async function resolveInitialState(deck: Deck): Promise<{
+/** Works out which slide the URL asks for inside a deck. */
+async function resolveInitialState(deck: StoredDeck): Promise<{
   state: PlaygroundState;
   presetId: string | null;
 }> {
@@ -673,22 +978,158 @@ async function resolveInitialState(deck: Deck): Promise<{
   if (location.kind === 'code') {
     return {
       state: {...location.state, version: await resolveVersion(location.state.version)},
-      presetId: null,
+      presetId: deck.id === '' ? deck.slides[0]!.id : null,
     };
   }
-  const preset =
-    (location.kind === 'preset' ? getPreset(deck, location.id) : undefined) ??
-    firstPreset(deck) ??
-    EMPTY_PRESET;
+  const slide =
+    (location.kind === 'preset' ? getSlide(deck, location.id) : undefined) ?? deck.slides[0]!;
   return {
     state: {
-      version: await resolveVersion(preset.version),
-      html: preset.html,
-      css: preset.css,
-      js: preset.js,
+      version: await resolveVersion(slide.version),
+      html: slide.html,
+      css: slide.css,
+      js: slide.js,
     },
-    presetId: preset.id,
+    presetId: slide.id,
   };
+}
+
+/** Which view the URL asks for. */
+export type Route =
+  | {kind: 'home'}
+  | {kind: 'deck'; id: string}
+  | {kind: 'scratch'};
+
+/**
+ * Decides between the home page and the editor.
+ *
+ * A deck id opens that deck. A `#code=` or `#preset=` hash without a deck id
+ * opens the scratch pad, which is what a shared link and the CLI produce.
+ * Anything else lands on the home page.
+ */
+export function routeFor(search: string, hash: string): Route {
+  const deck = new URLSearchParams(search).get('deck');
+  if (deck) {
+    return {kind: 'deck', id: deck};
+  }
+  const value = hash.startsWith('#') ? hash.slice(1) : hash;
+  if (value.startsWith('code=') || value.startsWith('preset=')) {
+    return {kind: 'scratch'};
+  }
+  return {kind: 'home'};
+}
+
+/** Shows the "that deck is not here" message. */
+function showMissingDeck(): void {
+  document.querySelector('#app')?.classList.add('app--missing');
+  required('#deck-missing').hidden = false;
+  required('#deck-missing-home').addEventListener('nys-click', () => {
+    window.location.href = './';
+  });
+}
+
+/** Builds and shows the home view. */
+async function startHome(openSettings: () => void): Promise<void> {
+  const refresh = async (): Promise<void> => {
+    home.render(await store.listDecks());
+  };
+  const readFiles = async (files: FileList | File[]): Promise<void> => {
+    let added = 0;
+    let failure = '';
+    for (const file of Array.from(files)) {
+      const result = await store.importDeck(
+        await file.text(),
+        file.name.replace(/\.json$/i, ''),
+      );
+      if (result.ok) {
+        added += 1;
+      } else {
+        failure = result.message;
+      }
+    }
+    await refresh();
+    if (added > 0) {
+      toast('success', added === 1 ? 'Deck imported' : `${added} decks imported`, '');
+    } else {
+      toast('warning', 'Nothing imported', failure || 'That file is not a deck.');
+    }
+  };
+
+  const home = new HomeView({
+    open: (id) => {
+      window.location.href = `./?deck=${encodeURIComponent(id)}`;
+    },
+    present: (id) => {
+      window.location.href = `./?deck=${encodeURIComponent(id)}&present=1`;
+    },
+    duplicate: async (id) => {
+      await store.duplicateDeck(id);
+      await refresh();
+    },
+    exportDeck: async (id) => {
+      const json = await store.exportDeck(id);
+      if (json) {
+        download(`${id}.json`, json);
+      }
+    },
+    remove: (deck) => {
+      confirmAction(`Delete the deck "${deck.title}"? This cannot be undone.`, async () => {
+        await store.deleteDeck(deck.id);
+        await refresh();
+      });
+    },
+    create: () => {
+      const modal = required<HTMLElement & {open?: boolean}>('#deck-modal');
+      setFieldValue('#deck-title-input', '');
+      setFieldValue('#deck-description-input', '');
+      setFieldValue('#deck-base-css-input', '');
+      const done = required('#deck-modal-done');
+      const create = (): void => {
+        done.removeEventListener('nys-click', create);
+        modal.open = false;
+        const title = fieldValue('#deck-title-input').trim() || 'Untitled deck';
+        void store.createDeck(title).then((deck) => {
+          window.location.href = `./?deck=${encodeURIComponent(deck.id)}`;
+        });
+      };
+      done.addEventListener('nys-click', create);
+      modal.open = true;
+    },
+    importFiles: readFiles,
+    restoreStarters: async () => {
+      const added = await store.seedStarters();
+      await refresh();
+      toast(
+        'success',
+        added === 0 ? 'Nothing to restore' : `${added} starter deck${added === 1 ? '' : 's'} added`,
+        added === 0 ? 'Every starter deck is already here.' : '',
+      );
+    },
+    scratch: () => {
+      window.location.href = './#preset=scratch';
+    },
+    openSettings,
+  });
+
+  home.show(await store.listDecks());
+}
+
+/** Shows a toast outside the editor. */
+function toast(type: string, heading: string, text: string): void {
+  const host = required('#toast');
+  const alert = document.createElement('nys-alert');
+  alert.setAttribute('type', type);
+  alert.setAttribute('heading', heading);
+  if (text) {
+    alert.setAttribute('text', text);
+  }
+  alert.setAttribute('dismissible', '');
+  host.replaceChildren(alert);
+  host.hidden = false;
+  window.setTimeout(() => {
+    host.hidden = true;
+    host.replaceChildren();
+  }, 2600);
 }
 
 /** Binds the always-on shortcut that rebuilds the preview immediately. */
@@ -711,11 +1152,51 @@ async function main(): Promise<void> {
   const present = isPresentMode();
   applyEditorTheme(initialTheme());
   applyFontSize(initialFontSize());
-  setupSplitter(present);
 
-  const deck = getDeck(readDeckId());
+  // The bundled decks and presets only seed an empty store.
+  await store.seedStarters();
+
+  const route = routeFor(window.location.search, window.location.hash);
+  if (route.kind === 'home') {
+    await startHome(() => {
+      required<HTMLElement & {open?: boolean}>('#settings-modal').open = true;
+    });
+    // The settings modal is shared with the editor, so bind its controls too.
+    const project = required<PlaygroundProject>('#project');
+    const panes = new EditorPanes();
+    const app = new PlaygroundApp(
+      project,
+      scratchDeck(),
+      {version: await resolveVersion('latest'), html: '', css: '', js: ''},
+      null,
+      false,
+      panes,
+    );
+    await app.start();
+    document.querySelector('#app')?.classList.add('app--home');
+    return;
+  }
+
+  setupSplitter();
+
+  let deck: StoredDeck;
+  if (route.kind === 'deck') {
+    const found = await store.getDeck(route.id);
+    if (!found) {
+      showMissingDeck();
+      return;
+    }
+    deck = found;
+  } else {
+    deck = scratchDeck();
+  }
+
   const project = required<PlaygroundProject>('#project');
   const {state, presetId} = await resolveInitialState(deck);
+  if (route.kind === 'scratch') {
+    // The scratch pad's single slide carries whatever the link asked for.
+    deck = scratchDeck(state);
+  }
   let app: PlaygroundApp | undefined;
   const panes = new EditorPanes((layout) => {
     // Keep `?editors=` accurate so a copied link opens the same way.
@@ -726,11 +1207,11 @@ async function main(): Promise<void> {
   await app.start();
   bindBuildShortcut(() => app?.buildNow());
 
-  if (present) {
-    const presentation = new Presentation(app, panes);
-    app.attachPresentation(presentation);
-    presentation.start();
-  }
+  // The slide bar is always on screen, so presentation mode is a state the
+  // same controller switches into rather than a separate page.
+  const presentation = new Presentation(app, panes);
+  app.attachPresentation(presentation);
+  presentation.start(present);
 
   // Warm the CDN cache check so the first preview paint is not the first
   // request for these URLs.

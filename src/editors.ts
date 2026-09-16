@@ -69,7 +69,10 @@ export function collapsedForPreset(editors: PaneId[] | null): Set<PaneId> | null
 
 /**
  * Picks the layout for this visit: the URL wins, then the remembered choice,
- * then tabs.
+ * then the side-by-side columns.
+ *
+ * A layout chosen before is kept, so changing the default does not move
+ * anyone's editors on them.
  */
 export function initialLayout(search: string = window.location.search): EditorLayout {
   const fromUrl = readLayoutParam(search);

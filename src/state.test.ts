@@ -13,6 +13,7 @@ import {parseDeck, parsePreset} from './preset-schema.ts';
 import {collapsedForPreset, layoutUrl, readLayoutParam} from './editors.ts';
 import {createQuietDebounce} from './debounce.ts';
 import {
+  DEFAULTS,
   FONT_SIZES,
   UPDATE_DELAYS,
   clampRatio,
@@ -403,6 +404,17 @@ test('readFontParam and readUpdateParam accept only known values', () => {
   assert.equal(readUpdateParam('?update=manual'), 'manual');
   assert.equal(readUpdateParam('?update=never'), null);
   assert.equal(readUpdateParam('?theme=dark'), null);
+});
+
+test('the editor layout defaults to the side-by-side columns', () => {
+  assert.equal(DEFAULTS.layout, 'columns');
+  // A stored choice still wins over the default.
+  assert.equal(readLayoutParam('?editors=tabs'), 'tabs');
+});
+
+test('the editor theme defaults to dark', () => {
+  assert.equal(DEFAULTS.theme, 'dark');
+  assert.equal(readThemeParam('?theme=light'), 'light');
 });
 
 test('the font sizes and update delays are the documented ones', () => {

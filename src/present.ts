@@ -6,24 +6,27 @@
  * change a slide live. A caption bar at the bottom names the slide and carries
  * the controls.
  */
-import type {Deck, Preset} from './decks';
-import {presetIndex} from './decks';
+import type {Slide, StoredDeck} from './deck-model';
+import {slideIndex} from './deck-model';
 import type {EditorPanes} from './editor-panes';
 import type {PaneId} from './editors';
 import {PANE_IDS} from './editors';
 import type {PresentationAction} from './keys';
 import {hintText, isTypingContext, routeKey} from './keys';
 import {applyEditorTheme, initialTheme, otherTheme, themeUrl, writeTheme} from './theme';
+import {STORAGE_KEYS, readKey, writeKey} from './settings';
 import {presentUrl} from './state';
 
 /** What presentation mode needs from the application shell. */
 export interface PresentationTarget {
+  /** Records whether the playground is presenting. */
+  setPresent(present: boolean): void;
   /** The deck being presented. */
-  getDeck(): Deck;
+  getDeck(): StoredDeck;
   /** The id of the slide on screen, or `null` for a shared code link. */
   getActivePresetId(): string | null;
   /** Loads a slide, restoring any edits made to it earlier in the session. */
-  loadPreset(preset: Preset): void;
+  loadPreset(preset: Slide): void;
   /** Discards this session's edits to the current slide. */
   resetSlide(): void;
 }
@@ -31,8 +34,7 @@ export interface PresentationTarget {
 /** How long the keyboard hint stays on screen, in milliseconds. */
 const HINT_DURATION_MS = 6000;
 
-/** Where the editor pane's collapsed state is remembered. */
-const COLLAPSED_STORAGE_KEY = 'nysds-playground:present-code-collapsed';
+
 
 /** Drives the slideshow. */
 export class Presentation {
@@ -50,6 +52,7 @@ export class Presentation {
   private readonly panes: EditorPanes;
   private collapsed = false;
   private notesOpen = false;
+  private presenting = false;
 
   constructor(
     target: PresentationTarget,
@@ -70,13 +73,10 @@ export class Presentation {
     this.notesButton = required(root, '#notes-button');
   }
 
-  /** Turns on presentation mode and binds the controls. */
-  start(): void {
-    this.app.classList.add('app--present');
-    this.caption.hidden = false;
+  /** Binds the slide bar, then enters presentation mode when asked. */
+  start(present: boolean): void {
     this.collapsed = readCollapsed();
     this.applyCollapsed();
-    this.hidePreviewToolbar();
     bindClick('#prev-button', () => this.step(-1));
     bindClick('#next-button', () => this.step(1));
     bindClick('#reset-slide-button', () => {
@@ -88,23 +88,65 @@ export class Presentation {
     bindClick('#notes-close', () => this.closeNotes());
     window.addEventListener('keydown', (event) => this.onKeyDown(event), true);
     this.refresh();
-    this.showHint();
+    if (present) {
+      this.setPresenting(true);
+    }
+  }
+
+  /**
+   * Enters presentation mode.
+   *
+   * The page is not reloaded, so the click that asked for it still counts as
+   * the user gesture that fullscreen requires.
+   */
+  enter(): void {
+    void document.documentElement.requestFullscreen?.().catch(() => undefined);
+    this.setPresenting(true);
     this.takeFocus();
+  }
+
+  /** Leaves presentation mode, keeping the deck and slide in the URL. */
+  exit(): void {
+    if (document.fullscreenElement) {
+      void document.exitFullscreen?.().catch(() => undefined);
+    }
+    this.setPresenting(false);
+  }
+
+  /** Whether the playground is presenting. */
+  get isPresenting(): boolean {
+    return this.presenting;
+  }
+
+  private setPresenting(presenting: boolean): void {
+    this.presenting = presenting;
+    this.app.classList.toggle('app--present', presenting);
+    this.hint.hidden = true;
+    this.hint.classList.remove('present-hint--fading');
+    if (presenting) {
+      this.hidePreviewToolbar();
+      this.showHint();
+    } else {
+      this.closeNotes();
+    }
+    this.target.setPresent(presenting);
+    window.history.replaceState(null, '', presentUrl(presenting));
+    this.refresh();
   }
 
   /** Redraws the caption and the notes from whatever is currently loaded. */
   refresh(): void {
     const deck = this.target.getDeck();
     const id = this.target.getActivePresetId();
-    const index = presetIndex(deck, id);
-    const preset = index >= 0 ? deck.presets[index] : undefined;
+    const index = slideIndex(deck, id);
+    const preset = index >= 0 ? deck.slides[index] : undefined;
     this.group.textContent = preset?.group ?? '';
     this.title.textContent = preset?.title ?? 'Custom code';
     this.description.textContent = preset?.description ?? '';
     this.count.textContent =
-      deck.presets.length === 0
+      deck.slides.length === 0
         ? ''
-        : `${index >= 0 ? index + 1 : '—'} / ${deck.presets.length}`;
+        : `${index >= 0 ? index + 1 : '—'} / ${deck.slides.length}`;
 
     const notes = preset?.notes ?? '';
     this.notesBody.textContent = notes;
@@ -118,11 +160,11 @@ export class Presentation {
   /** Moves to the slide at `index`, clamped to the deck. */
   goTo(index: number): void {
     const deck = this.target.getDeck();
-    if (deck.presets.length === 0) {
+    if (deck.slides.length === 0) {
       return;
     }
-    const clamped = Math.min(Math.max(index, 0), deck.presets.length - 1);
-    const preset = deck.presets[clamped];
+    const clamped = Math.min(Math.max(index, 0), deck.slides.length - 1);
+    const preset = deck.slides[clamped];
     if (preset) {
       this.closeNotes();
       this.target.loadPreset(preset);
@@ -133,10 +175,10 @@ export class Presentation {
 
   private step(delta: number): void {
     const deck = this.target.getDeck();
-    const current = presetIndex(deck, this.target.getActivePresetId());
+    const current = slideIndex(deck, this.target.getActivePresetId());
     // From a shared code link, stepping forward starts the deck and stepping
     // back lands on the last slide.
-    const next = current === -1 ? (delta > 0 ? 0 : deck.presets.length - 1) : current + delta;
+    const next = current === -1 ? (delta > 0 ? 0 : deck.slides.length - 1) : current + delta;
     this.goTo(next);
   }
 
@@ -169,7 +211,7 @@ export class Presentation {
         this.goTo(0);
         break;
       case 'last':
-        this.goTo(this.target.getDeck().presets.length - 1);
+        this.goTo(this.target.getDeck().slides.length - 1);
         break;
       case 'toggle-code':
         this.toggleCode();
@@ -186,7 +228,7 @@ export class Presentation {
         this.toggleTheme();
         break;
       case 'exit':
-        window.location.href = presentUrl(false);
+        this.exit();
         break;
       default: {
         const pane = paneFor(action);
@@ -309,19 +351,11 @@ function tagNamesFor(event: KeyboardEvent): string[] {
 }
 
 function readCollapsed(): boolean {
-  try {
-    return window.localStorage.getItem(COLLAPSED_STORAGE_KEY) === '1';
-  } catch {
-    return false;
-  }
+  return readKey(STORAGE_KEYS.codeCollapsed) === '1';
 }
 
 function writeCollapsed(collapsed: boolean): void {
-  try {
-    window.localStorage.setItem(COLLAPSED_STORAGE_KEY, collapsed ? '1' : '0');
-  } catch {
-    // Private browsing can block storage. The default is fine.
-  }
+  writeKey(STORAGE_KEYS.codeCollapsed, collapsed ? '1' : '0');
 }
 
 function bindClick(selector: string, handler: () => void): void {

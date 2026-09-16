@@ -29,8 +29,10 @@ Options
   --preset <id>       Open a preset by id (for example: button)
   --deck <id>         Open a deck by id (for example: styling-levels)
   --present           Open in presentation mode
-  --dark              Use the dark editor theme (light is the default)
-  --columns           Show the HTML, CSS, and JS editors side by side
+  --dark              Use the dark editor theme (default)
+  --light             Use the light editor theme
+  --columns           Show the HTML, CSS, and JS editors side by side (default)
+  --tabs              Show the editors as tabs instead of columns
   --font <size>       Editor font size: small, medium, or large
   --update <mode>     When the preview rebuilds: typing, pause, or manual
   --html <file>       Load an HTML file into the HTML tab
@@ -61,7 +63,9 @@ function parseCli(argv) {
       deck: {type: 'string'},
       present: {type: 'boolean', default: false},
       dark: {type: 'boolean', default: false},
+      light: {type: 'boolean', default: false},
       columns: {type: 'boolean', default: false},
+      tabs: {type: 'boolean', default: false},
       font: {type: 'string'},
       update: {type: 'string'},
       html: {type: 'string'},
@@ -100,10 +104,14 @@ async function buildLocation(options) {
   if (options.present) {
     query.set('present', '1');
   }
-  if (options.dark) {
+  if (options.light) {
+    query.set('theme', 'light');
+  } else if (options.dark) {
     query.set('theme', 'dark');
   }
-  if (options.columns) {
+  if (options.tabs) {
+    query.set('editors', 'tabs');
+  } else if (options.columns) {
     query.set('editors', 'columns');
   }
   if (options.font) {

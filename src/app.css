@@ -10,7 +10,6 @@
 :root {
   --pg-toolbar-height: auto;
   --pg-divider-width: 10px;
-  --pg-split-ratio: 50%;
   --pg-surface: var(--nys-color-ink-reverse, #ffffff);
   --pg-border: var(--nys-color-neutral-100, #d0d0ce);
   --pg-muted: var(--nys-color-text-weaker, #62666a);
@@ -80,6 +79,102 @@ body {
   height: 100dvh;
 }
 
+/* Home ----------------------------------------------------------------- */
+
+.home {
+  flex: 1 1 auto;
+  width: min(1100px, 100%);
+  margin-inline: auto;
+  padding: 32px 24px 64px;
+  overflow-y: auto;
+}
+
+.home[hidden] {
+  display: none;
+}
+
+.app--home .toolbar,
+.app--home .split,
+.app--home .caption,
+.app--home .preview__build {
+  display: none;
+}
+
+.home__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.home__title {
+  margin: 0;
+  font-size: 1.75rem;
+}
+
+.home__lede {
+  margin: 8px 0 24px;
+  max-width: 60ch;
+  color: var(--pg-muted);
+}
+
+.home__actions {
+  margin-bottom: 32px;
+}
+
+.home__decks {
+  --nys-card-height: 100%;
+}
+
+.home__empty {
+  margin: 0;
+  color: var(--pg-muted);
+}
+
+.home__footer {
+  margin-top: 32px;
+}
+
+.deck-card__meta {
+  margin: 0;
+  color: var(--pg-muted);
+  font-size: 0.9375rem;
+}
+
+.deck-card__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.home--dragging {
+  outline: 3px dashed var(--nys-color-theme, #154973);
+  outline-offset: -12px;
+}
+
+/* Deck not found ------------------------------------------------------- */
+
+.deck-missing {
+  width: min(680px, 100%);
+  margin: 48px auto;
+  padding-inline: 24px;
+}
+
+.deck-missing[hidden] {
+  display: none;
+}
+
+.deck-missing nys-button {
+  margin-top: 16px;
+}
+
+.app--missing .toolbar,
+.app--missing .split,
+.app--missing .caption,
+.app--missing .preview__build {
+  display: none;
+}
+
 /* Toolbar -------------------------------------------------------------- */
 
 .toolbar {
@@ -92,12 +187,59 @@ body {
   background: var(--pg-surface);
 }
 
+.toolbar__deck {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
 .toolbar__title {
   margin: 0;
+  max-width: 28ch;
+  overflow: hidden;
   font-size: 1.125rem;
   line-height: 1.2;
-  align-self: center;
+  text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/* The save indicator fades rather than shifting the toolbar, so the layout
+   stays still while you type. */
+.toolbar__saved {
+  margin: 0;
+  min-width: 5ch;
+  color: var(--pg-muted);
+  font-size: 0.8125rem;
+  opacity: 0;
+  transition: opacity 400ms ease;
+}
+
+.toolbar__saved--on {
+  opacity: 1;
+}
+
+.settings__fieldset {
+  margin: 0;
+  padding: 0;
+  border: none;
+}
+
+.settings__legend {
+  padding: 0;
+  font-size: 0.9375rem;
+  font-weight: 600;
+}
+
+.settings__hint {
+  margin: 4px 0 8px;
+  color: var(--pg-muted);
+  font-size: 0.875rem;
+}
+
+.share__lede {
+  margin: 0 0 16px;
+  color: var(--pg-muted);
 }
 
 .toolbar__controls {
@@ -134,10 +276,17 @@ nys-toggle[hidden] {
   margin-inline-start: auto;
 }
 
-/* Split pane ----------------------------------------------------------- */
+/* Stage ---------------------------------------------------------------- */
 
+/*
+ * One layout serves editing and presenting. The preview fills the stage and
+ * the editors are a drawer over its bottom edge. Sharing the space would
+ * change the preview iframe's viewport, so dragging the divider would reflow
+ * the example and push the part you are looking at off the screen.
+ */
 .split {
-  display: flex;
+  position: relative;
+  display: block;
   flex: 1 1 auto;
   min-height: 0;
 }
@@ -150,37 +299,76 @@ nys-toggle[hidden] {
   overflow: hidden;
 }
 
-.split__pane--editors {
-  flex: 0 0 var(--pg-split-ratio);
-  border-inline-end: 1px solid var(--pg-border);
+.split__pane--preview {
+  position: absolute;
+  inset: 0;
+  background: #ffffff;
 }
 
-.split__pane--preview {
-  position: relative;
+.split__pane--editors {
+  position: absolute;
+  inset-inline: 0;
+  inset-block-end: 0;
+  z-index: 5;
+  height: var(--pg-drawer-size, 32%);
+  /* Solid, never translucent: code has to stay readable on a projector. */
+  background: var(--pg-editor-surface);
+  border-top: 1px solid var(--pg-editor-border);
+  box-shadow: 0 -8px 28px rgb(0 0 0 / 28%);
+}
+
+.split__divider {
+  position: absolute;
+  inset-inline: 0;
+  inset-block-end: var(--pg-drawer-size, 32%);
+  z-index: 6;
+  height: var(--pg-divider-width);
+  cursor: row-resize;
+  border-block: 4px solid transparent;
+  background: var(--pg-editor-border);
+  background-clip: content-box;
+  touch-action: none;
+}
+
+.split__divider:focus-visible {
+  outline: 2px solid var(--nys-color-focus, #004dd1);
+  outline-offset: 1px;
+}
+
+.app--code-collapsed .split__pane--editors,
+.app--code-collapsed .split__divider {
+  display: none;
+}
+
+.preview {
   flex: 1 1 auto;
-  background: #ffffff;
+  min-height: 0;
+}
+
+/* Hide the preview's own header bar while presenting so the slide fills the
+   screen. The custom property has to land on the element itself:
+   playground-preview sets a default on :host, which beats an inherited
+   value. */
+.app--present .preview {
+  --playground-bar-height: 0px;
 }
 
 .preview__build {
   position: absolute;
-  inset-block-end: 16px;
+  inset-block-end: calc(var(--pg-drawer-size, 32%) + 16px);
   inset-inline-end: 16px;
   z-index: 4;
   background: var(--pg-surface);
   border-radius: 999px;
 }
 
+.app--code-collapsed .preview__build {
+  inset-block-end: 16px;
+}
+
 .preview__build--pending {
   --nys-button-border-color: var(--nys-color-theme, #154973);
   box-shadow: 0 0 0 3px rgb(21 73 115 / 22%);
-}
-
-.app--present .preview__build {
-  inset-block-end: calc(var(--pg-present-editor-size, 32%) + 16px);
-}
-
-.app--present.app--code-collapsed .preview__build {
-  inset-block-end: 16px;
 }
 
 .editors__layout {
@@ -321,61 +509,19 @@ nys-toggle[hidden] {
 
 /* Presentation mode ---------------------------------------------------- */
 
-.app--present .toolbar {
+.app--present .toolbar,
+.app--present .edit-only {
   display: none;
 }
 
-/*
- * While presenting, the editors are a drawer over the bottom of the slide, not
- * a pane beside it. Sharing the space would change the preview iframe's
- * viewport, so dragging the divider would reflow the example and push the part
- * the presenter is talking about off the screen.
- */
-.app--present .split {
-  position: relative;
-  display: block;
-}
-
-.app--present .split__pane--preview {
-  position: absolute;
-  inset: 0;
-}
-
-.app--present .split__pane--editors {
-  position: absolute;
-  inset-inline: 0;
-  inset-block-end: 0;
-  z-index: 5;
-  height: var(--pg-present-editor-size, 32%);
-  max-height: none;
-  /* Solid, never translucent: code has to stay readable on a projector. */
-  background: var(--pg-editor-surface);
-  border-inline-end: none;
-  border-top: 1px solid var(--pg-editor-border);
-  box-shadow: 0 -8px 28px rgb(0 0 0 / 28%);
-}
-
-.app--present .split__divider {
-  position: absolute;
-  inset-inline: 0;
-  inset-block-end: var(--pg-present-editor-size, 32%);
-  z-index: 6;
-  height: var(--pg-divider-width);
-  cursor: row-resize;
-  border-inline: none;
-  border-block: 4px solid transparent;
-}
-
-.app--present.app--code-collapsed .split__pane--editors,
-.app--present.app--code-collapsed .split__divider {
+.app:not(.app--present) .present-only {
   display: none;
 }
 
-/* Hide the preview's own header bar so the slide fills the screen. The custom
-   property has to land on the element itself: playground-preview sets a
-   default on :host, which beats an inherited value. */
-.app--present .preview {
-  --playground-bar-height: 0px;
+/* Deck-only controls disappear on the scratch pad, and the other way round. */
+.app:not(.app--deck) .deck-only,
+.app--deck .scratch-only {
+  display: none;
 }
 
 .caption {
@@ -530,39 +676,11 @@ nys-toggle[hidden] {
 /* Narrow screens ------------------------------------------------------- */
 
 @media (max-width: 720px) {
-  body {
-    overflow: auto;
-  }
-
-  .app {
-    height: auto;
-    min-height: 100dvh;
-  }
-
-  .split {
-    flex-direction: column;
-  }
-
-  .split__pane--editors,
-  .split__pane--preview {
-    flex: 0 0 auto;
-    min-height: 50vh;
-    border-inline-end: none;
-  }
-
-  .app--present .split__pane--editors {
-    max-height: none;
-  }
-
-  .split__pane--editors {
-    border-bottom: 1px solid var(--pg-border);
-  }
-
-  .split__divider {
-    display: none;
-  }
-
   .toolbar__actions {
     margin-inline-start: 0;
+  }
+
+  .caption {
+    flex-wrap: wrap;
   }
 }

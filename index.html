@@ -12,22 +12,78 @@
   </head>
   <body>
     <div id="app" class="app">
+      <main class="home" id="home" hidden>
+        <header class="home__header">
+          <h1 class="home__title">NYSDS Playground</h1>
+          <nys-button
+            id="home-settings-button"
+            size="sm"
+            variant="ghost"
+            label="Settings"
+            prefixIcon="more_vert"
+          ></nys-button>
+        </header>
+
+        <p class="home__lede">
+          Decks live in this browser. Edit one, present it, or share a slide as a link.
+        </p>
+
+        <div class="home__actions nys-display-flex nys-flex-wrap nys-flex-gap-200">
+          <nys-button id="new-deck-button" label="New deck" prefixIcon="add"></nys-button>
+          <nys-button
+            id="import-deck-button"
+            variant="outline"
+            label="Import deck"
+            prefixIcon="upload_file"
+          ></nys-button>
+          <nys-button
+            id="scratch-button"
+            variant="ghost"
+            label="Scratch pad"
+            prefixIcon="code"
+          ></nys-button>
+        </div>
+
+        <div class="home__decks nys-grid-row nys-grid-gap" id="deck-list"></div>
+
+        <div class="home__footer">
+          <nys-button
+            id="restore-starters-button"
+            size="sm"
+            variant="ghost"
+            label="Restore starter decks"
+            prefixIcon="refresh"
+          ></nys-button>
+        </div>
+
+        <input
+          class="home__file"
+          id="import-file"
+          type="file"
+          accept=".json,application/json"
+          hidden
+        />
+      </main>
+
       <header class="toolbar" id="toolbar">
-        <h1 class="toolbar__title" id="app-title">NYSDS Playground</h1>
+        <div class="toolbar__deck">
+          <h1 class="toolbar__title" id="deck-title">NYSDS Playground</h1>
+          <nys-button
+            class="edit-only deck-only"
+            id="rename-deck-button"
+            size="sm"
+            variant="ghost"
+            label="Rename"
+            prefixIcon="edit_square"
+          ></nys-button>
+          <p class="toolbar__saved" id="saved-indicator" role="status" aria-live="polite"></p>
+        </div>
 
         <div class="toolbar__controls">
           <nys-select
-            id="deck-select"
-            class="toolbar__select"
-            label="Deck"
-            width="md"
-            hidden
-          ></nys-select>
-
-          <nys-select
             id="preset-select"
             class="toolbar__select"
-            label="Example"
+            label="Slide"
             width="md"
           ></nys-select>
 
@@ -37,24 +93,25 @@
             label="Version"
             width="md"
           ></nys-select>
-
         </div>
 
         <div class="toolbar__actions">
           <nys-button id="share-button" size="sm" label="Share" prefixIcon="link"></nys-button>
           <nys-button
+            class="deck-only"
             id="export-button"
             size="sm"
             variant="outline"
-            label="Export preset"
+            label="Export deck"
             prefixIcon="download"
           ></nys-button>
           <nys-button
-            id="reset-button"
+            class="scratch-only"
+            id="save-as-deck-button"
             size="sm"
             variant="outline"
-            label="Reset"
-            prefixIcon="refresh"
+            label="Save as deck"
+            prefixIcon="add"
           ></nys-button>
           <nys-button
             id="present-button"
@@ -62,6 +119,13 @@
             variant="ghost"
             label="Present"
             prefixIcon="visibility"
+          ></nys-button>
+          <nys-button
+            id="home-button"
+            size="sm"
+            variant="ghost"
+            label="Home"
+            prefixIcon="arrow_back"
           ></nys-button>
           <nys-button
             id="settings-button"
@@ -188,8 +252,8 @@
           class="split__divider"
           id="divider"
           role="separator"
-          aria-orientation="vertical"
-          aria-label="Resize the editors and the preview"
+          aria-orientation="horizontal"
+          aria-label="Resize the code drawer"
           tabindex="0"
         ></div>
 
@@ -224,7 +288,7 @@
         ></nys-button>
       </div>
 
-      <footer class="caption" id="caption" tabindex="-1" hidden>
+      <footer class="caption" id="caption" tabindex="-1">
         <nys-button
           inverted
           id="prev-button"
@@ -243,6 +307,65 @@
         </div>
         <p class="caption__count" id="caption-count"></p>
         <nys-button
+          class="edit-only deck-only"
+          inverted
+          id="add-slide-button"
+          size="sm"
+          variant="outline"
+          label="Add slide"
+          prefixIcon="add"
+        ></nys-button>
+        <nys-button
+          class="edit-only deck-only"
+          inverted
+          id="slide-settings-button"
+          size="sm"
+          variant="ghost"
+          label="Slide settings"
+          prefixIcon="edit_square"
+        ></nys-button>
+        <nys-button
+          class="edit-only deck-only"
+          inverted
+          id="move-slide-back-button"
+          size="sm"
+          variant="ghost"
+          circle
+          icon="arrow_back"
+          label="Move slide earlier"
+        ></nys-button>
+        <nys-button
+          class="edit-only deck-only"
+          inverted
+          id="move-slide-forward-button"
+          size="sm"
+          variant="ghost"
+          circle
+          icon="arrow_forward"
+          label="Move slide later"
+        ></nys-button>
+        <nys-button
+          class="edit-only deck-only"
+          inverted
+          id="duplicate-slide-button"
+          size="sm"
+          variant="ghost"
+          circle
+          icon="content_copy"
+          label="Duplicate slide"
+        ></nys-button>
+        <nys-button
+          class="edit-only deck-only"
+          inverted
+          id="delete-slide-button"
+          size="sm"
+          variant="ghost"
+          circle
+          icon="delete"
+          label="Delete slide"
+        ></nys-button>
+        <nys-button
+          class="present-only"
           inverted
           id="reset-slide-button"
           size="sm"
@@ -271,6 +394,100 @@
 
       <p class="present-hint" id="present-hint" hidden></p>
 
+      <nys-modal id="deck-modal" heading="Deck settings" width="md">
+        <div class="settings">
+          <nys-textinput
+            id="deck-title-input"
+            label="Deck title"
+            placeholder="A name for this deck"
+          ></nys-textinput>
+          <nys-textarea
+            id="deck-description-input"
+            label="Description"
+            rows="2"
+            description="One sentence. It shows on the home page and in the slide bar."
+          ></nys-textarea>
+          <nys-textarea
+            id="deck-base-css-input"
+            label="Base CSS"
+            rows="4"
+            description="CSS applied to every slide in this deck, without taking up room in the CSS tab."
+          ></nys-textarea>
+        </div>
+        <div slot="actions">
+          <nys-button id="deck-modal-done" label="Done"></nys-button>
+        </div>
+      </nys-modal>
+
+      <nys-modal id="slide-modal" heading="Slide settings" width="md">
+        <div class="settings">
+          <nys-textinput id="slide-title-input" label="Title"></nys-textinput>
+          <nys-textinput
+            id="slide-group-input"
+            label="Group"
+            description="A section label, such as 1. Lock it down. Slides that share one are grouped."
+          ></nys-textinput>
+          <nys-textarea id="slide-description-input" label="Description" rows="2"></nys-textarea>
+          <nys-textarea
+            id="slide-notes-input"
+            label="Presenter notes"
+            rows="4"
+            description="Shown only to you, with the n key while presenting."
+          ></nys-textarea>
+          <fieldset class="settings__fieldset">
+            <legend class="settings__legend">Editors to open</legend>
+            <p class="settings__hint">
+              Applies to the side-by-side layout. Leave all three off to keep whatever is open.
+            </p>
+            <div class="nys-display-flex nys-flex-gap-300">
+              <nys-checkbox id="slide-editor-html" label="HTML" size="sm"></nys-checkbox>
+              <nys-checkbox id="slide-editor-css" label="CSS" size="sm"></nys-checkbox>
+              <nys-checkbox id="slide-editor-js" label="JS" size="sm"></nys-checkbox>
+            </div>
+          </fieldset>
+          <nys-textinput
+            id="slide-version-input"
+            label="Design system version"
+            width="md"
+            description="A version number, or latest."
+          ></nys-textinput>
+        </div>
+        <div slot="actions">
+          <nys-button id="slide-modal-done" label="Done"></nys-button>
+        </div>
+      </nys-modal>
+
+      <nys-modal id="confirm-modal" heading="Are you sure?" width="sm">
+        <p id="confirm-message"></p>
+        <div slot="actions">
+          <nys-button id="confirm-cancel" variant="outline" label="Cancel"></nys-button>
+          <nys-button id="confirm-ok" label="Delete"></nys-button>
+        </div>
+      </nys-modal>
+
+      <nys-modal id="share-modal" heading="Share" width="md">
+        <p class="share__lede">
+          A deck link points at a deck in this browser. A standalone link carries the code
+          itself, so it opens anywhere.
+        </p>
+        <div class="nys-display-flex nys-flex-column nys-flex-gap-200">
+          <nys-button
+            id="share-deck-link"
+            variant="outline"
+            label="Copy link to this slide (works in this browser)"
+            prefixIcon="link"
+          ></nys-button>
+          <nys-button
+            id="share-code-link"
+            label="Copy standalone link"
+            prefixIcon="link"
+          ></nys-button>
+        </div>
+        <div slot="actions">
+          <nys-button id="share-modal-done" label="Done"></nys-button>
+        </div>
+      </nys-modal>
+
       <nys-modal id="settings-modal" heading="Settings" width="md">
         <div class="settings">
           <nys-toggle
@@ -288,7 +505,7 @@
             class="settings__field"
             size="sm"
             label="Side by side editors"
-            description="Shows HTML, CSS, and JavaScript in three columns instead of tabs."
+            description="Shows HTML, CSS, and JavaScript in three columns. Turn it off for one tabbed editor."
             name="editor-layout"
             value="columns"
           ></nys-toggle>
@@ -338,6 +555,15 @@
           <nys-button id="settings-done-button" label="Done"></nys-button>
         </div>
       </nys-modal>
+
+      <div class="deck-missing" id="deck-missing" hidden>
+        <nys-alert
+          type="warning"
+          heading="Deck not found"
+          text="That deck is not in this browser. Decks are stored per browser, so a deck link only opens where it was made."
+        ></nys-alert>
+        <nys-button id="deck-missing-home" label="Go home" prefixIcon="arrow_back"></nys-button>
+      </div>
 
       <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
     </div>

@@ -22,6 +22,9 @@ import {UPDATE_DELAYS} from './settings';
 import type {PlaygroundState} from './state';
 import {splitUserHtml, wrapUserHtml} from './wrapper';
 
+/** How long a load ignores edits, in milliseconds. See `echoGuardUntil`. */
+const ECHO_GUARD_MS = 150;
+
 const HTML_FILE = 'index.html';
 const CSS_FILE = 'styles.css';
 const JS_FILE = 'script.js';
@@ -41,6 +44,17 @@ export class PlaygroundHost {
 
   /** Whether the files have changed since the last build. */
   private pending = false;
+
+  /**
+   * When to start trusting edits again after a programmatic load.
+   *
+   * Replacing the project's files makes each editor re-render, and an editor
+   * that has not caught up yet writes its old document straight back through
+   * `editFile`. That echo would look like the person typing, and would undo
+   * the load. Nobody can type in the few milliseconds it takes, so ignoring
+   * edits for that window is safe.
+   */
+  private echoGuardUntil = 0;
 
   /** Waits for typing to stop before it rebuilds the preview. */
   private readonly build: QuietDebounce = createQuietDebounce(() => {
@@ -69,6 +83,7 @@ export class PlaygroundHost {
     // Loading a project builds it right away, whatever the update mode is.
     this.build.cancel();
     this.setPending(false);
+    this.echoGuardUntil = performance.now() + ECHO_GUARD_MS;
     this.apply(state);
   }
 
@@ -140,6 +155,9 @@ export class PlaygroundHost {
     // call (such as a project load) builds right away and is never "pending".
     let editing = false;
     project.editFile = (file: SampleFile, content: string): void => {
+      if (performance.now() < this.echoGuardUntil) {
+        return;
+      }
       editing = true;
       try {
         originalEditFile(file, content);

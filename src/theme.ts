@@ -42,7 +42,10 @@ export function themeUrl(theme: EditorTheme, href: string): string {
 
 /**
  * Picks the theme for this visit: the URL wins, then the remembered choice,
- * then light.
+ * then dark.
+ *
+ * A theme chosen before is kept, so changing the default does not recolour
+ * anyone's editors on them.
  */
 export function initialTheme(search: string = window.location.search): EditorTheme {
   const fromUrl = readThemeParam(search);

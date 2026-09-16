@@ -39,13 +39,12 @@ export const UPDATE_DELAYS: Record<UpdateMode, number | null> = {
 
 /** The defaults a fresh visit, and "Reset settings", start from. */
 export const DEFAULTS = {
-  theme: 'light' as EditorTheme,
-  layout: 'tabs' as EditorLayout,
+  theme: 'dark' as EditorTheme,
+  layout: 'columns' as EditorLayout,
   fontSize: 'medium' as FontSize,
   updateMode: 'typing' as UpdateMode,
   prereleases: false,
-  splitRatio: 50,
-  presentEditorSize: 32,
+  drawerSize: 32,
 };
 
 /** Every key the playground writes, so "Reset settings" can clear them all. */
@@ -56,9 +55,8 @@ export const STORAGE_KEYS = {
   updateMode: 'nysds-playground:update-mode',
   prereleases: 'nysds-playground:prereleases',
   collapsedPanes: 'nysds-playground:collapsed-panes',
-  splitRatio: 'nysds-playground:split-ratio',
-  presentEditorSize: 'nysds-playground:present-editor-size',
-  presentCodeCollapsed: 'nysds-playground:present-code-collapsed',
+  drawerSize: 'nysds-playground:present-editor-size',
+  codeCollapsed: 'nysds-playground:present-code-collapsed',
 } as const;
 
 /* URL parsing ----------------------------------------------------------- */
