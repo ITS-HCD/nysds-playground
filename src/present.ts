@@ -44,7 +44,6 @@ export class Presentation {
   private readonly group: HTMLElement;
   private readonly title: HTMLElement;
   private readonly description: HTMLElement;
-  private readonly count: HTMLElement;
   private readonly hint: HTMLElement;
   private readonly notes: HTMLElement;
   private readonly notesBody: HTMLElement;
@@ -66,7 +65,6 @@ export class Presentation {
     this.group = required(root, '#caption-group');
     this.title = required(root, '#caption-title');
     this.description = required(root, '#caption-description');
-    this.count = required(root, '#caption-count');
     this.hint = required(root, '#present-hint');
     this.notes = required(root, '#notes');
     this.notesBody = required(root, '#notes-body');
@@ -143,10 +141,15 @@ export class Presentation {
     this.group.textContent = preset?.group ?? '';
     this.title.textContent = preset?.title ?? 'Custom code';
     this.description.textContent = preset?.description ?? '';
-    this.count.textContent =
+    const counter =
       deck.slides.length === 0
         ? ''
         : `${index >= 0 ? index + 1 : '—'} / ${deck.slides.length}`;
+    // One counter sits with the icons and another rides with the title on
+    // narrow screens; only one of them is ever visible.
+    for (const element of document.querySelectorAll<HTMLElement>('[data-count]')) {
+      element.textContent = counter;
+    }
 
     const notes = preset?.notes ?? '';
     this.notesBody.textContent = notes;

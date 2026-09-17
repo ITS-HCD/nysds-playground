@@ -593,34 +593,20 @@ nys-toggle[hidden] {
   display: none;
 }
 
+/*
+ * Three real columns rather than an absolutely centred mark. Both sides are
+ * `1fr`, so the mark is exactly centred and the sides shrink into their
+ * ellipses before anything can overlap it.
+ */
 .caption {
-  position: relative;
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   align-items: center;
   gap: 12px;
   padding: 8px 16px;
   border-top: 1px solid var(--nys-color-theme-strong);
   background: var(--nys-color-theme);
   color: var(--nys-color-text-reverse);
-}
-
-/*
- * The mark sits in the middle of the bar whatever the title is doing, so it
- * is taken out of the flow rather than given a share of the row. The title
- * truncates before it reaches this.
- */
-.caption__center {
-  position: absolute;
-  inset-block: 0;
-  inset-inline-start: 50%;
-  display: flex;
-  align-items: center;
-  transform: translateX(-50%);
-  pointer-events: none;
-}
-
-.caption__center > * {
-  pointer-events: auto;
 }
 
 .caption[hidden] {
@@ -634,14 +620,42 @@ nys-toggle[hidden] {
   outline: none;
 }
 
-/* The NYSDS mark leads the bar. The arrow is cut out of the symbol, so the
-   bar's colour shows through it. */
+.caption__left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.caption__center {
+  display: flex;
+  align-items: center;
+}
+
+.caption__right {
+  display: flex;
+  align-items: center;
+  justify-self: end;
+  gap: 8px;
+}
+
+.caption__actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* The mark matches the previous and next circle buttons, so the three read as
+   one row of equal shapes. */
 .caption__home {
   display: inline-flex;
   flex: 0 0 auto;
   align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
   color: var(--nys-color-text-reverse);
-  border-radius: 4px;
+  border-radius: 50%;
 }
 
 .caption__home:focus-visible {
@@ -650,21 +664,16 @@ nys-toggle[hidden] {
 }
 
 .caption__mark {
-  width: 28px;
-  height: 28px;
+  width: 100%;
+  height: 100%;
 }
 
 .caption__notes[hidden] {
   display: none;
 }
 
-.caption__text {
-  flex: 1 1 auto;
+.caption__headline {
   min-width: 0;
-  /* Stop short of the centred mark, so a long title truncates instead of
-     running underneath it. The subtraction covers the bar padding, the gap,
-     and the previous-slide button that sit to its left. */
-  max-width: calc(50% - 88px);
 }
 
 .caption__title {
@@ -701,13 +710,73 @@ nys-toggle[hidden] {
 }
 
 .caption__count {
-  /* The counter starts the right-hand group, so it takes the slack and keeps
-     that group away from the centred mark. */
-  margin: 0 0 0 auto;
+  margin: 0;
   font-variant-numeric: tabular-nums;
   font-size: 0.9375rem;
+  font-weight: 400;
   color: var(--nys-color-text-reverse-weak);
   white-space: nowrap;
+}
+
+/* The counter rides with the title on narrow screens instead. */
+.caption__count--inline {
+  display: none;
+  margin-inline-start: 8px;
+}
+
+/*
+ * Narrow screens: two rows. The arrows keep the outer columns and span both
+ * rows, the title and counter take row one, and the icons take row two. The
+ * mark has nowhere to go, so it steps aside.
+ */
+@media (max-width: 720px) {
+  .caption {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-rows: auto auto;
+    gap: 4px 8px;
+  }
+
+  .caption__left,
+  .caption__right {
+    display: contents;
+  }
+
+  .caption__center {
+    display: none;
+  }
+
+  #prev-button {
+    grid-column: 1;
+    grid-row: 1 / 3;
+    align-self: center;
+  }
+
+  .caption__headline {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  .caption__actions {
+    grid-column: 2;
+    grid-row: 2;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  #next-button {
+    grid-column: 3;
+    grid-row: 1 / 3;
+    align-self: center;
+  }
+
+  /* The counter reads better beside the title than alone on the icon row. */
+  .caption__right > .caption__count {
+    display: none;
+  }
+
+  .caption__count--inline {
+    display: inline;
+  }
 }
 
 /* Presenter notes ------------------------------------------------------ */
