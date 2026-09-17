@@ -24,7 +24,7 @@ import {
 import {isBuildShortcut} from './keys.ts';
 import {chooseVersion} from './version-catalog.ts';
 import {otherTheme, readThemeParam, themeUrl} from './theme.ts';
-import {splitUserHtml, wrapUserHtml} from './wrapper.ts';
+import {wrapUserHtml} from './wrapper.ts';
 
 /** Collects validation messages instead of writing them to the console. */
 function collector(): {messages: string[]; report: (message: string) => void} {
@@ -38,24 +38,28 @@ const WRAPPER_OPTIONS = {
   title: 'Preview',
 };
 
-test('wrapUserHtml round-trips through splitUserHtml', () => {
+test('wrapUserHtml puts the snippet in a whole document', () => {
   const userHtml = '<nys-button label="Save"></nys-button>';
   const wrapped = wrapUserHtml(userHtml, WRAPPER_OPTIONS);
-  assert.equal(splitUserHtml(wrapped), userHtml);
-});
-
-test('wrapUserHtml round-trips multi-line and comment-bearing markup', () => {
-  const userHtml = '<!-- a note -->\n<div>\n  <p>Line</p>\n</div>';
-  const wrapped = wrapUserHtml(userHtml, WRAPPER_OPTIONS);
-  assert.equal(splitUserHtml(wrapped), userHtml);
-});
-
-test('wrapUserHtml keeps the boilerplate inside hidden regions', () => {
-  const wrapped = wrapUserHtml('<p>Hi</p>', WRAPPER_OPTIONS);
-  assert.ok(wrapped.includes('<!-- playground-hide -->'));
-  assert.ok(wrapped.includes('<!-- playground-hide-end -->'));
+  assert.ok(wrapped.startsWith('<!doctype html>'));
+  assert.ok(wrapped.includes(userHtml));
   assert.ok(wrapped.includes(WRAPPER_OPTIONS.stylesHref));
   assert.ok(wrapped.includes(WRAPPER_OPTIONS.componentsSrc));
+  assert.ok(wrapped.includes('./styles.css'));
+  assert.ok(wrapped.includes('./script.js'));
+});
+
+test('wrapUserHtml leaves no editor pragmas behind', () => {
+  // The wrapper used to live inside the HTML pane behind `playground-hide`
+  // comments, which meant select-all copied it. It is its own hidden file now.
+  const wrapped = wrapUserHtml('<p>Hi</p>', WRAPPER_OPTIONS);
+  assert.ok(!wrapped.includes('playground-hide'));
+  assert.ok(!wrapped.includes('nysds-playground:user-html'));
+});
+
+test('wrapUserHtml keeps multi-line markup and comments intact', () => {
+  const userHtml = '<!-- a note -->\n<div>\n  <p>Line</p>\n</div>';
+  assert.ok(wrapUserHtml(userHtml, WRAPPER_OPTIONS).includes(userHtml));
 });
 
 test('wrapUserHtml adds extra head markup when configured', () => {
@@ -64,10 +68,6 @@ test('wrapUserHtml adds extra head markup when configured', () => {
     extraHeadHtml: '<link rel="stylesheet" href="https://fonts.example.com/f.css" />',
   });
   assert.ok(wrapped.includes('https://fonts.example.com/f.css'));
-});
-
-test('splitUserHtml returns null when the markers are gone', () => {
-  assert.equal(splitUserHtml('<p>no markers here</p>'), null);
 });
 
 test('encodeState and decodeState round-trip', () => {
@@ -110,13 +110,13 @@ test('slugify produces filename-safe ids', () => {
   assert.equal(slugify('   '), 'playground');
 });
 
-test('wrapUserHtml injects the deck base CSS into the hidden head', () => {
+test('wrapUserHtml injects the deck base CSS into the head', () => {
   const wrapped = wrapUserHtml('<p>Hi</p>', {
     ...WRAPPER_OPTIONS,
     baseCss: 'body { padding: 2rem }',
   });
   assert.ok(wrapped.includes('<style>body { padding: 2rem }</style>'));
-  assert.equal(splitUserHtml(wrapped), '<p>Hi</p>');
+  assert.ok(wrapped.includes('<p>Hi</p>'));
 });
 
 test('deckUrl keeps the library deck out of the query', () => {

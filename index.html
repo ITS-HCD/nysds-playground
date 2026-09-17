@@ -180,7 +180,7 @@
                 id="column-html-editor"
                 class="column__editor"
                 project="project"
-                filename="index.html"
+                filename="snippet.html"
                 line-numbers
                 line-wrapping
               ></playground-file-editor>
@@ -463,12 +463,12 @@
               <nys-checkbox id="slide-editor-js" label="JS" size="sm"></nys-checkbox>
             </div>
           </fieldset>
-          <nys-textinput
-            id="slide-version-input"
+          <nys-select
+            id="slide-version-select"
             label="Design system version"
             width="md"
-            description="A version number, or latest."
-          ></nys-textinput>
+            description="Pick latest to follow the newest release."
+          ></nys-select>
         </div>
         <div slot="actions">
           <nys-button id="slide-modal-done" label="Done"></nys-button>

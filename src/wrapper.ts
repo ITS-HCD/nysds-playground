@@ -1,9 +1,9 @@
 /**
- * Builds the hidden `index.html` wrapper that the preview renders, and splits
- * the user's markup back out of it.
+ * Builds the preview document that wraps the user's markup.
  *
- * The wrapper has no imports on purpose, so `src/state.test.ts` can load it
- * directly under `node --test`.
+ * The wrapper is a file of its own, hidden from the editors, so the HTML pane
+ * holds nothing but the user's snippet. That keeps select-all and copy honest
+ * and the line numbers correct.
  */
 
 /** The options that vary between wrappers. */
@@ -17,38 +17,19 @@ export interface WrapperOptions {
   /**
    * CSS that applies to every slide in a deck.
    *
-   * It goes into the hidden head as a `<style>`, so it styles the preview
-   * without taking up room in the CSS tab.
+   * It goes into the head as a `<style>`, so it styles the preview without
+   * taking up room in the CSS tab.
    */
   baseCss?: string;
   /** The `<title>` of the preview document. */
   title?: string;
 }
 
-/** Marks the start of the editable region. Playground hides this comment. */
-const START_MARKER = '<!-- nysds-playground:user-html -->';
-
-/** Marks the end of the editable region. Playground hides this comment. */
-const END_MARKER = '<!-- /nysds-playground:user-html -->';
-
-/**
- * The exact text that precedes the user's markup inside `index.html`.
- *
- * The whole hidden prefix sits on one line. Playground's pragma handling
- * collapses a hidden region and the newline that follows it into a single
- * display line, so a one-line prefix keeps the editor's line numbers
- * contiguous from the first line of the user's markup.
- */
-const OPEN_BOUNDARY = `${START_MARKER}<!-- playground-hide-end -->\n`;
-
-/** The exact text that follows the user's markup inside `index.html`. */
-const CLOSE_BOUNDARY = `\n<!-- playground-hide -->${END_MARKER}`;
-
 /**
  * Wraps the user's markup in a complete HTML document.
  *
- * Everything outside the `<!-- playground-hide -->` regions is what the HTML
- * editor shows, so the editor only ever displays the user's own markup.
+ * The result is never shown in an editor, so it is written for the browser
+ * rather than for reading.
  */
 export function wrapUserHtml(userHtml: string, options: WrapperOptions): string {
   const title = options.title ?? 'Preview';
@@ -66,32 +47,17 @@ export function wrapUserHtml(userHtml: string, options: WrapperOptions): string 
     '<link rel="stylesheet" href="./styles.css">',
     `<script type="module" src="${options.componentsSrc}"></script>`,
   ].join('');
-  const prefix =
-    `<!-- playground-hide --><!doctype html><html lang="en">` +
-    `<head>${head}</head><body>`;
-  const suffix =
-    `<script type="module" src="./script.js"></script></body></html>` +
-    `<!-- playground-hide-end -->\n`;
-  return `${prefix}${OPEN_BOUNDARY}${userHtml}${CLOSE_BOUNDARY}${suffix}`;
-}
-
-/**
- * Returns the user's markup from a wrapped `index.html`.
- *
- * Returns `null` when the markers are missing, which happens only if an edit
- * deletes them. Callers keep the previous markup in that case.
- */
-export function splitUserHtml(content: string): string | null {
-  const start = content.indexOf(OPEN_BOUNDARY);
-  if (start === -1) {
-    return null;
-  }
-  const from = start + OPEN_BOUNDARY.length;
-  const end = content.indexOf(CLOSE_BOUNDARY, from);
-  if (end === -1) {
-    return null;
-  }
-  return content.slice(from, end);
+  return [
+    '<!doctype html>',
+    '<html lang="en">',
+    `<head>${head}</head>`,
+    '<body>',
+    userHtml,
+    '<script type="module" src="./script.js"></script>',
+    '</body>',
+    '</html>',
+    '',
+  ].join('\n');
 }
 
 /** Escapes text that goes into an HTML text node. */

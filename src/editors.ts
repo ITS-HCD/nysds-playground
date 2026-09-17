@@ -30,7 +30,7 @@ export const EDITORS_PARAM = 'editors';
 
 /** The project file and tab label behind each column. */
 export const PANE_FILES: Record<PaneId, {file: string; label: string}> = {
-  html: {file: 'index.html', label: 'HTML'},
+  html: {file: 'snippet.html', label: 'HTML'},
   css: {file: 'styles.css', label: 'CSS'},
   js: {file: 'script.js', label: 'JS'},
 };

@@ -172,3 +172,76 @@ test('relativeTime reads as a person would say it', () => {
   assert.equal(relativeTime('2026-07-16T12:00:00.000Z', now), '2 months ago');
   assert.equal(relativeTime('not a date', now), 'unknown');
 });
+
+/* Confirm dialog handler lifetime ---------------------------------------- */
+
+/**
+ * The shape of `confirmAction` in `src/main.ts`, minus the DOM.
+ *
+ * Deleting one deck used to delete its neighbour: dismissing the modal with
+ * its own close button skipped the Cancel handler, so the next question added
+ * a second listener and one confirmation answered both.
+ */
+function makeConfirm(): {
+  ask(onConfirm: () => void): void;
+  confirm(): void;
+  dismiss(): void;
+} {
+  const listeners = new Set<() => void>();
+  let controller: {abort(): void} | undefined;
+  return {
+    ask(onConfirm) {
+      controller?.abort();
+      const handler = (): void => {
+        listeners.delete(handler);
+        controller = undefined;
+        onConfirm();
+      };
+      listeners.add(handler);
+      controller = {
+        abort() {
+          listeners.delete(handler);
+        },
+      };
+    },
+    confirm() {
+      for (const handler of [...listeners]) {
+        handler();
+      }
+    },
+    dismiss() {
+      controller?.abort();
+      controller = undefined;
+    },
+  };
+}
+
+test('confirming answers only the question on screen', () => {
+  const confirm = makeConfirm();
+  const answered: string[] = [];
+  // The first question is dismissed without Cancel, the way the modal's own
+  // close button does it.
+  confirm.ask(() => answered.push('first'));
+  confirm.ask(() => answered.push('second'));
+  confirm.confirm();
+  assert.deepEqual(answered, ['second']);
+});
+
+test('confirming twice does not repeat the previous answer', () => {
+  const confirm = makeConfirm();
+  const answered: string[] = [];
+  confirm.ask(() => answered.push('a'));
+  confirm.confirm();
+  confirm.ask(() => answered.push('b'));
+  confirm.confirm();
+  assert.deepEqual(answered, ['a', 'b']);
+});
+
+test('dismissing leaves nothing to answer', () => {
+  const confirm = makeConfirm();
+  const answered: string[] = [];
+  confirm.ask(() => answered.push('a'));
+  confirm.dismiss();
+  confirm.confirm();
+  assert.deepEqual(answered, []);
+});

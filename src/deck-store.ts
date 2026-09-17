@@ -31,7 +31,8 @@ function isDeck(value: unknown): value is StoredDeck {
     return false;
   }
   const deck = value as Partial<StoredDeck>;
-  return typeof deck.id === 'string' && Array.isArray(deck.slides);
+  // An empty id belongs to the scratch pad, which is never a stored deck.
+  return typeof deck.id === 'string' && deck.id !== '' && Array.isArray(deck.slides);
 }
 
 /** Every deck in the store, newest change first. */
@@ -53,9 +54,12 @@ export async function getDeck(id: string): Promise<StoredDeck | undefined> {
   return isDeck(value) ? value : undefined;
 }
 
-/** Writes a deck and stamps `updatedAt`. */
+/** Writes a deck and stamps `updatedAt`. The scratch pad is never written. */
 export async function saveDeck(deck: StoredDeck): Promise<StoredDeck> {
   const saved: StoredDeck = {...deck, updatedAt: new Date().toISOString()};
+  if (saved.id === '') {
+    return saved;
+  }
   await set(keyFor(saved.id), saved);
   return saved;
 }

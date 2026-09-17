@@ -1,10 +1,11 @@
 /**
  * Wires the `playground-elements` project to the playground's own state.
  *
- * The project holds three files. `index.html` is a full document whose head
- * and body tags sit inside `playground-hide` regions, so the HTML tab shows
- * only the markup the user typed. `styles.css` and `script.js` are shown as
- * written.
+ * The project holds four files. Three are the editable ones: `snippet.html`,
+ * `styles.css`, and `script.js`. The fourth, `index.html`, is hidden from the
+ * editors; the host regenerates it from the snippet so the preview has a whole
+ * document to load. Keeping the wrapper out of the snippet is what makes
+ * select-all in the HTML pane copy only the user's markup.
  */
 import 'playground-elements/playground-project.js';
 import 'playground-elements/playground-tab-bar.js';
@@ -20,12 +21,13 @@ import {createQuietDebounce} from './debounce';
 import type {UpdateMode} from './settings';
 import {UPDATE_DELAYS} from './settings';
 import type {PlaygroundState} from './state';
-import {splitUserHtml, wrapUserHtml} from './wrapper';
+import {wrapUserHtml} from './wrapper';
 
-/** How long a load ignores edits, in milliseconds. See `echoGuardUntil`. */
-const ECHO_GUARD_MS = 150;
+/** The hidden document the preview loads. */
+const INDEX_FILE = 'index.html';
 
-const HTML_FILE = 'index.html';
+/** The editable files, in the order the tabs and columns show them. */
+const HTML_FILE = 'snippet.html';
 const CSS_FILE = 'styles.css';
 const JS_FILE = 'script.js';
 
@@ -46,15 +48,14 @@ export class PlaygroundHost {
   private pending = false;
 
   /**
-   * When to start trusting edits again after a programmatic load.
+   * The file contents a load replaced, keyed by file name.
    *
-   * Replacing the project's files makes each editor re-render, and an editor
-   * that has not caught up yet writes its old document straight back through
-   * `editFile`. That echo would look like the person typing, and would undo
-   * the load. Nobody can type in the few milliseconds it takes, so ignoring
-   * edits for that window is safe.
+   * Replacing the project's files makes every editor re-render, and an editor
+   * that has not caught up writes its old document straight back through
+   * `editFile`. Matching that exact text identifies the echo without a timer,
+   * so a real keystroke is never dropped, however fast it arrives.
    */
-  private echoGuardUntil = 0;
+  private echoes = new Map<string, string>();
 
   /** Waits for typing to stop before it rebuilds the preview. */
   private readonly build: QuietDebounce = createQuietDebounce(() => {
@@ -83,20 +84,22 @@ export class PlaygroundHost {
     // Loading a project builds it right away, whatever the update mode is.
     this.build.cancel();
     this.setPending(false);
-    this.echoGuardUntil = performance.now() + ECHO_GUARD_MS;
+    this.echoes = new Map(
+      (this.project.files ?? []).map((file) => [file.name, file.content]),
+    );
     this.apply(state);
   }
 
   /**
    * Switches the design system version, keeping the user's three files.
    *
-   * This rebuilds the whole project because the version lives in the hidden
-   * head of `index.html`, and the HTML editor holds its own copy of that text.
-   * Mutating the file behind the editor would make the next keystroke write
-   * the old version back.
+   * The version only appears in the hidden wrapper, so nothing the editors
+   * show has to change. Regenerating that file and rebuilding is enough.
    */
   setVersion(version: string): void {
-    this.load({...this.readFiles(), version}, this.baseCss);
+    this.current = {...this.readFiles(), version};
+    this.regenerateIndex();
+    this.buildNow();
   }
 
   /** Returns the current editor contents and version. */
@@ -155,12 +158,20 @@ export class PlaygroundHost {
     // call (such as a project load) builds right away and is never "pending".
     let editing = false;
     project.editFile = (file: SampleFile, content: string): void => {
-      if (performance.now() < this.echoGuardUntil) {
+      if (this.echoes.get(file.name) === content) {
+        // An editor that has not caught up with a load, writing back what the
+        // load replaced. Drop it once; anything else is a real edit.
+        this.echoes.delete(file.name);
         return;
       }
+      this.echoes.clear();
       editing = true;
       try {
         originalEditFile(file, content);
+        if (file.name === HTML_FILE) {
+          // The preview loads the wrapper, so it has to follow the snippet.
+          this.regenerateIndex();
+        }
       } finally {
         editing = false;
       }
@@ -186,19 +197,37 @@ export class PlaygroundHost {
     }
   }
 
-  private apply(state: PlaygroundState): void {
-    const html = wrapUserHtml(state.html, {
+  /** Builds the hidden preview document from the snippet on screen. */
+  private wrap(state: PlaygroundState): string {
+    return wrapUserHtml(state.html, {
       stylesHref: stylesUrl(state.version),
       componentsSrc: componentsUrl(state.version),
       extraHeadHtml: PLAYGROUND_CONFIG.extraHeadHtml,
       baseCss: this.baseCss,
       title: PLAYGROUND_CONFIG.title,
     });
+  }
+
+  /**
+   * Rewrites the hidden preview document in place.
+   *
+   * No editor shows this file, so changing its content behind the library's
+   * back is safe, and it avoids resetting the project on every keystroke.
+   */
+  private regenerateIndex(): void {
+    const index = (this.project.files ?? []).find((file) => file.name === INDEX_FILE);
+    if (index) {
+      index.content = this.wrap(this.readFiles());
+    }
+  }
+
+  private apply(state: PlaygroundState): void {
     this.project.config = {
       files: {
-        [HTML_FILE]: {content: html, label: 'HTML', selected: true},
+        [HTML_FILE]: {content: state.html, label: 'HTML', selected: true},
         [CSS_FILE]: {content: state.css, label: 'CSS'},
         [JS_FILE]: {content: state.js, label: 'JS'},
+        [INDEX_FILE]: {content: this.wrap(state), hidden: true},
       },
     };
   }
@@ -207,11 +236,9 @@ export class PlaygroundHost {
     const files = this.project.files ?? [];
     const find = (name: string): string =>
       files.find((file) => file.name === name)?.content ?? '';
-    const wrapped = find(HTML_FILE);
-    const html = wrapped ? splitUserHtml(wrapped) : null;
     return {
       version: this.current.version,
-      html: html ?? this.current.html,
+      html: files.length ? find(HTML_FILE) : this.current.html,
       css: files.length ? find(CSS_FILE) : this.current.css,
       js: files.length ? find(JS_FILE) : this.current.js,
     };

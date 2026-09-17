@@ -439,8 +439,18 @@ class PlaygroundApp {
     await this.persist();
   }
 
-  /** Replaces the deck in the store and redraws everything that shows it. */
+  /**
+   * Replaces the deck in the store and redraws everything that shows it.
+   *
+   * The scratch pad has no deck to update. The home page builds an editor
+   * instance to reuse the settings modal, and that instance shares the deck
+   * modal's Done button, so without this guard creating a deck also wrote the
+   * scratch pad to the store under an empty id.
+   */
   private async updateDeck(deck: StoredDeck): Promise<void> {
+    if (!this.hasDeck) {
+      return;
+    }
     this.deck = await store.saveDeck(deck);
     this.renderDeckChrome();
     this.renderPresetOptions();
@@ -542,6 +552,9 @@ class PlaygroundApp {
   }
 
   private async applyDeckSettings(): Promise<void> {
+    if (!this.hasDeck) {
+      return;
+    }
     const title = fieldValue('#deck-title-input').trim() || this.deck.title;
     await this.updateDeck({
       ...this.deck,
@@ -563,12 +576,43 @@ class PlaygroundApp {
     setFieldValue('#slide-group-input', slide.group);
     setFieldValue('#slide-description-input', slide.description);
     setFieldValue('#slide-notes-input', slide.notes);
-    setFieldValue('#slide-version-input', slide.version);
+    void this.renderSlideVersionOptions(slide.version);
     for (const pane of ['html', 'css', 'js'] as const) {
       const box = required<HTMLElement & {checked?: boolean}>(`#slide-editor-${pane}`);
       box.checked = slide.editors?.includes(pane) ?? false;
     }
     required<HTMLElement & {open?: boolean}>('#slide-modal').open = true;
+  }
+
+  /**
+   * Fills the slide inspector's version menu from the same catalog the toolbar
+   * uses, honouring the prerelease setting.
+   *
+   * A version the catalog no longer lists is added anyway, so opening the
+   * inspector cannot quietly change what a slide pinned.
+   */
+  private async renderSlideVersionOptions(current: string): Promise<void> {
+    const select = required('#slide-version-select');
+    const catalog = await loadVersions();
+    const list = this.showPrereleases ? catalog.all : catalog.stable;
+    const versions = ['latest', ...list];
+    if (current && !versions.includes(current)) {
+      versions.splice(1, 0, current);
+    }
+    select.innerHTML = versions
+      .map((version) =>
+        option(
+          version,
+          version === 'latest'
+            ? 'latest (follow the newest release)'
+            : isPrerelease(version)
+              ? `${version} (prerelease)`
+              : version,
+          version === current,
+        ),
+      )
+      .join('');
+    this.setSelectValue(select, current || 'latest');
   }
 
   private async applySlideSettings(): Promise<void> {
@@ -588,7 +632,7 @@ class PlaygroundApp {
       group: fieldValue('#slide-group-input'),
       description: fieldValue('#slide-description-input'),
       notes: fieldValue('#slide-notes-input'),
-      version: fieldValue('#slide-version-input').trim() || 'latest',
+      version: fieldValue('#slide-version-select').trim() || 'latest',
       editors: chosen.length > 0 ? [...chosen] : null,
     };
     await this.updateDeck({...this.deck, slides});
@@ -876,22 +920,32 @@ function setFieldValue(selector: string, value: string): void {
  * It uses the design system modal rather than `window.confirm`, which blocks
  * the page and the automated checks along with it.
  */
+/** Drops the listeners from whichever question the modal asked last. */
+let confirmListeners: AbortController | undefined;
+
 function confirmAction(message: string, onConfirm: () => void): void {
   const modal = required<HTMLElement & {open?: boolean}>('#confirm-modal');
   required('#confirm-message').textContent = message;
-  const ok = required('#confirm-ok');
-  const cancel = required('#confirm-cancel');
+  // Dismissing the modal with its own close button or Escape skips the Cancel
+  // handler, so listeners from an earlier question would otherwise pile up and
+  // one confirmation would answer all of them.
+  confirmListeners?.abort();
+  confirmListeners = new AbortController();
+  const {signal} = confirmListeners;
   const close = (): void => {
     modal.open = false;
-    ok.removeEventListener('nys-click', accept);
-    cancel.removeEventListener('nys-click', close);
+    confirmListeners?.abort();
+    confirmListeners = undefined;
   };
-  const accept = (): void => {
-    close();
-    onConfirm();
-  };
-  ok.addEventListener('nys-click', accept);
-  cancel.addEventListener('nys-click', close);
+  required('#confirm-ok').addEventListener(
+    'nys-click',
+    () => {
+      close();
+      onConfirm();
+    },
+    {signal},
+  );
+  required('#confirm-cancel').addEventListener('nys-click', close, {signal});
   modal.open = true;
 }
 
@@ -1111,7 +1165,10 @@ async function startHome(openSettings: () => void): Promise<void> {
       );
     },
     scratch: () => {
-      window.location.href = './#preset=scratch';
+      // Changing only the hash does not reload, and the router runs once at
+      // start-up, so ask for the reload explicitly.
+      window.location.hash = '#preset=scratch';
+      window.location.reload();
     },
     openSettings,
   });

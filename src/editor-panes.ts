@@ -151,20 +151,28 @@ export class EditorPanes {
   }
 
   /**
-   * Makes the editors that just became visible re-read their file.
+   * Makes the editors that just became visible re-read their file, and stops
+   * the ones that are off screen from writing anything back.
    *
-   * `project.editFile` does not fire `filesChanged`, so an editor that was
-   * hidden while another one was edited still holds the old text. A re-render
-   * pulls the live content back in, because `playground-file-editor` binds the
-   * value with lit's `live()` directive.
+   * Both layouts stay mounted, so a hidden editor still holds the document it
+   * had when it was last seen. `project.editFile` does not fire
+   * `filesChanged`, so it never learns about edits made in the other layout,
+   * and on its next render it would write that stale text back over them.
+   * Marking it read-only keeps its CodeMirror from emitting changes at all.
    */
   private refreshVisibleEditors(): void {
-    const visible: HTMLElement[] =
-      this.currentLayout === 'columns'
+    const columns = this.currentLayout === 'columns';
+    const visible = new Set<HTMLElement>(
+      columns
         ? PANE_IDS.filter((pane) => !this.collapsed.has(pane)).map(
             (pane) => this.columns[pane].editor,
           )
-        : [this.tabsEditor];
+        : [this.tabsEditor],
+    );
+    const all = [this.tabsEditor, ...PANE_IDS.map((pane) => this.columns[pane].editor)];
+    for (const editor of all) {
+      (editor as HTMLElement & {readonly?: boolean}).readonly = !visible.has(editor);
+    }
     requestAnimationFrame(() => {
       for (const editor of visible) {
         (editor as HTMLElement & {requestUpdate?: () => void}).requestUpdate?.();
