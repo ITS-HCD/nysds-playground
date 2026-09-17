@@ -1,6 +1,6 @@
 {
-  "title": "Three levels of strictness",
-  "description": "How much a design system locks down, configures, or merely documents its components.",
+  "title": "Customizing components",
+  "description": "Three ways a design system handles customization: lock it down, make it configurable, or write guidance and hope.",
   "boilerplate": {
     "baseCss": "body { margin: 0; padding: 2rem; display: grid; gap: 2rem; font-family: var(--nys-font-family-body); }\n.stage { display: flex; gap: 1.5rem; align-items: center; flex-wrap: wrap; }"
   },

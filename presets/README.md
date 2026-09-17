@@ -63,7 +63,7 @@ filename without its extension becomes the deck's id.
 
 ```json
 {
-  "title": "Three levels of strictness",
+  "title": "Customizing components",
   "description": "One sentence describing the deck.",
   "boilerplate": {
     "baseCss": "body { padding: 2rem; }"
@@ -87,7 +87,7 @@ as the preset schema, with one difference: each slide needs its own `id`,
 because it isn't loaded from a file of its own. `boilerplate.baseCss` is
 CSS injected into the hidden preview head for every slide in the deck —
 use it for shared layout, such as the `.stage` and `.card` helper classes
-in `decks/styling-levels.json`. Don't set `boilerplate.head`: the
+in `decks/customizing-components.json`. Don't set `boilerplate.head`: the
 playground ignores it and logs a console warning, because the version
 selector, not the deck, controls what the preview loads.
 
@@ -95,7 +95,7 @@ Building a starter deck is simpler than building a preset, because
 **Export deck** already writes this exact shape: create the deck in the
 app, add and arrange its slides, select **Export deck**, and move the
 downloaded file into `decks/` under the filename you want as its id.
-`decks/styling-levels.json` is a full worked example.
+`decks/customizing-components.json` is a full worked example.
 
 ## Validation tips
 

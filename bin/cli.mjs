@@ -27,7 +27,7 @@ Usage
 
 Options
   --preset <id>       Open a preset by id (for example: button)
-  --deck <id>         Open a deck by id (for example: styling-levels)
+  --deck <id>         Open a deck by id (for example: customizing-components)
   --present           Open in presentation mode
   --dark              Use the dark editor theme (default)
   --light             Use the light editor theme
@@ -47,7 +47,7 @@ Options
 Examples
   nysds-playground                          Open the library deck
   nysds-playground --preset modal           Open the modal preset
-  nysds-playground --deck styling-levels --present --dark
+  nysds-playground --deck customizing-components --present --dark
   nysds-playground --html demo.html --css demo.css
   nysds-playground link --html demo.html    Print a shareable URL for demo.html
 `;

@@ -231,7 +231,7 @@ starter deck.
 
 Name preset files `NN-slug.json`, for example `03-alert.json`. The
 numeric prefix sets the display order. Name deck files `<id>.json`, for
-example `styling-levels.json`; the filename becomes the starter deck's
+example `customizing-components.json`; the filename becomes the starter deck's
 id, and each slide inside the deck's `presets` array needs its own `id`.
 
 The fastest way to build either is to shape it in the running app and
