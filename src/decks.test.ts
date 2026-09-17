@@ -245,3 +245,24 @@ test('dismissing leaves nothing to answer', () => {
   confirm.confirm();
   assert.deepEqual(answered, []);
 });
+
+/* Untitled decks ---------------------------------------------------------- */
+
+test('a new deck is called Untitled and takes the next free id', () => {
+  const first = makeDeck('Untitled', [], NOW);
+  assert.equal(first.id, 'untitled');
+  assert.equal(first.title, 'Untitled');
+
+  const second = makeDeck('Untitled', ['untitled'], NOW);
+  assert.equal(second.id, 'untitled-2');
+
+  const third = makeDeck('Untitled', ['untitled', 'untitled-2'], NOW);
+  assert.equal(third.id, 'untitled-3');
+});
+
+test('renaming a deck does not move its id', () => {
+  // The id is generated once, at creation; a later title is only a label.
+  const deck = makeDeck('Untitled', [], NOW);
+  const renamed = {...deck, title: 'Three levels of strictness'};
+  assert.equal(renamed.id, 'untitled');
+});

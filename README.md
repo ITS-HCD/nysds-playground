@@ -26,7 +26,9 @@ The bare URL opens the home page: a card for every deck saved in this
 browser, each with **Open**, **Present**, **Duplicate**, **Export**, and
 **Delete**. Above the list:
 
-- **New deck** creates a deck with one blank slide and opens it.
+- **New deck** creates a deck named "Untitled" and opens it at once —
+  there's no name prompt. The title opens selected for editing, so
+  typing replaces "Untitled" right away.
 - **Import deck** adds a deck from a JSON file, through a file picker or
   by dragging a file anywhere onto the page. It accepts a deck export or
   a single preset, which becomes a one-slide deck. If the imported id is
@@ -58,18 +60,27 @@ browser.
 ## Editing a deck
 
 Opening or creating a deck puts you in the editor. The preview fills the
-stage. The HTML, CSS, and JS editors float in a drawer over the bottom of
-the stage — drag the divider to resize it, or press `c` to collapse it.
-The slide bar along the bottom shows the current slide's group, title,
-and position, with **Previous** and **Next**, and, while editing, **Add
-slide**, **Slide settings**, **Move earlier**, **Move later**,
-**Duplicate slide**, and **Delete slide**.
+stage, and its own "Result" bar stays hidden — press Cmd+Enter or
+Ctrl+Enter, or Cmd+S or Ctrl+S, or use the manual-mode **Update preview**
+button, to force a rebuild. The HTML, CSS, and JS editors float in a
+drawer over the bottom of the stage — drag the divider to resize it, or
+press `c` to collapse it. The slide bar along the bottom shows a slide
+picker in place of a title, grouped the way your slides are grouped,
+with **Previous** and **Next**, and, while editing, **Add slide**,
+**Slide settings**, **Move earlier**, **Move later**, **Duplicate
+slide**, and **Delete slide**.
 
-The toolbar (hidden while presenting) carries the deck title, with
-**Rename** opening deck settings — title, description, and base CSS
-injected into every slide's hidden head — plus a slide select, a version
-select, **Share**, **Export deck**, **Present**, **Home**, and
-**Settings**.
+The toolbar is one row: the NYSDS mark (a link to Home), the deck title,
+**Deck settings**, and the **Saved** indicator on the left; the version
+selector, **Share**, **Export deck**, **Settings**, and **Present** on
+the right. Share, Export deck, and Settings are icon buttons with
+tooltips.
+
+Click the deck title to rename it in place, the way a document title
+behaves: type the new name, then press Enter or click away to save, or
+Escape to cancel. **Deck settings**, the circle button next to the
+title, opens a modal for the title, description, and base CSS injected
+into every slide's hidden head.
 
 **Slide settings** opens the inspector for the current slide: title,
 group, description, presenter notes, which of the HTML, CSS, and JS
@@ -121,13 +132,14 @@ unsaved edits.
 
 Select **Present** in the editor toolbar, or **Present** on a deck card,
 to present a deck. Presenting reuses the same layout: it hides the
-toolbar and the slide-editing controls, requests fullscreen, and shows
-**Reset slide**, which discards this session's edits to the current
-slide and reloads what's saved. Opening a deck with `?present=1`
-presents it directly. The slide bar also gains **Edit**, which returns
-to editing, and **Settings**, which opens the settings modal without
-leaving the presentation. Escape exits presentation mode, and leaves
-fullscreen with it.
+toolbar and the slide-editing controls, requests fullscreen, and shows a
+decorative NYSDS mark centered in the slide bar. In place of the
+edit-only controls, the slide bar shows, in order, **Edit** (returns to
+editing), presenter **Notes**, **Reset slide** (discards this session's
+edits to the current slide and reloads what's saved), and **Settings**
+(opens the settings modal without leaving the presentation). Opening a
+deck with `?present=1` presents it directly. Escape exits presentation
+mode, and leaves fullscreen with it.
 
 Editing while presenting works the same as editing normally, but those
 edits are ephemeral: they last only for the browser session, and leaving
@@ -165,8 +177,9 @@ the code editor, and the second reaches presentation mode.
 | Copy standalone link | A `#code=<compressed JSON>` URL that carries the current HTML, CSS, JS, and version. Opens anywhere, in the **Scratch pad**. |
 
 On the scratch pad, Share always copies a standalone link, and a
-**Save as deck** button turns the current code into a new deck in this
-browser. Opening a standalone link, or a bare `#preset=` link with no
+**Save as deck** button turns the current code into a new deck named
+"Untitled" — the same no-prompt, select-to-rename behavior as **New
+deck**. Opening a standalone link, or a bare `#preset=` link with no
 `?deck=`, lands on the scratch pad; a bare URL with neither opens Home.
 
 ## Use the CLI

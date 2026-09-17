@@ -60,13 +60,20 @@
             <img class="home__logo" src="./nysds-logo.svg" alt="New York State Design System" width="986" height="219" />
             <span class="home__title-text">Playground</span>
           </h1>
-          <nys-button
-            id="home-settings-button"
-            size="sm"
-            variant="ghost"
-            label="Settings"
-            prefixIcon="more_vert"
-          ></nys-button>
+          <nys-tooltip for="home-settings-button" text="Settings"></nys-tooltip>
+          <nys-button id="home-settings-button" size="sm" variant="ghost" circle label="Settings">
+            <svg
+              slot="circle-icon"
+              class="glyph"
+              viewBox="0 -960 960 960"
+              fill="currentColor"
+              aria-hidden="true"
+            >
+              <path
+                d="M370-80l-16-128q-13-5-24.5-12T307-235l-119 50L78-375l103-78q-1-7-1-13.5v-27q0-6.5 1-13.5L78-585l110-190 119 50q11-8 23-15t24-12l16-128h220l16 128q13 5 24.5 12t22.5 15l119-50 110 190-103 78q1 7 1 13.5v27q0 6.5-2 13.5l103 78-110 190-118-50q-11 8-23 15t-24 12L590-80H370Zm112-260q58 0 99-41t41-99q0-58-41-99t-99-41q-59 0-99.5 41T342-480q0 58 40.5 99t99.5 41Z"
+              />
+            </svg>
+          </nys-button>
         </header>
 
         <p class="home__lede">
@@ -111,75 +118,129 @@
       </main>
 
       <header class="toolbar" id="toolbar">
-        <div class="toolbar__deck">
-          <h1 class="toolbar__title" id="deck-title">NYSDS Playground</h1>
-          <nys-button
-            class="edit-only deck-only"
-            id="rename-deck-button"
-            size="sm"
-            variant="ghost"
-            label="Rename"
-            prefixIcon="edit_square"
-          ></nys-button>
-          <p class="toolbar__saved" id="saved-indicator" role="status" aria-live="polite"></p>
-        </div>
+        <a class="toolbar__home" id="toolbar-home" href="./" aria-label="NYSDS Playground home">
+          <svg
+              class="toolbar__mark"
+              viewBox="13 3 205 205"
+              fill="currentColor"
+              aria-hidden="true"
+              focusable="false"
+            >
+              <path
+                d="M89.6599 110.894L56.3349 77.5558V48.4713H172.629L217.285 93.4372C211.299 42.5111 168.016 3 115.5 3C58.8907 3 13 48.908 13 105.538C13 128.627 20.6323 149.93 33.5051 167.07"
+              />
+              <path
+                d="M172.629 48.3945V164.733H143.556V98.0323L54.072 187.55C71.191 200.39 92.4567 208 115.5 208C172.109 208 218 162.092 218 105.462C218 101.356 217.731 97.3158 217.262 93.3366L172.629 48.3945Z"
+              />
+              <path d="M56.3291 77.5552H122.979L89.6541 110.893L56.3291 77.5552Z" />
+            </svg>
+        </a>
 
-        <div class="toolbar__controls">
-          <nys-select
-            id="preset-select"
-            class="toolbar__select"
-            label="Slide"
-            width="md"
-          ></nys-select>
+        <h1 class="toolbar__title scratch-only" id="deck-title-static">Scratch pad</h1>
 
-          <nys-select
-            id="version-select"
-            class="toolbar__select"
-            label="Version"
-            width="md"
-          ></nys-select>
-        </div>
+        <button
+          class="toolbar__title toolbar__rename deck-only edit-only"
+          id="deck-title"
+          type="button"
+        >
+          <span id="deck-title-text"></span>
+          <nys-icon class="toolbar__rename-icon" name="edit_square" size="sm"></nys-icon>
+        </button>
 
-        <div class="toolbar__actions">
-          <nys-button id="share-button" size="sm" label="Share" prefixIcon="link"></nys-button>
-          <nys-button
-            class="deck-only"
-            id="export-button"
-            size="sm"
-            variant="outline"
-            label="Export deck"
-            prefixIcon="download"
-          ></nys-button>
-          <nys-button
-            class="scratch-only"
-            id="save-as-deck-button"
-            size="sm"
-            variant="outline"
-            label="Save as deck"
-            prefixIcon="add"
-          ></nys-button>
-          <nys-button
-            id="present-button"
-            size="sm"
-            variant="ghost"
-            label="Present"
-            prefixIcon="visibility"
-          ></nys-button>
-          <nys-button
-            id="home-button"
-            size="sm"
-            variant="ghost"
-            label="Home"
-            prefixIcon="arrow_back"
-          ></nys-button>
-          <nys-button
-            id="settings-button"
-            size="sm"
-            variant="ghost"
-            label="Settings"
-            prefixIcon="more_vert"
-          ></nys-button>
-        </div>
+        <input
+          class="toolbar__rename-input deck-only"
+          id="deck-title-field"
+          type="text"
+          aria-label="Deck title"
+          hidden
+        />
+
+        <nys-tooltip class="deck-only" for="deck-settings-button" text="Deck settings"></nys-tooltip>
+        <nys-button
+          class="deck-only"
+          id="deck-settings-button"
+          size="sm"
+          variant="ghost"
+          circle
+          icon="more_vert"
+          label="Deck settings"
+        ></nys-button>
+
+        <nys-button
+          class="scratch-only"
+          id="save-as-deck-button"
+          size="sm"
+          variant="outline"
+          label="Save as deck"
+          prefixIcon="add"
+        ></nys-button>
+
+        <p class="toolbar__saved" id="saved-indicator" role="status" aria-live="polite"></p>
+
+        <div class="toolbar__spacer"></div>
+
+        <nys-select
+          id="version-select"
+          class="toolbar__select"
+          ariaLabel="Design system version"
+          width="md"
+        ></nys-select>
+
+        <nys-tooltip for="share-button" text="Share"></nys-tooltip>
+        <nys-button
+          id="share-button"
+          size="sm"
+          variant="ghost"
+          circle
+          icon="link"
+          label="Share"
+        ></nys-button>
+
+        <nys-tooltip class="deck-only" for="export-button" text="Export deck"></nys-tooltip>
+        <nys-button
+          class="deck-only"
+          id="export-button"
+          size="sm"
+          variant="ghost"
+          circle
+          icon="download"
+          label="Export deck"
+        ></nys-button>
+
+
+
+        <nys-tooltip for="settings-button" text="Settings"></nys-tooltip>
+        <nys-button
+          id="settings-button"
+          size="sm"
+          variant="ghost"
+          circle
+          label="Settings"
+        >
+          <svg
+              slot="circle-icon"
+              class="glyph"
+              viewBox="0 -960 960 960"
+              fill="currentColor"
+              aria-hidden="true"
+            >
+              <path
+                d="M370-80l-16-128q-13-5-24.5-12T307-235l-119 50L78-375l103-78q-1-7-1-13.5v-27q0-6.5 1-13.5L78-585l110-190 119 50q11-8 23-15t24-12l16-128h220l16 128q13 5 24.5 12t22.5 15l119-50 110 190-103 78q1 7 1 13.5v27q0 6.5-2 13.5l103 78-110 190-118-50q-11 8-23 15t-24 12L590-80H370Zm112-260q58 0 99-41t41-99q0-58-41-99t-99-41q-59 0-99.5 41T342-480q0 58 40.5 99t99.5 41Z"
+              />
+            </svg>
+        </nys-button>
+
+        <nys-button id="present-button" size="sm" label="Present">
+          <svg
+              slot="prefix-icon"
+              class="glyph"
+              viewBox="0 -960 960 960"
+              fill="currentColor"
+              aria-hidden="true"
+            >
+              <path d="M320-200v-560l440 280-440 280Z" />
+            </svg>
+        </nys-button>
       </header>
 
       <main class="split" id="split">
@@ -346,8 +407,14 @@
           ></nys-button>
           <div class="caption__headline">
             <p class="caption__title">
-              <span class="caption__group" id="caption-group"></span>
-              <span id="caption-title"></span>
+              <span class="present-only">
+                <span class="caption__group" id="caption-group"></span>
+                <span id="caption-title"></span>
+              </span>
+              <span class="caption__picker edit-only">
+                <select class="caption__select" id="slide-picker" aria-label="Go to slide"></select>
+                <nys-icon class="caption__picker-icon" name="chevron_down" size="sm"></nys-icon>
+              </span>
               <span class="caption__count caption__count--inline" data-count></span>
             </p>
             <p class="caption__description" id="caption-description"></p>
@@ -355,29 +422,7 @@
         </div>
 
         <div class="caption__center">
-          <a
-            class="caption__home edit-only"
-            id="caption-home"
-            href="./"
-            aria-label="NYSDS Playground home"
-          >
-            <svg
-              class="caption__mark"
-              viewBox="13 3 205 205"
-              fill="currentColor"
-              aria-hidden="true"
-              focusable="false"
-            >
-              <path
-                d="M89.6599 110.894L56.3349 77.5558V48.4713H172.629L217.285 93.4372C211.299 42.5111 168.016 3 115.5 3C58.8907 3 13 48.908 13 105.538C13 128.627 20.6323 149.93 33.5051 167.07"
-              />
-              <path
-                d="M172.629 48.3945V164.733H143.556V98.0323L54.072 187.55C71.191 200.39 92.4567 208 115.5 208C172.109 208 218 162.092 218 105.462C218 101.356 217.731 97.3158 217.262 93.3366L172.629 48.3945Z"
-              />
-              <path d="M56.3291 77.5552H122.979L89.6541 110.893L56.3291 77.5552Z" />
-            </svg>
-          </a>
-          <span class="caption__home present-only" aria-hidden="true">
+          <span class="caption__home" aria-hidden="true">
             <svg
               class="caption__mark"
               viewBox="13 3 205 205"

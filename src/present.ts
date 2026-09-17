@@ -75,6 +75,7 @@ export class Presentation {
   start(present: boolean): void {
     this.collapsed = readCollapsed();
     this.applyCollapsed();
+    this.hidePreviewToolbar();
     bindClick('#prev-button', () => this.step(-1));
     bindClick('#next-button', () => this.step(1));
     bindClick('#reset-slide-button', () => {
@@ -122,7 +123,6 @@ export class Presentation {
     this.hint.hidden = true;
     this.hint.classList.remove('present-hint--fading');
     if (presenting) {
-      this.hidePreviewToolbar();
       this.showHint();
     } else {
       this.closeNotes();

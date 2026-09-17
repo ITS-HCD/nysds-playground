@@ -62,6 +62,9 @@ const HASH_DEBOUNCE_MS = 300;
 /** How long a toast stays on screen, in milliseconds. */
 const TOAST_DURATION_MS = 2600;
 
+/** The name every new deck starts with, until someone types over it. */
+export const UNTITLED_DECK = 'Untitled';
+
 /** How long to wait after a keystroke before writing to the store. */
 const SAVE_DEBOUNCE_MS = 500;
 
@@ -160,7 +163,7 @@ class PlaygroundApp {
     this.version = initial.version;
     this.activePresetId = presetId;
     this.modified = presetId === null;
-    this.presetSelect = required('#preset-select');
+    this.presetSelect = required('#slide-picker');
     this.versionSelect = required('#version-select');
     this.prereleaseToggle = required('#prerelease-toggle');
     this.columnsToggle = required('#columns-toggle');
@@ -192,6 +195,13 @@ class PlaygroundApp {
     if (this.activePresetId) {
       // Name the slide in the URL so a refresh stays put.
       writePresetHash(this.activePresetId);
+    }
+    // A deck that was just created arrives with its name waiting to be typed.
+    if (this.hasDeck && new URLSearchParams(window.location.search).has('new')) {
+      const url = new URL(window.location.href);
+      url.searchParams.delete('new');
+      window.history.replaceState(null, '', url.toString());
+      this.openTitleEditor();
     }
     await this.renderVersionOptions();
   }
@@ -287,7 +297,8 @@ class PlaygroundApp {
 
     bindClick('#reset-settings-button', () => this.resetSettings());
 
-    bindClick('#rename-deck-button', () => this.openDeckSettings());
+    bindClick('#deck-settings-button', () => this.openDeckSettings());
+    required('#deck-title').addEventListener('click', () => this.openTitleEditor());
     bindClick('#deck-modal-done', () => {
       required<HTMLElement & {open?: boolean}>('#deck-modal').open = false;
       void this.applyDeckSettings();
@@ -320,10 +331,9 @@ class PlaygroundApp {
     const goHome = (): void => {
       void this.flushSave().then(() => this.leaveFor('./'));
     };
-    bindClick('#home-button', goHome);
     // The mark is a real link, so it needs its own handler to run the scratch
     // pad's leave check before the browser follows it.
-    required('#caption-home').addEventListener('click', (event) => {
+    required('#toolbar-home').addEventListener('click', (event) => {
       event.preventDefault();
       goHome();
     });
@@ -677,7 +687,7 @@ class PlaygroundApp {
    */
   private async saveAsDeck(destination?: string): Promise<void> {
     const state = this.currentState();
-    const deck = await store.createDeck('Scratch deck');
+    const deck = await store.createDeck(UNTITLED_DECK);
     const slides = [
       makeSlide({
         ...deck.slides[0]!,
@@ -688,7 +698,9 @@ class PlaygroundApp {
       }),
     ];
     const saved = await store.saveDeck({...deck, slides});
-    window.location.assign(destination ?? deckUrl(saved.id, slides[0]!.id, ''));
+    window.location.assign(
+      destination ?? `${deckUrl(saved.id, slides[0]!.id, '')}`.replace('#', '&new=1#'),
+    );
   }
 
   /* Leaving ------------------------------------------------------------- */
@@ -872,7 +884,63 @@ class PlaygroundApp {
   /* Toolbar ------------------------------------------------------------ */
 
   private renderDeckChrome(): void {
-    required('#deck-title').textContent = this.deck.title;
+    required('#deck-title-text').textContent = this.deck.title;
+    required('#deck-title').setAttribute(
+      'aria-label',
+      `Rename deck: ${this.deck.title}`,
+    );
+    required('#deck-title-static').textContent = this.deck.title;
+  }
+
+  /* Renaming in place ---------------------------------------------------- */
+
+  /**
+   * Swaps the title for a text field, the way a document title behaves.
+   *
+   * Enter or blur saves, Escape puts the old title back. An empty name is
+   * ignored rather than accepted, so a deck always has something to call it.
+   */
+  openTitleEditor(): void {
+    if (!this.hasDeck) {
+      return;
+    }
+    const button = required('#deck-title');
+    const field = required<HTMLInputElement>('#deck-title-field');
+    if (!field.hidden) {
+      return;
+    }
+    const original = this.deck.title;
+    field.value = original;
+    field.hidden = false;
+    button.hidden = true;
+    field.focus();
+    field.select();
+
+    const controller = new AbortController();
+    const {signal} = controller;
+    const close = (): void => {
+      controller.abort();
+      field.hidden = true;
+      button.hidden = false;
+    };
+    const commit = (): void => {
+      const next = field.value.trim();
+      close();
+      if (next && next !== original) {
+        void this.updateDeck({...this.deck, title: next});
+      }
+    };
+    field.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        commit();
+      } else if (event.key === 'Escape') {
+        event.preventDefault();
+        close();
+        button.focus();
+      }
+    }, {signal});
+    field.addEventListener('blur', commit, {signal});
   }
 
   private renderPresetOptions(): void {
@@ -931,7 +999,7 @@ class PlaygroundApp {
   }
 
   private bindToolbar(): void {
-    this.presetSelect.addEventListener('nys-change', (event) => {
+    this.presetSelect.addEventListener('change', (event) => {
       const value = detailValue(event);
       if (!value || value === '__custom__') {
         return;
@@ -1232,21 +1300,11 @@ async function startHome(openSettings: () => void): Promise<void> {
       });
     },
     create: () => {
-      const modal = required<HTMLElement & {open?: boolean}>('#deck-modal');
-      setFieldValue('#deck-title-input', '');
-      setFieldValue('#deck-description-input', '');
-      setFieldValue('#deck-base-css-input', '');
-      const done = required('#deck-modal-done');
-      const create = (): void => {
-        done.removeEventListener('nys-click', create);
-        modal.open = false;
-        const title = fieldValue('#deck-title-input').trim() || 'Untitled deck';
-        void store.createDeck(title).then((deck) => {
-          window.location.href = `./?deck=${encodeURIComponent(deck.id)}`;
-        });
-      };
-      done.addEventListener('nys-click', create);
-      modal.open = true;
+      // No prompt: the deck appears at once and the editor opens with its name
+      // selected, so typing replaces "Untitled" straight away.
+      void store.createDeck(UNTITLED_DECK).then((deck) => {
+        window.location.assign(`./?deck=${encodeURIComponent(deck.id)}&new=1`);
+      });
     },
     importFiles: readFiles,
     restoreStarters: async () => {
