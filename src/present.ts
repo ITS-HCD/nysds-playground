@@ -151,6 +151,12 @@ export class Presentation {
     const notes = preset?.notes ?? '';
     this.notesBody.textContent = notes;
     this.notesButton.hidden = notes === '';
+    // The tooltip has to go with its trigger, or it names a button nobody can
+    // see.
+    const notesTooltip = document.querySelector<HTMLElement>('nys-tooltip[for="notes-button"]');
+    if (notesTooltip) {
+      notesTooltip.hidden = notes === '';
+    }
     if (!notes) {
       this.closeNotes();
     }

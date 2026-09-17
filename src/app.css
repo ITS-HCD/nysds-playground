@@ -594,6 +594,7 @@ nys-toggle[hidden] {
 }
 
 .caption {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 12px;
@@ -601,6 +602,25 @@ nys-toggle[hidden] {
   border-top: 1px solid var(--nys-color-theme-strong);
   background: var(--nys-color-theme);
   color: var(--nys-color-text-reverse);
+}
+
+/*
+ * The mark sits in the middle of the bar whatever the title is doing, so it
+ * is taken out of the flow rather than given a share of the row. The title
+ * truncates before it reaches this.
+ */
+.caption__center {
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: 50%;
+  display: flex;
+  align-items: center;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.caption__center > * {
+  pointer-events: auto;
 }
 
 .caption[hidden] {
@@ -614,16 +634,47 @@ nys-toggle[hidden] {
   outline: none;
 }
 
+/* The NYSDS mark leads the bar. The arrow is cut out of the symbol, so the
+   bar's colour shows through it. */
+.caption__home {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  color: var(--nys-color-text-reverse);
+  border-radius: 4px;
+}
+
+.caption__home:focus-visible {
+  outline: 2px solid var(--nys-color-text-reverse);
+  outline-offset: 2px;
+}
+
+.caption__mark {
+  width: 28px;
+  height: 28px;
+}
+
+.caption__notes[hidden] {
+  display: none;
+}
+
 .caption__text {
   flex: 1 1 auto;
   min-width: 0;
+  /* Stop short of the centred mark, so a long title truncates instead of
+     running underneath it. The subtraction covers the bar padding, the gap,
+     and the previous-slide button that sit to its left. */
+  max-width: calc(50% - 88px);
 }
 
 .caption__title {
   margin: 0;
+  overflow: hidden;
   font-size: 1.0625rem;
   font-weight: 600;
   line-height: 1.3;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .caption__group {
@@ -637,9 +688,12 @@ nys-toggle[hidden] {
 
 .caption__description {
   margin: 2px 0 0;
+  overflow: hidden;
   font-size: 0.9375rem;
   line-height: 1.35;
   color: var(--nys-color-text-reverse-weak);
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .caption__description:empty {
@@ -647,7 +701,9 @@ nys-toggle[hidden] {
 }
 
 .caption__count {
-  margin: 0;
+  /* The counter starts the right-hand group, so it takes the slack and keeps
+     that group away from the centred mark. */
+  margin: 0 0 0 auto;
   font-variant-numeric: tabular-nums;
   font-size: 0.9375rem;
   color: var(--nys-color-text-reverse-weak);

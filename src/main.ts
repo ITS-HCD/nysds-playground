@@ -317,8 +317,15 @@ class PlaygroundApp {
     });
 
     bindClick('#save-as-deck-button', () => void this.saveAsDeck());
-    bindClick('#home-button', () => {
+    const goHome = (): void => {
       void this.flushSave().then(() => this.leaveFor('./'));
+    };
+    bindClick('#home-button', goHome);
+    // The mark is a real link, so it needs its own handler to run the scratch
+    // pad's leave check before the browser follows it.
+    required('#caption-home').addEventListener('click', (event) => {
+      event.preventDefault();
+      goHome();
     });
 
     // A reload or a closed tab must not lose the last keystrokes. A deck
