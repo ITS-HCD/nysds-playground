@@ -599,6 +599,10 @@ nys-toggle[hidden] {
  * ellipses before anything can overlap it.
  */
 .caption {
+  /* Sits above the editor drawer (z-index 5) so tooltips that pop upward
+     out of the bar are not painted over by the drawer. Modals use 20+. */
+  position: relative;
+  z-index: 10;
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   align-items: center;
