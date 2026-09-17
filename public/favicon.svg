@@ -1,20 +1,10 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="NYSDS Playground">
-  <rect width="32" height="32" rx="6" fill="#154973" />
-  <path
-    d="M11.8 9.6 7 16l4.8 6.4"
-    fill="none"
-    stroke="#ffffff"
-    stroke-width="2.6"
-    stroke-linecap="round"
-    stroke-linejoin="round"
-  />
-  <path
-    d="M20.2 9.6 25 16l-4.8 6.4"
-    fill="none"
-    stroke="#ffffff"
-    stroke-width="2.6"
-    stroke-linecap="round"
-    stroke-linejoin="round"
-  />
-  <path d="M17.6 8.4 14.4 23.6" fill="none" stroke="#f5a623" stroke-width="2.6" stroke-linecap="round" />
+<svg width="66" height="66" viewBox="0 0 66 66" fill="none" xmlns="http://www.w3.org/2000/svg">
+<mask id="mask0_2_15" style="mask-type:alpha" maskUnits="userSpaceOnUse" x="0" y="0" width="66" height="66">
+<circle cx="33" cy="33" r="33" fill="#286AD8"/>
+</mask>
+<g mask="url(#mask0_2_15)">
+<circle cx="33" cy="33" r="33" fill="#356CB0"/>
+<path d="M78 43.5L51 15L14 24.5L25 34L-1 59.5L30.5 94L78 43.5Z" fill="#001842"/>
+<path d="M34.5 24.5L0 58.5L7.5 65.5L41 31.5V51H51V15H14V24.5H34.5Z" fill="white"/>
+</g>
 </svg>
