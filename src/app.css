@@ -81,6 +81,11 @@ body {
 
 /* Home ----------------------------------------------------------------- */
 
+/* A raised surface behind the home page so the white deck cards stand out. */
+.app:has(> .home:not([hidden])) {
+  background: var(--nys-color-surface-raised, #f6f6f6);
+}
+
 .home {
   flex: 1 1 auto;
   width: min(1100px, 100%);
