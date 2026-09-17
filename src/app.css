@@ -108,8 +108,35 @@ body {
 }
 
 .home__title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
   margin: 0;
   font-size: 1.75rem;
+}
+
+/* The logo's intrinsic size is 986x219; scale it by height so the
+   wordmark lines up with the "Playground" text beside it. */
+.home__logo {
+  display: block;
+  width: auto;
+  height: 44px;
+}
+
+.home__title-text {
+  padding-left: 12px;
+  border-left: 2px solid var(--nys-color-neutral-300, #b1b3b5);
+  font-weight: 400;
+  color: var(--pg-muted);
+}
+
+@media (max-width: 640px) {
+  .home__logo {
+    height: 32px;
+  }
+  .home__title {
+    font-size: 1.25rem;
+  }
 }
 
 .home__lede {
