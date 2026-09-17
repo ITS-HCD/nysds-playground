@@ -62,7 +62,7 @@ test('makeDeck starts with one usable slide', () => {
   assert.equal(made.id, 'my-deck-2');
   assert.equal(made.title, 'My Deck');
   assert.equal(made.slides.length, 1);
-  assert.match(made.slides[0]?.html ?? '', /nys-button/);
+  assert.equal(made.slides[0]?.html, '<nys-button label="Excelsior"></nys-button>\n');
   assert.equal(made.createdAt, made.updatedAt);
 });
 

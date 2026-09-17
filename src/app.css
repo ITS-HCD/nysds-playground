@@ -131,7 +131,10 @@ body {
 .home__title-text {
   padding-left: 16px;
   border-left: 2px solid var(--nys-color-neutral-300, #b1b3b5);
+  font-size: 1.5rem;
   font-weight: 400;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
   color: var(--pg-muted);
 }
 
@@ -139,8 +142,8 @@ body {
   .home__logo {
     height: 44px;
   }
-  .home__title {
-    font-size: 1.5rem;
+  .home__title-text {
+    font-size: 1rem;
   }
 }
 

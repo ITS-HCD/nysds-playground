@@ -33,7 +33,7 @@ export interface StoredDeck {
 }
 
 /** The markup a brand new slide starts from. */
-export const BLANK_SLIDE_HTML = '<nys-button label="Hello"></nys-button>\n';
+export const BLANK_SLIDE_HTML = '<nys-button label="Excelsior"></nys-button>\n';
 
 /** Turns a title into a slug that is safe in a URL and a filename. */
 export function slugify(title: string): string {

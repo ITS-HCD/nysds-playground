@@ -18,6 +18,8 @@ import {
 } from './deck-model';
 import * as store from './deck-store';
 import {HomeView} from './home';
+import type {Route} from './routing';
+import {needsReboot, routeFor, slideIdFromHash} from './routing';
 import {PLAYGROUND_CONFIG, componentsUrl, stylesUrl} from './playground.config';
 import {PlaygroundHost} from './playground';
 import {Presentation} from './present';
@@ -114,6 +116,12 @@ class PlaygroundApp {
   private present: boolean;
   private savedTimer: number | undefined;
 
+  /** The route the page booted with, used to spot a history move. */
+  private readonly bootRoute: Route = routeFor(window.location.search, window.location.hash);
+
+  /** The scratch pad's starting code, so unsaved edits can be spotted. */
+  private readonly openedWith: {html: string; css: string; js: string};
+
   /**
    * This session's edits, keyed by slide id.
    *
@@ -130,6 +138,7 @@ class PlaygroundApp {
   private updateMode: UpdateMode = initialUpdateMode();
   private theme: EditorTheme = initialTheme();
   private toastTimer: number | undefined;
+  private leaveListeners: AbortController | undefined;
   private presentation: Presentation | undefined;
 
   private readonly syncHash = debounce(() => this.writeHash(), HASH_DEBOUNCE_MS);
@@ -162,6 +171,7 @@ class PlaygroundApp {
     this.buildButton = required('#build-button');
     this.savedIndicator = required('#saved-indicator');
     this.toast = required('#toast');
+    this.openedWith = {html: initial.html, css: initial.css, js: initial.js};
     this.host = new PlaygroundHost(project, initial, deck.baseCss);
     this.host.setUpdateMode(this.updateMode);
     this.host.onEdit(() => this.handleEdit());
@@ -308,15 +318,23 @@ class PlaygroundApp {
 
     bindClick('#save-as-deck-button', () => void this.saveAsDeck());
     bindClick('#home-button', () => {
-      void this.flushSave().then(() => {
-        window.location.href = './';
-      });
+      void this.flushSave().then(() => this.leaveFor('./'));
     });
 
-    // A reload or a closed tab must not lose the last keystrokes.
-    window.addEventListener('beforeunload', () => {
+    // A reload or a closed tab must not lose the last keystrokes. A deck
+    // autosaves, so only the scratch pad has anything to warn about.
+    window.addEventListener('beforeunload', (event) => {
       void this.flushSave();
+      if (this.hasUnsavedScratch()) {
+        event.preventDefault();
+        event.returnValue = '';
+      }
     });
+
+    // The router runs once at start-up, so going back or forward between
+    // views has to be turned into a reload.
+    window.addEventListener('popstate', () => this.handleHistoryMove());
+    window.addEventListener('hashchange', () => this.handleHistoryMove());
   }
 
   private setTheme(theme: EditorTheme): void {
@@ -645,8 +663,12 @@ class PlaygroundApp {
     this.showToast('success', 'Deck exported', 'Import the file to open it in another browser.');
   }
 
-  /** Turns the scratch pad into a deck of its own. */
-  private async saveAsDeck(): Promise<void> {
+  /**
+   * Turns the scratch pad into a deck of its own.
+   *
+   * `destination` is where to go afterwards. Without one, the new deck opens.
+   */
+  private async saveAsDeck(destination?: string): Promise<void> {
     const state = this.currentState();
     const deck = await store.createDeck('Scratch deck');
     const slides = [
@@ -659,7 +681,97 @@ class PlaygroundApp {
       }),
     ];
     const saved = await store.saveDeck({...deck, slides});
-    window.location.href = deckUrl(saved.id, slides[0]!.id, '');
+    window.location.assign(destination ?? deckUrl(saved.id, slides[0]!.id, ''));
+  }
+
+  /* Leaving ------------------------------------------------------------- */
+
+  /** Whether the scratch pad holds code that is not saved anywhere. */
+  private hasUnsavedScratch(): boolean {
+    if (this.hasDeck) {
+      return false;
+    }
+    const state = this.host.getState();
+    return (
+      state.html !== this.openedWith.html ||
+      state.css !== this.openedWith.css ||
+      state.js !== this.openedWith.js
+    );
+  }
+
+  /** Goes to a URL, asking first when the scratch pad has unsaved edits. */
+  private leaveFor(destination: string): void {
+    if (!this.hasUnsavedScratch()) {
+      window.location.assign(destination);
+      return;
+    }
+    this.askBeforeLeaving(destination);
+  }
+
+  /**
+   * Handles a history move.
+   *
+   * Only a change of view needs a reload. A move within one deck is a slide
+   * change, which loads in place; `loadPreset` rewrites the hash with
+   * `replaceState`, so that cannot loop.
+   */
+  private handleHistoryMove(): void {
+    const next = routeFor(window.location.search, window.location.hash);
+    if (!needsReboot(this.bootRoute, next)) {
+      const slideId = slideIdFromHash(window.location.hash);
+      const slide = slideId ? getSlide(this.deck, slideId) : undefined;
+      if (slide && slide.id !== this.activePresetId) {
+        this.loadPreset(slide);
+      }
+      return;
+    }
+    const destination = window.location.href;
+    if (!this.hasUnsavedScratch()) {
+      window.location.reload();
+      return;
+    }
+    // Put the scratch pad back in the address bar so the person is still on
+    // the page they are being asked about.
+    window.history.pushState(null, '', this.scratchUrl());
+    this.askBeforeLeaving(destination);
+  }
+
+  /** The URL that describes the scratch pad as it stands. */
+  private scratchUrl(): string {
+    const url = new URL(window.location.href);
+    url.searchParams.delete('deck');
+    url.hash = `#code=${encodeState(this.currentState())}`;
+    return url.toString();
+  }
+
+  private askBeforeLeaving(destination: string): void {
+    const modal = required<HTMLElement & {open?: boolean}>('#leave-modal');
+    this.leaveListeners?.abort();
+    this.leaveListeners = new AbortController();
+    const {signal} = this.leaveListeners;
+    const close = (): void => {
+      modal.open = false;
+      this.leaveListeners?.abort();
+      this.leaveListeners = undefined;
+    };
+    required('#leave-stay').addEventListener('nys-click', close, {signal});
+    required('#leave-discard').addEventListener(
+      'nys-click',
+      () => {
+        close();
+        window.location.assign(destination);
+      },
+      {signal},
+    );
+    required('#leave-save').addEventListener(
+      'nys-click',
+      () => {
+        close();
+        void this.saveAsDeck(destination);
+      },
+      {signal},
+    );
+    modal.open = true;
   }
 
   /* Share --------------------------------------------------------------- */
@@ -1051,31 +1163,6 @@ async function resolveInitialState(deck: StoredDeck): Promise<{
     },
     presetId: slide.id,
   };
-}
-
-/** Which view the URL asks for. */
-export type Route =
-  | {kind: 'home'}
-  | {kind: 'deck'; id: string}
-  | {kind: 'scratch'};
-
-/**
- * Decides between the home page and the editor.
- *
- * A deck id opens that deck. A `#code=` or `#preset=` hash without a deck id
- * opens the scratch pad, which is what a shared link and the CLI produce.
- * Anything else lands on the home page.
- */
-export function routeFor(search: string, hash: string): Route {
-  const deck = new URLSearchParams(search).get('deck');
-  if (deck) {
-    return {kind: 'deck', id: deck};
-  }
-  const value = hash.startsWith('#') ? hash.slice(1) : hash;
-  if (value.startsWith('code=') || value.startsWith('preset=')) {
-    return {kind: 'scratch'};
-  }
-  return {kind: 'home'};
 }
 
 /** Shows the "that deck is not here" message. */
