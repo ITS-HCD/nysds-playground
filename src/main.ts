@@ -1281,4 +1281,23 @@ async function main(): Promise<void> {
   void fetch(componentsUrl(state.version), {mode: 'no-cors'}).catch(() => undefined);
 }
 
-void main();
+/**
+ * Shows the shell and removes the splash.
+ *
+ * `index.html` hides the shell until this runs, so the page never paints
+ * unstyled text before the components are defined. It runs even when boot
+ * fails, so an error surfaces instead of a blank page.
+ */
+function revealApp(): void {
+  document.querySelector('#app')?.classList.add('app--ready');
+  const splash = document.querySelector<HTMLElement>('#splash');
+  if (splash) {
+    splash.hidden = true;
+  }
+}
+
+void main()
+  .catch((error: unknown) => {
+    console.error(error);
+  })
+  .finally(revealApp);

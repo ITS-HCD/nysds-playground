@@ -9,8 +9,50 @@
       content="Edit HTML, CSS, and JavaScript against the New York State Design System and share the result with a link."
     />
     <title>NYSDS Playground</title>
+    <style>
+      /* Keep the shell out of sight until the components are defined, so
+         the page never shows unstyled text before the design system loads.
+         A splash with the logo covers the wait. The app removes both. */
+      #app:not(.app--ready) {
+        visibility: hidden;
+      }
+      #splash {
+        position: fixed;
+        inset: 0;
+        z-index: 1000;
+        display: grid;
+        place-items: center;
+        background: #f6f6f6;
+      }
+      #splash[hidden] {
+        display: none;
+      }
+      #splash img {
+        width: auto;
+        height: 56px;
+        animation: splash-pulse 1.4s ease-in-out infinite;
+      }
+      @keyframes splash-pulse {
+        50% {
+          opacity: 0.5;
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        #splash img {
+          animation: none;
+        }
+      }
+    </style>
   </head>
   <body>
+    <div id="splash" aria-hidden="true">
+      <img src="./nysds-logo.svg" alt="" width="986" height="219" />
+    </div>
+    <noscript>
+      <p style="padding: 16px; font-family: sans-serif">
+        NYSDS Playground needs JavaScript to run.
+      </p>
+    </noscript>
     <div id="app" class="app">
       <main class="home" id="home" hidden>
         <header class="home__header">
@@ -28,7 +70,7 @@
         </header>
 
         <p class="home__lede">
-          Decks live in this browser. Edit one, present it, or share a slide as a link.
+          Decks are saved in this browser only, not on a server. Edit one, present it, share a slide as a link, or export a deck as JSON to back it up or move it to another browser.
         </p>
 
         <div class="home__actions nys-display-flex nys-flex-wrap nys-flex-gap-200">

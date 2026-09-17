@@ -5,8 +5,9 @@ York State Design System (NYSDS) components in the browser. You edit
 HTML, CSS, and JavaScript for each slide of a deck, the app saves your
 decks in that browser, and you share what you build as a URL.
 
-Live URL: https://ideal-robot-77go1q2.pages.github.io/ (private to the
-ITS-HCD organization; sign in to GitHub to view).
+Live site: https://its-hcd.github.io/nysds-playground/
+
+Source: https://github.com/ITS-HCD/nysds-playground
 
 ## Quick start
 
