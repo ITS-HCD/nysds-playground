@@ -183,6 +183,17 @@ export class Presentation {
   }
 
   private onKeyDown(event: KeyboardEvent): void {
+    // A dialog owns the keyboard while it is open, including its own Escape.
+    // Read the property rather than the attribute: the attribute only lands on
+    // the component's next render, which is a frame too late.
+    if (anyModalOpen()) {
+      return;
+    }
+    // While editing, these keys belong to the slide bar. Alt plus an arrow
+    // still steps from anywhere, as it does while presenting.
+    if (!this.presenting && !event.altKey && !this.caption.contains(event.target as Node)) {
+      return;
+    }
     const typing = isTypingContext(tagNamesFor(event));
     const action = routeKey(event, typing, this.panes.layout === 'columns');
     if (action === null) {
@@ -356,6 +367,13 @@ function readCollapsed(): boolean {
 
 function writeCollapsed(collapsed: boolean): void {
   writeKey(STORAGE_KEYS.codeCollapsed, collapsed ? '1' : '0');
+}
+
+/** Reports whether any design system dialog is on screen. */
+function anyModalOpen(): boolean {
+  return [...document.querySelectorAll('nys-modal')].some(
+    (modal) => (modal as HTMLElement & {open?: boolean}).open === true,
+  );
 }
 
 function bindClick(selector: string, handler: () => void): void {

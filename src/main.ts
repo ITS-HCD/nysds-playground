@@ -243,10 +243,15 @@ class PlaygroundApp {
   }
 
   private bindSettings(): void {
-    bindClick('#settings-button', () => {
+    const openSettings = (): void => {
       this.syncSettingsControls();
       this.settingsModal.open = true;
-    });
+    };
+    bindClick('#settings-button', openSettings);
+    // The toolbar is hidden while presenting, so the slide bar carries its own
+    // way into the settings and back to editing.
+    bindClick('#present-settings-button', openSettings);
+    bindClick('#exit-present-button', () => this.presentation?.exit());
     bindClick('#settings-done-button', () => {
       this.settingsModal.open = false;
     });

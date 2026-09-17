@@ -123,7 +123,9 @@ to present a deck. Presenting reuses the same layout: it hides the
 toolbar and the slide-editing controls, requests fullscreen, and shows
 **Reset slide**, which discards this session's edits to the current
 slide and reloads what's saved. Opening a deck with `?present=1`
-presents it directly. Escape exits presentation mode, and leaves
+presents it directly. The slide bar also gains **Edit**, which returns
+to editing, and **Settings**, which opens the settings modal without
+leaving the presentation. Escape exits presentation mode, and leaves
 fullscreen with it.
 
 Editing while presenting works the same as editing normally, but those
