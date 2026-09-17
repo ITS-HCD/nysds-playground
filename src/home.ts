@@ -4,6 +4,14 @@
 import type {StoredDeck} from './deck-model';
 import {relativeTime} from './deck-model';
 
+/** Marks the one action whose glyph the design system does not ship. */
+const PLAY_ICON = 'play';
+
+/** Makes a deck id safe to put in an element id. */
+function slug(value: string): string {
+  return value.replace(/[^a-zA-Z0-9_-]/g, '-');
+}
+
 /** What the home view asks the application to do. */
 export interface HomeActions {
   /** Opens a deck in the editor. */
@@ -72,23 +80,43 @@ export class HomeView {
       'nys-mobile-lg:nys-grid-col-6 nys-tablet:nys-grid-col-4 nys-display-flex';
 
     const card = document.createElement('nys-card');
-    card.setAttribute('heading', deck.title);
-    card.setAttribute('headingLevel', 'h2');
+    // The heading is rendered in the default slot instead of through the
+    // `heading` property, because the property takes plain text and the title
+    // has to be a link.
+    const firstSlide = deck.slides[0]?.id ?? '';
+    const heading = document.createElement('h2');
+    heading.className = 'deck-card__title';
+    const link = document.createElement('a');
+    link.href = `?deck=${encodeURIComponent(deck.id)}&present=1#preset=${encodeURIComponent(firstSlide)}`;
+    link.textContent = deck.title;
+    heading.append(link);
+
+    const meta = document.createElement('p');
+    meta.className = 'deck-card__meta';
     const slides = deck.slides.length === 1 ? '1 slide' : `${deck.slides.length} slides`;
-    card.setAttribute('subheading', `${slides} · updated ${relativeTime(deck.updatedAt)}`);
+    meta.textContent = `${slides} · updated ${relativeTime(deck.updatedAt)}`;
+    card.append(heading, meta);
+
     if (deck.description) {
-      card.setAttribute('description', deck.description);
+      const description = document.createElement('p');
+      description.className = 'deck-card__description';
+      description.textContent = deck.description;
+      card.append(description);
     }
 
     const footer = document.createElement('div');
     footer.slot = 'footer';
     footer.className = 'deck-card__actions';
+    footer.append(this.action('Edit', 'filled', () => this.actions.open(deck.id)));
     footer.append(
-      this.action('Open', 'filled', () => this.actions.open(deck.id)),
-      this.action('Present', 'outline', () => this.actions.present(deck.id)),
-      this.action('Duplicate', 'ghost', () => void this.actions.duplicate(deck.id)),
-      this.action('Export', 'ghost', () => void this.actions.exportDeck(deck.id)),
-      this.action('Delete', 'ghost', () => this.actions.remove(deck)),
+      ...this.circle(deck.id, 'Present', PLAY_ICON, () => this.actions.present(deck.id)),
+      ...this.circle(deck.id, 'Duplicate', 'content_copy', () =>
+        void this.actions.duplicate(deck.id),
+      ),
+      ...this.circle(deck.id, 'Export', 'download', () =>
+        void this.actions.exportDeck(deck.id),
+      ),
+      ...this.circle(deck.id, 'Delete', 'delete', () => this.actions.remove(deck)),
     );
     card.append(footer);
     column.append(card);
@@ -102,6 +130,48 @@ export class HomeView {
     button.setAttribute('variant', variant);
     button.addEventListener('nys-click', handler);
     return button;
+  }
+
+  /**
+   * Builds one icon-only action and the tooltip that names it.
+   *
+   * `label` is the accessible name, which circle buttons render as
+   * visually hidden text, so the tooltip is the only visible hint.
+   */
+  private circle(
+    deckId: string,
+    label: string,
+    icon: string,
+    handler: () => void,
+  ): HTMLElement[] {
+    const id = `deck-${slug(deckId)}-${label.toLowerCase()}`;
+    const tooltip = document.createElement('nys-tooltip');
+    tooltip.setAttribute('for', id);
+    tooltip.setAttribute('text', label);
+
+    const button = document.createElement('nys-button');
+    button.id = id;
+    button.setAttribute('circle', '');
+    button.setAttribute('size', 'sm');
+    button.setAttribute('variant', 'outline');
+    button.setAttribute('label', label);
+    if (icon === PLAY_ICON) {
+      // NYSDS ships no play glyph, so this one comes in through the slot.
+      const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      svg.setAttribute('slot', 'circle-icon');
+      svg.setAttribute('class', 'deck-card__play');
+      svg.setAttribute('viewBox', '0 -960 960 960');
+      svg.setAttribute('fill', 'currentColor');
+      svg.setAttribute('aria-hidden', 'true');
+      const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      path.setAttribute('d', 'M320-200v-560l440 280-440 280Z');
+      svg.append(path);
+      button.append(svg);
+    } else {
+      button.setAttribute('icon', icon);
+    }
+    button.addEventListener('nys-click', handler);
+    return [tooltip, button];
   }
 
   private bind(): void {
