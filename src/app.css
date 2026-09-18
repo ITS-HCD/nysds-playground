@@ -141,25 +141,30 @@ body {
   color: var(--pg-muted);
 }
 
-/* On a phone the wordmark and "Playground" no longer fit beside the settings
-   button on one line, so stack them and drop the divider. */
-@media (max-width: 640px) {
-  .home {
-    padding-inline: 16px;
-  }
+/* Below about 800px the wordmark and "Playground" no longer fit beside the
+   settings button on one line, so stack them, drop the divider, and let the
+   wordmark scale down with the window. Its natural width at 48px tall is
+   437px. */
+@media (max-width: 800px) {
   .home__title {
     flex-direction: column;
     align-items: flex-start;
     gap: 4px;
   }
   .home__logo {
-    width: min(100%, 320px);
+    width: min(100%, 437px);
     height: auto;
   }
   .home__title-text {
     padding-left: 0;
     border-left: 0;
     font-size: 0.875rem;
+  }
+}
+
+@media (max-width: 640px) {
+  .home {
+    padding-inline: 16px;
   }
 }
 
