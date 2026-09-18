@@ -741,7 +741,9 @@
         <nys-button id="deck-missing-home" label="Go home" prefixIcon="arrow_back"></nys-button>
       </div>
 
-      <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+      <!-- Always in the page, never hidden, so the live region exists before
+           a toast lands in it and the change is what gets announced. -->
+      <div class="toast" id="toast" role="status" aria-live="polite" aria-atomic="true"></div>
     </div>
 
     <playground-project id="project"></playground-project>

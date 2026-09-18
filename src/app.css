@@ -1012,16 +1012,15 @@ nys-toggle[hidden] {
 
 /* Toast ---------------------------------------------------------------- */
 
+/* The toast host is a live region that stays in the page. Empty, it has no
+   size, so it needs no hiding: `display: none` would take the region out of
+   the accessibility tree between toasts. */
 .toast {
   position: fixed;
   inset-block-end: 24px;
   inset-inline-end: 24px;
   z-index: 30;
   max-width: 320px;
-}
-
-.toast[hidden] {
-  display: none;
 }
 
 /* Narrow screens ------------------------------------------------------- */

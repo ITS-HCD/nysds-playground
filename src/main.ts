@@ -60,8 +60,13 @@ import {isPrerelease, loadVersions, resolveVersion} from './versions';
 /** How long to wait after a keystroke before writing the URL. */
 const HASH_DEBOUNCE_MS = 300;
 
-/** How long a toast stays on screen, in milliseconds. */
-const TOAST_DURATION_MS = 2600;
+/**
+ * How long a toast stays on screen, in milliseconds.
+ *
+ * Long enough to read two short sentences. The timer pauses while the
+ * pointer or focus is on the toast, and the toast can be dismissed sooner.
+ */
+const TOAST_DURATION_MS = 6000;
 
 /** The name every new deck starts with, until someone types over it. */
 export const UNTITLED_DECK = 'Untitled';
@@ -142,6 +147,8 @@ class PlaygroundApp {
   private updateMode: UpdateMode = initialUpdateMode();
   private theme: EditorTheme = initialTheme();
   private toastTimer: number | undefined;
+  /** The element that had focus when the toast appeared. */
+  private toastOpener: Element | null = null;
   private leaveListeners: AbortController | undefined;
   private presentation: Presentation | undefined;
 
@@ -175,6 +182,16 @@ class PlaygroundApp {
     this.buildButton = required('#build-button');
     this.savedIndicator = required('#saved-indicator');
     this.toast = required('#toast');
+    // A toast waits while someone is reading it with the pointer or has
+    // tabbed to its close button.
+    this.toast.addEventListener('mouseenter', () => this.clearToastTimer());
+    this.toast.addEventListener('mouseleave', () => this.resumeToastTimer());
+    this.toast.addEventListener('focusin', () => this.clearToastTimer());
+    this.toast.addEventListener('focusout', (event) => {
+      if (!this.toast.contains(event.relatedTarget as Node | null)) {
+        this.resumeToastTimer();
+      }
+    });
     this.openedWith = {html: initial.html, css: initial.css, js: initial.js};
     this.host = new PlaygroundHost(project, initial, deck.baseCss);
     this.host.setUpdateMode(this.updateMode);
@@ -1055,21 +1072,52 @@ class PlaygroundApp {
     });
   }
 
+  /**
+   * Shows a toast and lets screen readers announce it.
+   *
+   * The container is a live region that is always in the page, so inserting
+   * the alert is the change that gets announced. Warnings use the alert's own
+   * assertive region as well. The toast goes away on its own, when its close
+   * button is used, and dismissing it hands focus back to the control that
+   * raised it.
+   */
   private showToast(type: string, heading: string, text: string): void {
     const alert = document.createElement('nys-alert');
     alert.setAttribute('type', type);
     alert.setAttribute('heading', heading);
     alert.setAttribute('text', text);
     alert.setAttribute('dismissible', '');
+    alert.addEventListener('nys-close', () => this.hideToast());
+    this.toastOpener = document.activeElement;
     this.toast.replaceChildren(alert);
-    this.toast.hidden = false;
+    this.resumeToastTimer();
+  }
+
+  /** Removes the toast. Focus goes back where it came from if it was inside. */
+  private hideToast(): void {
+    this.clearToastTimer();
+    const hadFocus = this.toast.contains(document.activeElement);
+    this.toast.replaceChildren();
+    const opener = this.toastOpener;
+    this.toastOpener = null;
+    if (hadFocus && opener instanceof HTMLElement && opener.isConnected) {
+      opener.focus();
+    }
+  }
+
+  private clearToastTimer(): void {
     if (this.toastTimer !== undefined) {
       window.clearTimeout(this.toastTimer);
+      this.toastTimer = undefined;
     }
-    this.toastTimer = window.setTimeout(() => {
-      this.toast.hidden = true;
-      this.toast.replaceChildren();
-    }, TOAST_DURATION_MS);
+  }
+
+  /** Starts the countdown over, if there is a toast to count down. */
+  private resumeToastTimer(): void {
+    this.clearToastTimer();
+    if (this.toast.childElementCount > 0) {
+      this.toastTimer = window.setTimeout(() => this.hideToast(), TOAST_DURATION_MS);
+    }
   }
 }
 
