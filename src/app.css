@@ -759,7 +759,7 @@ nys-toggle[hidden] {
   display: flex;
   align-items: center;
   justify-self: end;
-  gap: 4px;
+  gap: 12px;
 }
 
 .caption__notes[hidden] {
