@@ -48,6 +48,8 @@ export class Presentation {
   private readonly notes: HTMLElement;
   private readonly notesBody: HTMLElement;
   private readonly notesButton: HTMLElement;
+  private readonly prevButton: HTMLElement & {disabled?: boolean};
+  private readonly nextButton: HTMLElement & {disabled?: boolean};
   private readonly panes: EditorPanes;
   private collapsed = false;
   private notesOpen = false;
@@ -69,6 +71,8 @@ export class Presentation {
     this.notes = required(root, '#notes');
     this.notesBody = required(root, '#notes-body');
     this.notesButton = required(root, '#notes-button');
+    this.prevButton = required(root, '#prev-button');
+    this.nextButton = required(root, '#next-button');
   }
 
   /** Binds the slide bar, then enters presentation mode when asked. */
@@ -150,6 +154,11 @@ export class Presentation {
     for (const element of document.querySelectorAll<HTMLElement>('[data-count]')) {
       element.textContent = counter;
     }
+    // The arrows go quiet at the ends of the deck. From a shared code link,
+    // where no slide is current, both still work: forward starts the deck and
+    // back lands on its last slide.
+    this.prevButton.disabled = deck.slides.length === 0 || index === 0;
+    this.nextButton.disabled = deck.slides.length === 0 || index === deck.slides.length - 1;
 
     const notes = preset?.notes ?? '';
     this.notesBody.textContent = notes;

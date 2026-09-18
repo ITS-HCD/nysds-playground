@@ -535,6 +535,15 @@ class PlaygroundApp {
     const [slide] = slides.splice(from, 1);
     slides.splice(to, 0, slide!);
     await this.updateDeck({...this.deck, slides});
+    this.syncMoveButtons();
+  }
+
+  /** Disables Move earlier and Move later at the ends of the deck. */
+  private syncMoveButtons(): void {
+    const index = slideIndex(this.deck, this.activePresetId);
+    required<HTMLElement & {disabled?: boolean}>('#move-slide-back-button').disabled = index <= 0;
+    required<HTMLElement & {disabled?: boolean}>('#move-slide-forward-button').disabled =
+      index === -1 || index >= this.deck.slides.length - 1;
   }
 
   /** Copies the current slide in place. */
@@ -617,6 +626,7 @@ class PlaygroundApp {
       const box = required<HTMLElement & {checked?: boolean}>(`#slide-editor-${pane}`);
       box.checked = slide.editors?.includes(pane) ?? false;
     }
+    this.syncMoveButtons();
     required<HTMLElement & {open?: boolean}>('#slide-modal').open = true;
   }
 

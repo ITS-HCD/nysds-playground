@@ -759,12 +759,6 @@ nys-toggle[hidden] {
   display: flex;
   align-items: center;
   justify-self: end;
-  gap: 8px;
-}
-
-.caption__actions {
-  display: flex;
-  align-items: center;
   gap: 4px;
 }
 
@@ -776,14 +770,23 @@ nys-toggle[hidden] {
   min-width: 0;
 }
 
+/* A flex row, so the title or picker gives way and the counter keeps its
+   place at the end. */
 .caption__title {
+  display: flex;
+  align-items: center;
+  min-width: 0;
   margin: 0;
-  overflow: hidden;
   font-size: 1.0625rem;
   font-weight: 600;
   line-height: 1.3;
-  text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.caption__title > .present-only {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .caption__group {
@@ -794,13 +797,20 @@ nys-toggle[hidden] {
 /* The slide title doubles as the slide picker while editing. */
 .caption__picker {
   display: inline-flex;
+  flex: 0 1 auto;
   align-items: center;
   gap: 2px;
-  max-width: 100%;
+  min-width: 0;
 }
 
+/* A select sizes to its longest option; `field-sizing` sizes it to the
+   chosen one instead where the browser supports it, so the chevron hugs
+   the title. Either way it can shrink and clip. */
 .caption__select {
+  min-width: 0;
   max-width: 100%;
+  field-sizing: content;
+  text-overflow: ellipsis;
   padding: 2px 2px 2px 4px;
   border: none;
   border-radius: 4px;
@@ -851,8 +861,9 @@ nys-toggle[hidden] {
   display: none;
 }
 
+/* The counter rides with the title, set off by a bullet. */
 .caption__count {
-  margin: 0;
+  margin: 0 0 0 8px;
   font-variant-numeric: tabular-nums;
   font-size: 0.9375rem;
   font-weight: 400;
@@ -860,59 +871,23 @@ nys-toggle[hidden] {
   white-space: nowrap;
 }
 
-/* The counter rides with the title on narrow screens instead. */
-.caption__count--inline {
-  display: none;
-  margin-inline-start: 8px;
+.caption__count:not(:empty)::before {
+  content: "\2022  ";
 }
 
 /*
- * Narrow screens: two rows. The arrows keep the outer columns and span both
- * rows, the title and counter take row one, and the icons take row two.
+ * Narrow screens: two rows. The title, counter, and slide settings take row
+ * one, and the action buttons spread across row two.
  */
 @media (max-width: 720px) {
   .caption {
-    grid-template-columns: auto minmax(0, 1fr) auto;
-    grid-template-rows: auto auto;
-    gap: 4px 8px;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 6px;
   }
 
-  .caption__left,
   .caption__right {
-    display: contents;
-  }
-
-  #prev-button {
-    grid-column: 1;
-    grid-row: 1 / 3;
-    align-self: center;
-  }
-
-  .caption__headline {
-    grid-column: 2;
-    grid-row: 1;
-  }
-
-  .caption__actions {
-    grid-column: 2;
-    grid-row: 2;
-    flex-wrap: wrap;
-    justify-content: center;
-  }
-
-  #next-button {
-    grid-column: 3;
-    grid-row: 1 / 3;
-    align-self: center;
-  }
-
-  /* The counter reads better beside the title than alone on the icon row. */
-  .caption__right > .caption__count {
-    display: none;
-  }
-
-  .caption__count--inline {
-    display: inline;
+    justify-self: stretch;
+    justify-content: space-between;
   }
 }
 

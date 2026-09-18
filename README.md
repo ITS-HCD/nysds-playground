@@ -70,9 +70,10 @@ button, to force a rebuild. The HTML, CSS, and JS editors float in a
 drawer over the bottom of the stage — drag the divider to resize it, or
 press `c` to collapse it. The slide bar along the bottom shows a slide
 picker in place of a title, grouped the way your slides are grouped,
-with **Previous** and **Next**, and, while editing, **Add slide**,
-**Slide settings**, **Move earlier**, **Move later**, **Duplicate
-slide**, and **Delete slide**.
+with the slide count and **Slide settings** beside it. On the right sit
+**Add slide**, **Delete slide**, **Duplicate slide**, **Previous**, and
+**Next**. Previous and Next are disabled at the ends of the deck. On a
+phone the bar takes two rows, with the actions on the second.
 
 The toolbar is one row: the NYSDS mark (a link to Home), the deck title,
 **Deck settings**, and the **Saved** indicator on the left; the version
@@ -88,8 +89,9 @@ into every slide's hidden head.
 
 **Slide settings** opens the inspector for the current slide: title,
 group, description, presenter notes, which of the HTML, CSS, and JS
-columns start expanded in the side-by-side layout, and a design system
-version to pin the slide to.
+columns start expanded in the side-by-side layout, a design system
+version to pin the slide to, and **Move earlier** and **Move later** to
+change the slide's position in the deck.
 
 Edits save automatically, 500 milliseconds after you stop typing, with a
 brief **Saved** indicator to confirm it. Leaving the editor — selecting
@@ -141,7 +143,8 @@ place of the edit-only controls, the slide bar shows, in order, **Edit**
 (returns to
 editing), presenter **Notes**, **Reset slide** (discards this session's
 edits to the current slide and reloads what's saved), and **Settings**
-(opens the settings modal without leaving the presentation). Opening a
+(opens the settings modal without leaving the presentation), followed by
+**Previous** and **Next**. Opening a
 deck with `?present=1` presents it directly. Escape exits presentation
 mode, and leaves fullscreen with it.
 

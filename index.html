@@ -404,15 +404,6 @@
 
       <footer class="caption" id="caption" tabindex="-1">
         <div class="caption__left">
-          <nys-button
-            inverted
-            id="prev-button"
-            size="sm"
-            variant="outline"
-            circle
-            icon="chevron_left"
-            label="Previous slide"
-          ></nys-button>
           <div class="caption__headline">
             <p class="caption__title">
               <span class="present-only">
@@ -423,119 +414,110 @@
                 <select class="caption__select" id="slide-picker" aria-label="Go to slide"></select>
                 <nys-icon class="caption__picker-icon" name="chevron_down" size="sm"></nys-icon>
               </span>
-              <span class="caption__count caption__count--inline" data-count></span>
+              <span class="caption__count" id="caption-count" data-count></span>
             </p>
             <p class="caption__description" id="caption-description"></p>
           </div>
+          <nys-tooltip class="edit-only deck-only" for="slide-settings-button" text="Slide settings" inverted></nys-tooltip>
+          <nys-button
+            class="edit-only deck-only"
+            inverted
+            id="slide-settings-button"
+            size="sm"
+            variant="ghost"
+            circle
+            icon="edit_square"
+            label="Slide settings"
+          ></nys-button>
         </div>
 
-
         <div class="caption__right">
-          <p class="caption__count" id="caption-count" data-count></p>
-          <div class="caption__actions">
-            <nys-button
-              class="edit-only deck-only"
-              inverted
-              id="add-slide-button"
-              size="sm"
-              variant="outline"
-              label="Add slide"
-              prefixIcon="add"
-            ></nys-button>
-            <nys-button
-              class="edit-only deck-only"
-              inverted
-              id="slide-settings-button"
-              size="sm"
-              variant="ghost"
-              label="Slide settings"
-              prefixIcon="edit_square"
-            ></nys-button>
-            <nys-button
-              class="edit-only deck-only"
-              inverted
-              id="move-slide-back-button"
-              size="sm"
-              variant="ghost"
-              circle
-              icon="arrow_back"
-              label="Move slide earlier"
-            ></nys-button>
-            <nys-button
-              class="edit-only deck-only"
-              inverted
-              id="move-slide-forward-button"
-              size="sm"
-              variant="ghost"
-              circle
-              icon="arrow_forward"
-              label="Move slide later"
-            ></nys-button>
-            <nys-button
-              class="edit-only deck-only"
-              inverted
-              id="duplicate-slide-button"
-              size="sm"
-              variant="ghost"
-              circle
-              icon="content_copy"
-              label="Duplicate slide"
-            ></nys-button>
-            <nys-button
-              class="edit-only deck-only"
-              inverted
-              id="delete-slide-button"
-              size="sm"
-              variant="ghost"
-              circle
-              icon="delete"
-              label="Delete slide"
-            ></nys-button>
-            <nys-tooltip class="present-only" for="exit-present-button" text="Edit slides" inverted></nys-tooltip>
-            <nys-button
-              class="present-only"
-              inverted
-              id="exit-present-button"
-              size="sm"
-              variant="ghost"
-              circle
-              icon="edit_square"
-              label="Edit slides"
-            ></nys-button>
-            <nys-tooltip class="caption__notes" for="notes-button" text="Presenter notes" inverted></nys-tooltip>
-            <nys-button
-              class="caption__notes"
-              inverted
-              id="notes-button"
-              size="sm"
-              variant="ghost"
-              circle
-              icon="info"
-              label="Presenter notes"
-            ></nys-button>
-            <nys-tooltip class="present-only" for="reset-slide-button" text="Reset slide" inverted></nys-tooltip>
-            <nys-button
-              class="present-only"
-              inverted
-              id="reset-slide-button"
-              size="sm"
-              variant="ghost"
-              circle
-              icon="refresh"
-              label="Reset slide"
-            ></nys-button>
-            <nys-tooltip class="present-only" for="present-settings-button" text="Settings" inverted></nys-tooltip>
-            <nys-button
-              class="present-only"
-              inverted
-              id="present-settings-button"
-              size="sm"
-              variant="ghost"
-              circle
-              icon="more_vert"
-              label="Settings"
-            ></nys-button>
-          </div>
+          <nys-tooltip class="edit-only deck-only" for="add-slide-button" text="Add slide" inverted></nys-tooltip>
+          <nys-button
+            class="edit-only deck-only"
+            inverted
+            id="add-slide-button"
+            size="sm"
+            variant="ghost"
+            circle
+            icon="add"
+            label="Add slide"
+          ></nys-button>
+          <nys-tooltip class="edit-only deck-only" for="delete-slide-button" text="Delete slide" inverted></nys-tooltip>
+          <nys-button
+            class="edit-only deck-only"
+            inverted
+            id="delete-slide-button"
+            size="sm"
+            variant="ghost"
+            circle
+            icon="delete"
+            label="Delete slide"
+          ></nys-button>
+          <nys-tooltip class="edit-only deck-only" for="duplicate-slide-button" text="Duplicate slide" inverted></nys-tooltip>
+          <nys-button
+            class="edit-only deck-only"
+            inverted
+            id="duplicate-slide-button"
+            size="sm"
+            variant="ghost"
+            circle
+            icon="content_copy"
+            label="Duplicate slide"
+          ></nys-button>
+          <nys-tooltip class="present-only" for="exit-present-button" text="Edit slides" inverted></nys-tooltip>
+          <nys-button
+            class="present-only"
+            inverted
+            id="exit-present-button"
+            size="sm"
+            variant="ghost"
+            circle
+            icon="edit_square"
+            label="Edit slides"
+          ></nys-button>
+          <nys-tooltip class="caption__notes" for="notes-button" text="Presenter notes" inverted></nys-tooltip>
+          <nys-button
+            class="caption__notes"
+            inverted
+            id="notes-button"
+            size="sm"
+            variant="ghost"
+            circle
+            icon="info"
+            label="Presenter notes"
+          ></nys-button>
+          <nys-tooltip class="present-only" for="reset-slide-button" text="Reset slide" inverted></nys-tooltip>
+          <nys-button
+            class="present-only"
+            inverted
+            id="reset-slide-button"
+            size="sm"
+            variant="ghost"
+            circle
+            icon="refresh"
+            label="Reset slide"
+          ></nys-button>
+          <nys-tooltip class="present-only" for="present-settings-button" text="Settings" inverted></nys-tooltip>
+          <nys-button
+            class="present-only"
+            inverted
+            id="present-settings-button"
+            size="sm"
+            variant="ghost"
+            circle
+            icon="more_vert"
+            label="Settings"
+          ></nys-button>
+          <nys-button
+            inverted
+            id="prev-button"
+            size="sm"
+            variant="outline"
+            circle
+            icon="chevron_left"
+            label="Previous slide"
+          ></nys-button>
           <nys-button
             inverted
             id="next-button"
@@ -616,6 +598,26 @@
             width="md"
             description="Pick latest to follow the newest release."
           ></nys-select>
+          <fieldset class="settings__fieldset">
+            <legend class="settings__legend">Position</legend>
+            <p class="settings__hint">Move this slide within the deck.</p>
+            <div class="nys-display-flex nys-flex-gap-200">
+              <nys-button
+                id="move-slide-back-button"
+                size="sm"
+                variant="outline"
+                label="Move earlier"
+                prefixIcon="arrow_back"
+              ></nys-button>
+              <nys-button
+                id="move-slide-forward-button"
+                size="sm"
+                variant="outline"
+                label="Move later"
+                suffixIcon="arrow_forward"
+              ></nys-button>
+            </div>
+          </fieldset>
         </div>
         <div slot="actions">
           <nys-button id="slide-modal-done" label="Done"></nys-button>
