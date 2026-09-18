@@ -9,7 +9,9 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import {
+  arrangeSlides,
   copyOfDeck,
+  hasContent,
   makeDeck,
   makeSlide,
   missingStarters,
@@ -285,4 +287,57 @@ test('staleStarters finds untouched copies seeded under a retired key', () => {
     [untouched],
   );
   assert.deepEqual(staleStarters([untouched], retired, []), []);
+});
+
+test('arrangeSlides reorders, renames, regroups, and drops removed slides', () => {
+  const slides = [
+    makeSlide({id: 'a', title: 'A', html: 'a'}),
+    makeSlide({id: 'b', title: 'B', html: 'b', group: 'One'}),
+    makeSlide({id: 'c', title: 'C', html: 'c'}),
+  ];
+  const result = arrangeSlides(slides, [
+    {id: 'c', title: 'C renamed', group: ' Two '},
+    {id: 'b', title: 'B', group: 'One', removed: true},
+    {id: 'a', title: '   ', group: ''},
+  ]);
+  assert.deepEqual(
+    result.map((slide) => [slide.id, slide.title, slide.group, slide.html]),
+    [
+      ['c', 'C renamed', 'Two', 'c'],
+      ['a', 'A', '', 'a'],
+    ],
+  );
+});
+
+test('arrangeSlides ignores unknown rows and never returns an empty deck', () => {
+  const slides = [makeSlide({id: 'a', title: 'A', html: 'a'})];
+  assert.deepEqual(
+    arrangeSlides(slides, [{id: 'ghost', title: 'Ghost', group: ''}]).map((s) => s.id),
+    ['a'],
+  );
+  assert.deepEqual(
+    arrangeSlides(slides, [{id: 'a', title: 'A', group: '', removed: true}]).map((s) => s.id),
+    ['a'],
+  );
+});
+
+test('hasContent is false for a slide as Add slide or New deck made it', () => {
+  assert.equal(hasContent(makeSlide({id: 'slide-3', title: 'Slide 3'})), false);
+  assert.equal(
+    hasContent(makeSlide({id: 'slide-1', title: 'Slide 1', html: '<nys-button label="Excelsior"></nys-button>\n'})),
+    false,
+  );
+});
+
+test('hasContent is true once anything was typed or set', () => {
+  const blank = {id: 'slide-3', title: 'Slide 3'};
+  assert.equal(hasContent(makeSlide({...blank, html: '<p>Hi</p>'})), true);
+  assert.equal(hasContent(makeSlide({...blank, css: 'p{}'})), true);
+  assert.equal(hasContent(makeSlide({...blank, js: 'x()'})), true);
+  assert.equal(hasContent(makeSlide({...blank, title: 'Button'})), true);
+  assert.equal(hasContent(makeSlide({...blank, group: 'One'})), true);
+  assert.equal(hasContent(makeSlide({...blank, description: 'd'})), true);
+  assert.equal(hasContent(makeSlide({...blank, notes: 'n'})), true);
+  assert.equal(hasContent(makeSlide({...blank, version: '1.21.0'})), true);
+  assert.equal(hasContent(makeSlide({...blank, editors: ['html']})), true);
 });

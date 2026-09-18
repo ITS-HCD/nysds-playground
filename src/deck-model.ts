@@ -35,6 +35,26 @@ export interface StoredDeck {
 /** The markup a brand new slide starts from. */
 export const BLANK_SLIDE_HTML = '<nys-button label="Excelsior"></nys-button>\n';
 
+/**
+ * Whether a slide holds anything worth a warning before it is deleted: code
+ * in any editor beyond the starter button, or a setting someone changed from
+ * what a new slide gets.
+ */
+export function hasContent(slide: Slide): boolean {
+  const html = slide.html.trim();
+  return (
+    (html !== '' && html !== BLANK_SLIDE_HTML.trim()) ||
+    slide.css.trim() !== '' ||
+    slide.js.trim() !== '' ||
+    !/^Slide \d+$/.test(slide.title.trim()) ||
+    slide.group.trim() !== '' ||
+    slide.description.trim() !== '' ||
+    slide.notes.trim() !== '' ||
+    slide.version !== 'latest' ||
+    (slide.editors?.length ?? 0) > 0
+  );
+}
+
 /** Turns a title into a slug that is safe in a URL and a filename. */
 export function slugify(title: string): string {
   const slug = title
@@ -276,6 +296,33 @@ export function staleStarters(
     const replacement = starters.find((starter) => starter.starter === retirement.replacedBy);
     return replacement !== undefined && sameCode(deck.slides, replacement.slides);
   });
+}
+
+/** One row of the slide list in Deck settings. */
+export interface SlideEdit {
+  id: string;
+  title: string;
+  group: string;
+  /** Marked for removal; the slide goes when the edits are applied. */
+  removed?: boolean;
+}
+
+/**
+ * Applies the slide list's edits: the rows' order, titles, and groups, with
+ * removed rows dropped. Code and every other field come from the slide as it
+ * is. A blank title keeps the old one, and the result is never empty.
+ */
+export function arrangeSlides(slides: readonly Slide[], edits: readonly SlideEdit[]): Slide[] {
+  const byId = new Map(slides.map((slide) => [slide.id, slide]));
+  const result: Slide[] = [];
+  for (const edit of edits) {
+    const slide = byId.get(edit.id);
+    if (!slide || edit.removed) {
+      continue;
+    }
+    result.push({...slide, title: edit.title.trim() || slide.title, group: edit.group.trim()});
+  }
+  return result.length > 0 ? result : slides.map((slide) => ({...slide}));
 }
 
 /** Formats an ISO timestamp as "today", "3 days ago", and so on. */

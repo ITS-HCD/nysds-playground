@@ -73,7 +73,10 @@ picker in place of a title, grouped the way your slides are grouped,
 with the slide count and **Slide settings** beside it. On the right sit
 **Add slide**, **Delete slide**, **Duplicate slide**, **Previous**, and
 **Next**. Previous and Next are disabled at the ends of the deck. On a
-phone the bar takes two rows, with the actions on the second.
+phone the bar takes two rows, with the actions on the second. Delete
+slide asks first only when the slide has something to lose: code in an
+editor, or a title, group, description, notes, version, or editor
+setting someone changed.
 
 The toolbar is one row: the NYSDS mark (a link to Home), the deck title,
 **Deck settings**, and the **Saved** indicator on the left; the version
@@ -84,8 +87,12 @@ tooltips.
 Click the deck title to rename it in place, the way a document title
 behaves: type the new name, then press Enter or click away to save, or
 Escape to cancel. **Deck settings**, the circle button next to the
-title, opens a modal for the title, description, and base CSS injected
-into every slide's hidden head.
+title, opens a modal for the title, description, the slide list, and
+base CSS injected into every slide's hidden head. The slide list has one
+row per slide, with the title and group as fields and **Move up**,
+**Move down**, and **Remove**. Drag a row by its handle to reorder with
+the pointer. Nothing changes until you select **Done**, so a removed
+slide can be restored, and closing the modal discards the edits.
 
 **Slide settings** opens the inspector for the current slide: title,
 group, description, presenter notes, which of the HTML, CSS, and JS

@@ -55,6 +55,9 @@ jsDelivr at request time.
   the preview can load.
 - `src/icon-names.ts` and `src/icons.test.ts`: the icon allowlist and the
   test that enforces it. See Icons, below.
+- `src/slide-list.ts`: the slide list inside Deck settings: rename,
+  regroup, reorder (drag, or Move up and Move down), and remove slides,
+  applied on Done through `arrangeSlides` in `src/deck-model.ts`.
 - `src/main.ts`: boots the app, routes between the home page, a deck, and
   the scratch pad (`routeFor`), and drives the toolbar, autosave, deck
   and slide settings modals, and Share.

@@ -985,6 +985,107 @@ nys-toggle[hidden] {
   align-self: flex-start;
 }
 
+/* Read by screen readers, invisible to everyone else. */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* The slide list in Deck settings ------------------------------------ */
+
+.slide-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.slide-row {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+}
+
+.slide-row--dragging {
+  opacity: 0.4;
+}
+
+/* A line above or below the row the drag would land beside. */
+.slide-row--drop-before::before,
+.slide-row--drop-after::after {
+  content: "";
+  position: absolute;
+  inset-inline: 0;
+  height: 2px;
+  background: var(--nys-color-theme, #154973);
+}
+
+.slide-row--drop-before::before {
+  top: -3px;
+}
+
+.slide-row--drop-after::after {
+  bottom: -3px;
+}
+
+.slide-row__handle {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  color: var(--pg-muted);
+  cursor: grab;
+  touch-action: none;
+}
+
+.slide-row__handle:active {
+  cursor: grabbing;
+}
+
+.slide-row--removed .slide-row__handle {
+  visibility: hidden;
+}
+
+.slide-row__position {
+  flex: 0 0 1.5em;
+  font-variant-numeric: tabular-nums;
+  color: var(--pg-muted);
+  text-align: end;
+}
+
+.slide-row__title {
+  flex: 1 1 200px;
+  min-width: 0;
+}
+
+.slide-row__group {
+  flex: 0 1 200px;
+  min-width: 0;
+}
+
+.slide-row__actions {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  margin-inline-start: auto;
+}
+
+.slide-row--removed .slide-row__title,
+.slide-row--removed .slide-row__group {
+  text-decoration: line-through;
+}
+
 /* The base CSS field is the same CodeMirror editor as the CSS pane, boxed
    like a design system text area so it sits with the other fields. */
 .settings__code .settings__legend {

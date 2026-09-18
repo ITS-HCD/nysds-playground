@@ -11,6 +11,8 @@ import type {PlaygroundProject} from 'playground-elements/playground-project.js'
 import type {Slide, StoredDeck} from './deck-model';
 import {
   BLANK_SLIDE_HTML,
+  arrangeSlides,
+  hasContent,
   getSlide,
   makeSlide,
   nextSlideId,
@@ -24,6 +26,7 @@ import {needsReboot, routeFor, slideIdFromHash} from './routing';
 import {PLAYGROUND_CONFIG, componentsUrl, stylesUrl} from './playground.config';
 import {PlaygroundHost} from './playground';
 import {Presentation} from './present';
+import {SlideList} from './slide-list';
 import type {PlaygroundState} from './state';
 import {
   debounce,
@@ -146,6 +149,7 @@ class PlaygroundApp {
   private fontSize: FontSize = initialFontSize();
   private updateMode: UpdateMode = initialUpdateMode();
   private theme: EditorTheme = initialTheme();
+  private readonly slideList: SlideList;
   private toastTimer: number | undefined;
   /** The element that had focus when the toast appeared. */
   private toastOpener: Element | null = null;
@@ -182,6 +186,7 @@ class PlaygroundApp {
     this.buildButton = required('#build-button');
     this.savedIndicator = required('#saved-indicator');
     this.toast = required('#toast');
+    this.slideList = new SlideList(required('#slide-list'), required('#slide-list-status'));
     // A toast waits while someone is reading it with the pointer or has
     // tabbed to its close button.
     this.toast.addEventListener('mouseenter', () => this.clearToastTimer());
@@ -592,7 +597,7 @@ class PlaygroundApp {
       this.showToast('warning', 'Keep one slide', 'A deck needs at least one slide.');
       return;
     }
-    confirmAction(`Delete the slide "${current.title}"? This cannot be undone.`, async () => {
+    const remove = async () => {
       this.saveSoon.cancel();
       const index = slideIndex(this.deck, current.id);
       const slides = this.deck.slides.filter((slide) => slide.id !== current.id);
@@ -605,7 +610,16 @@ class PlaygroundApp {
         this.loadPreset(next);
       }
       this.presentation?.refresh();
-    });
+    };
+    // A blank slide has nothing to lose, so it goes without a question. The
+    // editors may hold something not yet saved, so check what is on screen.
+    const onScreen = this.host.getState();
+    const asEdited = {...current, html: onScreen.html, css: onScreen.css, js: onScreen.js};
+    if (hasContent(asEdited)) {
+      confirmAction(`Delete the slide "${current.title}"? This cannot be undone.`, remove);
+    } else {
+      void remove();
+    }
   }
 
   /** Opens the deck settings modal, which also renames the deck. */
@@ -614,6 +628,7 @@ class PlaygroundApp {
     setFieldValue('#deck-title-input', this.deck.title);
     setFieldValue('#deck-description-input', this.deck.description);
     setFieldValue('#deck-base-css-input', this.deck.baseCss);
+    this.slideList.load(this.deck.slides);
     modal.open = true;
   }
 
@@ -621,13 +636,26 @@ class PlaygroundApp {
     if (!this.hasDeck) {
       return;
     }
+    // Write the editors out first, so a slide the list removed cannot take
+    // the current editor contents with it.
+    await this.flushSave();
     const title = fieldValue('#deck-title-input').trim() || this.deck.title;
+    const slides = arrangeSlides(this.deck.slides, this.slideList.value());
+    const activeSurvives = slides.some((slide) => slide.id === this.activePresetId);
+    if (!activeSurvives) {
+      this.saveSoon.cancel();
+      this.activePresetId = slides[0]?.id ?? null;
+    }
     await this.updateDeck({
       ...this.deck,
       title,
       description: fieldValue('#deck-description-input'),
       baseCss: fieldValue('#deck-base-css-input'),
+      slides,
     });
+    if (!activeSurvives && slides[0]) {
+      this.loadPreset(slides[0]);
+    }
     // The base CSS lives in the hidden head, so the preview has to be rebuilt.
     this.host.load(this.currentState(), this.deck.baseCss);
   }

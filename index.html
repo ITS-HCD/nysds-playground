@@ -532,7 +532,7 @@
 
       <p class="present-hint" id="present-hint" hidden></p>
 
-      <nys-modal id="deck-modal" heading="Deck settings" width="md">
+      <nys-modal id="deck-modal" heading="Deck settings" width="lg">
         <div class="settings">
           <nys-textinput
             id="deck-title-input"
@@ -545,6 +545,15 @@
             rows="2"
             description="One sentence. It shows on the home page and in the slide bar."
           ></nys-textarea>
+          <fieldset class="settings__fieldset">
+            <legend class="settings__legend">Slides</legend>
+            <p class="settings__hint">
+              Rename, regroup, reorder, or remove slides. Drag a row by its handle, or use the
+              arrows. Changes apply when you select Done.
+            </p>
+            <ol class="slide-list" id="slide-list"></ol>
+            <p class="visually-hidden" id="slide-list-status" role="status" aria-live="polite"></p>
+          </fieldset>
           <div class="settings__code">
             <div class="settings__legend" id="deck-base-css-label">Base CSS</div>
             <p class="settings__hint" id="deck-base-css-hint">
