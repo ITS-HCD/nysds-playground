@@ -96,9 +96,9 @@ slide can be restored, and closing the modal discards the edits.
 
 **Slide settings** opens the inspector for the current slide: title,
 group, description, presenter notes, which of the HTML, CSS, and JS
-columns start expanded in the side-by-side layout, a design system
-version to pin the slide to, and **Move earlier** and **Move later** to
-change the slide's position in the deck.
+columns start expanded in the side-by-side layout, and a design system
+version to pin the slide to. To reorder slides, use the slide list in
+**Deck settings**.
 
 Edits save automatically, 500 milliseconds after you stop typing, with a
 brief **Saved** indicator to confirm it. Leaving the editor — selecting

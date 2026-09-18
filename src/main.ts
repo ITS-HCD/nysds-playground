@@ -329,8 +329,6 @@ class PlaygroundApp {
 
     bindClick('#add-slide-button', () => void this.addSlide());
     bindClick('#slide-settings-button', () => this.openSlideSettings());
-    bindClick('#move-slide-back-button', () => void this.moveSlide(-1));
-    bindClick('#move-slide-forward-button', () => void this.moveSlide(1));
     bindClick('#duplicate-slide-button', () => void this.duplicateSlide());
     bindClick('#delete-slide-button', () => this.deleteSlide());
     bindClick('#slide-modal-done', () => {
@@ -549,29 +547,6 @@ class PlaygroundApp {
     this.showToast('success', `${title} added`, 'Name it and add notes in Slide settings.');
   }
 
-  /** Moves the current slide one place earlier or later. */
-  private async moveSlide(delta: number): Promise<void> {
-    await this.flushSave();
-    const from = slideIndex(this.deck, this.activePresetId);
-    const to = from + delta;
-    if (from === -1 || to < 0 || to >= this.deck.slides.length) {
-      return;
-    }
-    const slides = [...this.deck.slides];
-    const [slide] = slides.splice(from, 1);
-    slides.splice(to, 0, slide!);
-    await this.updateDeck({...this.deck, slides});
-    this.syncMoveButtons();
-  }
-
-  /** Disables Move earlier and Move later at the ends of the deck. */
-  private syncMoveButtons(): void {
-    const index = slideIndex(this.deck, this.activePresetId);
-    required<HTMLElement & {disabled?: boolean}>('#move-slide-back-button').disabled = index <= 0;
-    required<HTMLElement & {disabled?: boolean}>('#move-slide-forward-button').disabled =
-      index === -1 || index >= this.deck.slides.length - 1;
-  }
-
   /** Copies the current slide in place. */
   private async duplicateSlide(): Promise<void> {
     await this.flushSave();
@@ -675,7 +650,6 @@ class PlaygroundApp {
       const box = required<HTMLElement & {checked?: boolean}>(`#slide-editor-${pane}`);
       box.checked = slide.editors?.includes(pane) ?? false;
     }
-    this.syncMoveButtons();
     required<HTMLElement & {open?: boolean}>('#slide-modal').open = true;
   }
 
