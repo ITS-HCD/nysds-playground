@@ -755,11 +755,31 @@ nys-toggle[hidden] {
   min-width: 0;
 }
 
+/*
+ * Spaced by visible edges, not by box. A ghost circle button shows only its
+ * 24px glyph inside a 40px box, so ghost boxes sit 4px apart and the
+ * outlined arrows carry a wider margin: every visible edge then sits 20px
+ * from the next, and hovered ghost circles still clear each other. Margins
+ * rather than `gap`, because the zero-width tooltips between the buttons
+ * would each take a gap of their own.
+ */
 .caption__right {
   display: flex;
   align-items: center;
   justify-self: end;
-  gap: 12px;
+}
+
+.caption__right > nys-button {
+  margin-inline: 2px;
+}
+
+#prev-button,
+#next-button {
+  margin-inline: 10px;
+}
+
+#next-button {
+  margin-inline-end: 0;
 }
 
 .caption__notes[hidden] {
