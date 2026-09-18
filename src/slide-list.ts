@@ -11,7 +11,7 @@
  */
 import type {Slide, SlideEdit} from './deck-model';
 
-type Control = 'up' | 'down' | 'remove' | 'restore';
+type Control = 'handle' | 'up' | 'down' | 'remove' | 'restore';
 
 export class SlideList {
   private rows: SlideEdit[] = [];
@@ -66,15 +66,18 @@ export class SlideList {
     item.className = row.removed ? 'slide-row slide-row--removed' : 'slide-row';
     item.dataset.id = row.id;
 
-    const handle = document.createElement('span');
-    handle.className = 'slide-row__handle';
+    // The handle is a button like the row's other controls. The pointer drags
+    // it; from the keyboard, the up and down arrow keys move the row while it
+    // has focus.
+    const handle = this.circle('handle', 'menu', 'Drag to reorder', !!row.removed, () => undefined);
+    handle.classList.add('slide-row__handle');
     handle.draggable = !row.removed;
-    // The arrows are the keyboard route, so the handle is pointer-only.
-    handle.setAttribute('aria-hidden', 'true');
-    const grip = document.createElement('nys-icon');
-    grip.setAttribute('name', 'menu');
-    grip.setAttribute('size', 'sm');
-    handle.append(grip);
+    handle.addEventListener('keydown', (event) => {
+      if (event.key === 'ArrowUp' || event.key === 'ArrowDown') {
+        event.preventDefault();
+        this.move(row, event.key === 'ArrowUp' ? -1 : 1, 'handle');
+      }
+    });
     handle.addEventListener('dragstart', (event) => {
       this.dragId = row.id;
       item.classList.add('slide-row--dragging');
@@ -168,7 +171,7 @@ export class SlideList {
     return button;
   }
 
-  private move(row: SlideEdit, delta: number): void {
+  private move(row: SlideEdit, delta: number, from_control: 'arrow' | 'handle' = 'arrow'): void {
     const from = this.rows.indexOf(row);
     const to = from + delta;
     if (from === -1 || to < 0 || to >= this.rows.length) {
@@ -176,11 +179,11 @@ export class SlideList {
     }
     this.rows.splice(from, 1);
     this.rows.splice(to, 0, row);
-    // Focus stays on the arrow that was used, unless the row has reached an
+    // Focus stays on the control that was used, unless the row has reached an
     // end and that arrow is now disabled.
-    const control: Control =
+    const arrow: Control =
       delta < 0 ? (to === 0 ? 'down' : 'up') : to === this.rows.length - 1 ? 'up' : 'down';
-    this.render({id: row.id, control});
+    this.render({id: row.id, control: from_control === 'handle' ? 'handle' : arrow});
     this.announce(`Moved "${this.name(row)}" to position ${to + 1} of ${this.rows.length}.`);
   }
 

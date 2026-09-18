@@ -1041,20 +1041,13 @@ nys-toggle[hidden] {
 }
 
 .slide-row__handle {
-  display: inline-flex;
   flex: 0 0 auto;
-  align-items: center;
-  color: var(--pg-muted);
   cursor: grab;
   touch-action: none;
 }
 
 .slide-row__handle:active {
   cursor: grabbing;
-}
-
-.slide-row--removed .slide-row__handle {
-  visibility: hidden;
 }
 
 .slide-row__position {
