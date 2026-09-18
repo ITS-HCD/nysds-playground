@@ -20,6 +20,10 @@ Prerequisites: Node.js 20 or newer.
 `npm start` runs the CLI, which starts the dev server on port 5173 and
 opens a browser tab. See Use the CLI for other ways to run it.
 
+To run the playground without cloning, run `npx @nysds/playground`. The
+npm package doesn't include the NYSDS fonts. See Requirements and
+limitations.
+
 ## Home page
 
 The bare URL opens the home page: a card for every deck saved in this
@@ -186,7 +190,8 @@ deck**. Opening a standalone link, or a bare `#preset=` link with no
 
 Installing dependencies also installs a `nysds-playground` command,
 runnable through `npx nysds-playground` or the `npm start` and
-`npm run present` scripts.
+`npm run present` scripts. Outside a clone, `npx @nysds/playground`
+runs the same command from the published package.
 
 | Command | What it does |
 | --- | --- |
@@ -307,6 +312,13 @@ For a team-only deployment, replace `--allow-unauthenticated` with
 `--no-allow-unauthenticated` and put the service behind Identity-Aware
 Proxy or an internal load balancer.
 
+### npm
+
+`npm publish` publishes `@nysds/playground`. The `prepublishOnly` script
+runs the tests and the build first, and the `files` list keeps the
+fonts out of the package. Bump `version` in `package.json` before you
+publish.
+
 ### Any static host
 
 Run `npm run build` and upload the contents of `dist/` to any static
@@ -331,16 +343,22 @@ browser, and all NYSDS assets load from jsDelivr at request time.
 - Decks live in IndexedDB and don't sync between browsers, devices, or
   private-browsing sessions. Export a deck before you clear site data or
   switch machines, and Import it wherever you need it next.
-- The NYSDS fonts (Proxima Nova and D Sari) ship in `public/fonts/` and
-  load in both the app and the preview. They are licensed for New York
-  State use only. Don't reuse them outside NYS projects. The preview runs
-  on a different origin, so any host that serves the playground has to
-  send permissive CORS headers for `fonts/`. GitHub Pages does, and
-  `nginx.conf` does for the container. In local development, Chrome
-  blocks the preview from fetching `localhost`, because the preview is a
-  public origin asking for a local network resource, so the preview
-  falls back to system fonts until you deploy. The app itself still
-  shows the fonts.
+- The NYSDS fonts (Proxima Nova and D Sari) ship in `public/fonts/` in
+  this repository and on the live site, and load in both the app and the
+  preview there. They are licensed for New York State use only. Don't
+  reuse them outside NYS projects. The npm package leaves them out. The
+  app still asks for the same font families, so when you run the
+  package on a computer that has Proxima Nova and D Sari installed, the
+  browser uses those. Otherwise it falls back to system fonts. To serve
+  the fonts from a package install, copy the bundle into
+  `node_modules/@nysds/playground/public/fonts/`.
+- The preview runs on a different origin, so any host that serves the
+  playground has to send permissive CORS headers for `fonts/`. GitHub
+  Pages does, and `nginx.conf` does for the container. In local
+  development, Chrome blocks the preview from fetching `localhost`,
+  because the preview is a public origin asking for a local network
+  resource, so the preview falls back to system fonts until you deploy.
+  The app itself still shows the fonts.
 - The preview relies on service workers, and the deck store relies on
   IndexedDB, so the playground needs a browser that supports both. Every
   current major browser does.

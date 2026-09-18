@@ -68,10 +68,12 @@ jsDelivr at request time.
   not read at runtime after that. See `presets/README.md` for the
   schema.
 - `public/fonts/`: the NYSDS app font bundle (Proxima Nova and D Sari)
-  with its `nysds-fonts.css`. Licensed for NYS use only. `index.html`
-  links it for the shell, and `extraHeadHtml` in
-  `src/playground.config.ts` links it for the preview, which the app
-  resolves to an absolute URL because the preview is cross-origin.
+  with its `nysds-fonts.css`. Licensed for NYS use only, so the `files`
+  list in `package.json` keeps it out of the npm package; the links stay
+  so installed or hand-copied fonts still load. `index.html` links it
+  for the shell, and `extraHeadHtml` in `src/playground.config.ts` links
+  it for the preview, which the app resolves to an absolute URL because
+  the preview is cross-origin.
 - `index.html`: the app shell — home page, toolbar, stage, slide bar, and
   every modal (deck settings, slide settings, share, settings, confirm).
 - `vite.config.ts`: build configuration, including `base: './'` so the
@@ -171,7 +173,9 @@ actions go through the `#confirm-modal` `nys-modal` (`confirmAction` in
 A push to `main` runs `.github/workflows/deploy.yml`, which builds the
 app and deploys it to GitHub Pages. The `Dockerfile` builds the same app
 behind nginx for deployment to Google Cloud Run or any container host.
-See `README.md` for both workflows in full.
+See `README.md` for both workflows in full. `npm publish` publishes the
+package as `@nysds/playground`; `prepublishOnly` runs the tests and the
+build first.
 
 ## Writing style
 
