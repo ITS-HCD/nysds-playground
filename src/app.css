@@ -1019,6 +1019,31 @@ nys-toggle[hidden] {
   align-self: flex-start;
 }
 
+/* The base CSS field is the same CodeMirror editor as the CSS pane, boxed
+   like a design system text area so it sits with the other fields. */
+.settings__code .settings__legend {
+  font-size: 1rem;
+}
+
+.settings__code .settings__hint {
+  margin-bottom: 8px;
+  font-size: 1rem;
+  color: var(--nys-color-text, #1b1b1b);
+}
+
+.settings__editor {
+  display: block;
+  height: 160px;
+  border: 1px solid var(--nys-color-neutral-400, #6b6d70);
+  border-radius: var(--nys-radius-md, 4px);
+  overflow: hidden;
+}
+
+.settings__editor:focus-within {
+  outline: 2px solid var(--nys-color-focus, #004dd1);
+  outline-offset: 2px;
+}
+
 /* Toast ---------------------------------------------------------------- */
 
 .toast {

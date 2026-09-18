@@ -5,6 +5,7 @@ import '@nysds/components';
 import '@nysds/styles/full';
 import './app.css';
 
+import 'playground-elements/playground-code-editor.js';
 import type {PlaygroundProject} from 'playground-elements/playground-project.js';
 
 import type {Slide, StoredDeck} from './deck-model';

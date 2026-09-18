@@ -582,12 +582,21 @@
             rows="2"
             description="One sentence. It shows on the home page and in the slide bar."
           ></nys-textarea>
-          <nys-textarea
-            id="deck-base-css-input"
-            label="Base CSS"
-            rows="4"
-            description="CSS applied to every slide in this deck, without taking up room in the CSS tab."
-          ></nys-textarea>
+          <div class="settings__code">
+            <div class="settings__legend" id="deck-base-css-label">Base CSS</div>
+            <p class="settings__hint" id="deck-base-css-hint">
+              CSS applied to every slide in this deck, without taking up room in the CSS tab.
+            </p>
+            <playground-code-editor
+              id="deck-base-css-input"
+              class="settings__editor"
+              type="css"
+              line-numbers
+              line-wrapping
+              aria-labelledby="deck-base-css-label"
+              aria-describedby="deck-base-css-hint"
+            ></playground-code-editor>
+          </div>
         </div>
         <div slot="actions">
           <nys-button id="deck-modal-done" label="Done"></nys-button>
