@@ -1000,12 +1000,14 @@ nys-toggle[hidden] {
 
 /* The slide list in Deck settings ------------------------------------ */
 
+/* The modal body clips at its edges, and a focus ring reaches 4px past a
+   button, so the list keeps that much room on each side. */
 .slide-list {
   display: flex;
   flex-direction: column;
   gap: 4px;
   margin: 0;
-  padding: 0;
+  padding: 0 4px;
   list-style: none;
 }
 
@@ -1040,14 +1042,11 @@ nys-toggle[hidden] {
   bottom: -3px;
 }
 
+/* The button inside sets the pointer cursor itself. Once a drag starts, the
+   browser draws the drag cursor and no CSS reaches it. */
 .slide-row__handle {
   flex: 0 0 auto;
-  cursor: grab;
   touch-action: none;
-}
-
-.slide-row__handle:active {
-  cursor: grabbing;
 }
 
 .slide-row__position {
