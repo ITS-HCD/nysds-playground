@@ -719,9 +719,8 @@ nys-toggle[hidden] {
 }
 
 /*
- * Three real columns rather than an absolutely centred mark. Both sides are
- * `1fr`, so the mark is exactly centred and the sides shrink into their
- * ellipses before anything can overlap it.
+ * Two columns: the title side shrinks into its ellipsis, and the controls
+ * take the room they need.
  */
 .caption {
   /* Sits above the editor drawer (z-index 5) so tooltips that pop upward
@@ -729,7 +728,7 @@ nys-toggle[hidden] {
   position: relative;
   z-index: 10;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
   gap: 12px;
   padding: 8px 16px;
@@ -756,11 +755,6 @@ nys-toggle[hidden] {
   min-width: 0;
 }
 
-.caption__center {
-  display: flex;
-  align-items: center;
-}
-
 .caption__right {
   display: flex;
   align-items: center;
@@ -772,29 +766,6 @@ nys-toggle[hidden] {
   display: flex;
   align-items: center;
   gap: 4px;
-}
-
-/* The mark matches the previous and next circle buttons, so the three read as
-   one row of equal shapes. */
-.caption__home {
-  display: inline-flex;
-  flex: 0 0 auto;
-  align-items: center;
-  justify-content: center;
-  width: 40px;
-  height: 40px;
-  color: var(--nys-color-text-reverse);
-  border-radius: 50%;
-}
-
-.caption__home:focus-visible {
-  outline: 2px solid var(--nys-color-text-reverse);
-  outline-offset: 2px;
-}
-
-.caption__mark {
-  width: 100%;
-  height: 100%;
 }
 
 .caption__notes[hidden] {
@@ -897,8 +868,7 @@ nys-toggle[hidden] {
 
 /*
  * Narrow screens: two rows. The arrows keep the outer columns and span both
- * rows, the title and counter take row one, and the icons take row two. The
- * mark has nowhere to go, so it steps aside.
+ * rows, the title and counter take row one, and the icons take row two.
  */
 @media (max-width: 720px) {
   .caption {
@@ -910,10 +880,6 @@ nys-toggle[hidden] {
   .caption__left,
   .caption__right {
     display: contents;
-  }
-
-  .caption__center {
-    display: none;
   }
 
   #prev-button {

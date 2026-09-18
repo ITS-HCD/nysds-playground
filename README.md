@@ -136,9 +136,9 @@ unsaved edits.
 
 Select **Present** in the editor toolbar, or **Present** on a deck card,
 to present a deck. Presenting reuses the same layout: it hides the
-toolbar and the slide-editing controls, requests fullscreen, and shows a
-decorative NYSDS mark centered in the slide bar. In place of the
-edit-only controls, the slide bar shows, in order, **Edit** (returns to
+toolbar and the slide-editing controls, and requests fullscreen. In
+place of the edit-only controls, the slide bar shows, in order, **Edit**
+(returns to
 editing), presenter **Notes**, **Reset slide** (discards this session's
 edits to the current slide and reloads what's saved), and **Settings**
 (opens the settings modal without leaving the presentation). Opening a
