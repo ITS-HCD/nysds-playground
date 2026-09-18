@@ -36,8 +36,8 @@
         display: none;
       }
       #splash img {
-        width: auto;
-        height: 56px;
+        width: min(80vw, 400px);
+        height: auto;
         animation: splash-pulse 1.4s ease-in-out infinite;
       }
       @keyframes splash-pulse {
@@ -54,7 +54,7 @@
   </head>
   <body>
     <div id="splash" aria-hidden="true">
-      <img src="./nysds-logo.svg" alt="" width="986" height="219" />
+      <img src="./nysds-logo.svg" alt="" width="1037" height="114" />
     </div>
     <noscript>
       <p style="padding: 16px; font-family: sans-serif">
@@ -65,7 +65,7 @@
       <main class="home" id="home" hidden>
         <header class="home__header">
           <h1 class="home__title">
-            <img class="home__logo" src="./nysds-logo.svg" alt="New York State Design System" width="986" height="219" />
+            <img class="home__logo" src="./nysds-logo.svg" alt="NYS Design System" width="1037" height="114" />
             <span class="home__title-text">Playground</span>
           </h1>
           <nys-tooltip for="home-settings-button" text="Settings"></nys-tooltip>
