@@ -520,7 +520,9 @@ class PlaygroundApp {
     slides.splice(at === -1 ? slides.length : at + 1, 0, slide);
     await this.updateDeck({...this.deck, slides});
     this.loadPreset(slide);
-    this.openSlideSettings();
+    // The slide opens ready to code. A toast points at Slide settings for the
+    // title and notes, rather than a modal standing in the way.
+    this.showToast('success', `${title} added`, 'Name it and add notes in Slide settings.');
   }
 
   /** Moves the current slide one place earlier or later. */
