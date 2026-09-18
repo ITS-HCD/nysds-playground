@@ -142,7 +142,8 @@ pull one slide out of the export). In every case:
 - `npm run build`: run `tsc --noEmit`, then build to `dist/`.
 - `npm run typecheck`: run `tsc --noEmit` alone.
 - `npm run preview`: serve the built `dist/` locally.
-- `npm test`: run the `src/*.test.ts` unit tests under `node --test`.
+- `npm test`: run the `src/*.test.ts` and `bin/*.test.mjs` unit tests
+  under `node --test`.
 
 ## Verification
 
