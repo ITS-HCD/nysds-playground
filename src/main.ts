@@ -510,10 +510,12 @@ class PlaygroundApp {
   private async addSlide(): Promise<void> {
     await this.flushSave();
     const title = `Slide ${this.deck.slides.length + 1}`;
+    // A new deck's first slide shows the Excelsior button, so there is something
+    // to see. A slide added to a deck that is already going starts empty, so
+    // there is nothing to clear away first.
     const slide = makeSlide({
       id: nextSlideId(title, this.deck.slides),
       title,
-      html: BLANK_SLIDE_HTML,
     });
     const at = slideIndex(this.deck, this.activePresetId);
     const slides = [...this.deck.slides];
