@@ -8,6 +8,7 @@
  * The hash format matches `src/state.ts`: `#code=` carries an lz-string
  * compressed JSON object with the keys `v`, `h`, `c`, and `j`.
  */
+import {realpathSync} from 'node:fs';
 import {readFile} from 'node:fs/promises';
 import {resolve, dirname} from 'node:path';
 import {fileURLToPath} from 'node:url';
@@ -42,7 +43,8 @@ Options
   --port <n>          Port for the local server (default: ${DEFAULT_PORT})
   --built             Serve the production build in dist/ instead of the dev server
   --no-open           Start the server without opening a browser
-  --base <url>        Base URL for the link command (default: http://localhost:${DEFAULT_PORT}/)
+  --base <url>        Base URL for the link command (default: http://localhost:${DEFAULT_PORT}/).
+                      A path such as https://its-hcd.github.io/nysds-playground/ is kept.
 
 Examples
   nysds-playground                          Open the library deck
@@ -50,6 +52,7 @@ Examples
   nysds-playground --deck customizing-components --present --dark
   nysds-playground --html demo.html --css demo.css
   nysds-playground link --html demo.html    Print a shareable URL for demo.html
+  nysds-playground link --html demo.html --base https://its-hcd.github.io/nysds-playground/
 `;
 
 /** Parses argv into a command name and typed options. */
@@ -142,13 +145,25 @@ async function buildLocation(options) {
   return `/${search}${hash}`;
 }
 
+/**
+ * Joins a playground location onto a base URL, keeping the base's path.
+ *
+ * `buildLocation` returns a root-relative location such as `/?deck=x#code=y`,
+ * which the dev server needs. Resolving that directly against a base with a
+ * path, such as a GitHub Pages project site, would drop the path, so the
+ * location is made relative and the base is treated as a directory.
+ */
+export function linkUrl(base, location) {
+  const directory = base.endsWith('/') ? base : `${base}/`;
+  return new URL(location.replace(/^\//, ''), directory).toString();
+}
+
 /** Prints a URL for the given options without starting a server. */
 async function link(options) {
   const port = options.port ? Number(options.port) : DEFAULT_PORT;
   const base = options.base ?? `http://localhost:${port}/`;
   const location = await buildLocation(options);
-  const url = new URL(location, base);
-  process.stdout.write(`${url.toString()}\n`);
+  process.stdout.write(`${linkUrl(base, location)}\n`);
 }
 
 /** Starts the dev server or the production preview and opens the browser. */
@@ -197,7 +212,12 @@ async function main() {
   }
 }
 
-main().catch((error) => {
-  process.stderr.write(`${error instanceof Error ? error.message : String(error)}\n`);
-  process.exitCode = 1;
-});
+const isMain =
+  process.argv[1] !== undefined && realpathSync(process.argv[1]) === fileURLToPath(import.meta.url);
+
+if (isMain) {
+  main().catch((error) => {
+    process.stderr.write(`${error instanceof Error ? error.message : String(error)}\n`);
+    process.exitCode = 1;
+  });
+}
