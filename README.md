@@ -195,6 +195,7 @@ runnable through `npx nysds-playground` or the `npm start` and
 | `nysds-playground --deck library --present` | Present a deck. |
 | `nysds-playground --html demo.html --css demo.css` | Open the scratch pad with local files loaded into the editors. |
 | `nysds-playground link --html demo.html` | Print a shareable URL for a local file without starting a server. |
+| `nysds-playground link --html demo.html --base https://its-hcd.github.io/nysds-playground/` | Print a link to the published site instead of a local server. |
 | `nysds-playground --built` | Serve the production build in `dist/` with `vite preview`, instead of the dev server. |
 | `nysds-playground --help` | List every command and flag. |
 
