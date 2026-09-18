@@ -112,7 +112,10 @@ exported deck's `presets` array, uses the same fields but needs its own
 Use the NYSDS MCP server (`mcp__nysds__*`) for component names,
 attributes, and utility classes. Never read `node_modules/@nysds` for
 documentation — the MCP server is the authoritative source. NYSDS themes
-are set with the `data-nys-theme` attribute, not `data-theme`.
+are applied with a `nys-theme-<id>` class or the `data-theme` attribute in
+every published stylesheet through 1.21.1. The MCP themes guide documents
+`data-nys-theme`, but no published stylesheet selects on it, so prefer
+the class, which both the guide and the shipped CSS support.
 
 `nys-radiogroup` did not reflect a programmatically set selection, so the
 settings modal uses `nys-select` for multi-option settings instead.
