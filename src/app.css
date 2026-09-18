@@ -687,20 +687,6 @@ nys-toggle[hidden] {
   min-height: 0;
 }
 
-.split__divider {
-  flex: 0 0 var(--pg-divider-width);
-  cursor: col-resize;
-  background: var(--pg-border);
-  background-clip: content-box;
-  border-inline: 4px solid var(--pg-surface);
-  touch-action: none;
-}
-
-.split__divider:focus-visible {
-  outline: 2px solid var(--nys-color-focus, #004dd1);
-  outline-offset: 1px;
-}
-
 /* Presentation mode ---------------------------------------------------- */
 
 .app--present .toolbar,
