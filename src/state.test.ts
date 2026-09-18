@@ -24,7 +24,7 @@ import {
 import {isBuildShortcut} from './keys.ts';
 import {chooseVersion} from './version-catalog.ts';
 import {otherTheme, readThemeParam, themeUrl} from './theme.ts';
-import {wrapUserHtml} from './wrapper.ts';
+import {resolveHeadUrls, wrapUserHtml} from './wrapper.ts';
 
 /** Collects validation messages instead of writing them to the console. */
 function collector(): {messages: string[]; report: (message: string) => void} {
@@ -68,6 +68,17 @@ test('wrapUserHtml adds extra head markup when configured', () => {
     extraHeadHtml: '<link rel="stylesheet" href="https://fonts.example.com/f.css" />',
   });
   assert.ok(wrapped.includes('https://fonts.example.com/f.css'));
+});
+
+test('resolveHeadUrls makes relative href and src values absolute', () => {
+  const html =
+    '<link rel="stylesheet" href="./fonts/nysds-fonts.css">' +
+    "<script src='../x.js'></script>" +
+    '<link href="https://cdn.example.com/a.css">';
+  const resolved = resolveHeadUrls(html, 'https://example.org/playground/index.html');
+  assert.ok(resolved.includes('href="https://example.org/playground/fonts/nysds-fonts.css"'));
+  assert.ok(resolved.includes("src='https://example.org/x.js'"));
+  assert.ok(resolved.includes('href="https://cdn.example.com/a.css"'));
 });
 
 test('encodeState and decodeState round-trip', () => {

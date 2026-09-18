@@ -21,7 +21,7 @@ import {createQuietDebounce} from './debounce';
 import type {UpdateMode} from './settings';
 import {UPDATE_DELAYS} from './settings';
 import type {PlaygroundState} from './state';
-import {wrapUserHtml} from './wrapper';
+import {resolveHeadUrls, wrapUserHtml} from './wrapper';
 
 /** The hidden document the preview loads. */
 const INDEX_FILE = 'index.html';
@@ -202,7 +202,7 @@ export class PlaygroundHost {
     return wrapUserHtml(state.html, {
       stylesHref: stylesUrl(state.version),
       componentsSrc: componentsUrl(state.version),
-      extraHeadHtml: PLAYGROUND_CONFIG.extraHeadHtml,
+      extraHeadHtml: resolveHeadUrls(PLAYGROUND_CONFIG.extraHeadHtml, document.baseURI),
       baseCss: this.baseCss,
       title: PLAYGROUND_CONFIG.title,
     });

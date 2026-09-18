@@ -54,4 +54,9 @@ export default defineConfig({
     // resolves against /node_modules/playground-elements/.
     exclude: ['playground-elements'],
   },
+  // The preview iframe runs on unpkg.com and loads the fonts from this
+  // server. Font requests always need CORS, and Vite only allows localhost
+  // origins by default.
+  server: {cors: true},
+  preview: {cors: true},
 });

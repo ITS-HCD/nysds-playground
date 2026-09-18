@@ -67,6 +67,11 @@ jsDelivr at request time.
   browser's deck store the first time the playground runs there; they are
   not read at runtime after that. See `presets/README.md` for the
   schema.
+- `public/fonts/`: the NYSDS app font bundle (Proxima Nova and D Sari)
+  with its `nysds-fonts.css`. Licensed for NYS use only. `index.html`
+  links it for the shell, and `extraHeadHtml` in
+  `src/playground.config.ts` links it for the preview, which the app
+  resolves to an absolute URL because the preview is cross-origin.
 - `index.html`: the app shell — home page, toolbar, stage, slide bar, and
   every modal (deck settings, slide settings, share, settings, confirm).
 - `vite.config.ts`: build configuration, including `base: './'` so the

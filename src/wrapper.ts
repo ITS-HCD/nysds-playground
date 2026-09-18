@@ -60,6 +60,21 @@ export function wrapUserHtml(userHtml: string, options: WrapperOptions): string 
   ].join('\n');
 }
 
+/**
+ * Rewrites relative `href` and `src` values in head markup to absolute URLs.
+ *
+ * The preview runs on a different origin from the playground, so a link
+ * written relative to the playground page, such as `./fonts/nysds-fonts.css`,
+ * has to be resolved against the page before it goes into the preview.
+ */
+export function resolveHeadUrls(html: string, baseUrl: string): string {
+  return html.replace(
+    /\b(href|src)=(["'])(\.{1,2}\/[^"']*)\2/g,
+    (_match, attr: string, quote: string, value: string) =>
+      `${attr}=${quote}${new URL(value, baseUrl).href}${quote}`,
+  );
+}
+
 /** Escapes text that goes into an HTML text node. */
 function escapeHtmlText(value: string): string {
   return value

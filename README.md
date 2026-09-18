@@ -330,12 +330,16 @@ browser, and all NYSDS assets load from jsDelivr at request time.
 - Decks live in IndexedDB and don't sync between browsers, devices, or
   private-browsing sessions. Export a deck before you clear site data or
   switch machines, and Import it wherever you need it next.
-- NYSDS's licensed fonts (Proxima Nova and D Sari) aren't included, so
-  the preview falls back to system fonts. For an internal deployment,
-  host the font bundle on the same host as the playground, with
-  permissive CORS headers, since the preview runs on a different origin.
-  Then set `extraHeadHtml` in `src/playground.config.ts` to a
-  `<link rel="stylesheet">` pointing at that bundle.
+- The NYSDS fonts (Proxima Nova and D Sari) ship in `public/fonts/` and
+  load in both the app and the preview. They are licensed for New York
+  State use only. Don't reuse them outside NYS projects. The preview runs
+  on a different origin, so any host that serves the playground has to
+  send permissive CORS headers for `fonts/`. GitHub Pages does, and
+  `nginx.conf` does for the container. In local development, Chrome
+  blocks the preview from fetching `localhost`, because the preview is a
+  public origin asking for a local network resource, so the preview
+  falls back to system fonts until you deploy. The app itself still
+  shows the fonts.
 - The preview relies on service workers, and the deck store relies on
   IndexedDB, so the playground needs a browser that supports both. Every
   current major browser does.

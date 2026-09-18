@@ -32,7 +32,13 @@ export interface PlaygroundAppConfig {
   defaultVersion: string;
   /** The versions to offer when the versions API is unreachable. */
   fallbackVersions: string[];
-  /** Extra markup to add to the preview `<head>`, such as a fonts stylesheet. */
+  /**
+   * Extra markup to add to the preview `<head>`, such as a fonts stylesheet.
+   *
+   * Write `href` and `src` values relative to the playground page. The
+   * preview runs on another origin, so the app resolves them to absolute
+   * URLs before it builds the preview document.
+   */
   extraHeadHtml: string;
   /** Whether the version list includes prereleases before you opt in. */
   showPrereleasesByDefault: boolean;
@@ -48,7 +54,7 @@ export const PLAYGROUND_CONFIG: PlaygroundAppConfig = {
   versionsApi: 'https://data.jsdelivr.com/v1/package/npm/',
   defaultVersion: 'latest',
   fallbackVersions: ['1.21.1', '1.21.0', '1.20.1', '1.20.0', '1.19.4'],
-  extraHeadHtml: '',
+  extraHeadHtml: '<link rel="stylesheet" href="./fonts/nysds-fonts.css">',
   showPrereleasesByDefault: false,
 };
 
