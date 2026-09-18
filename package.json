@@ -1,6 +1,6 @@
 {
   "name": "@nysds/playground",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "A browser playground for the New York State Design System.",
   "scripts": {
     "start": "node bin/cli.mjs",
