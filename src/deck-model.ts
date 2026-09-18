@@ -236,6 +236,48 @@ export function missingStarters(
   return additions;
 }
 
+/** A starter key an earlier build seeded under a different file name. */
+export interface RetiredStarter {
+  /** The old starter key. */
+  starter: string;
+  /** The starter key the same deck ships under now. */
+  replacedBy: string;
+  /** The title the deck had when it was seeded under the old key. */
+  title: string;
+}
+
+function sameCode(a: readonly Slide[], b: readonly Slide[]): boolean {
+  return (
+    a.length === b.length &&
+    a.every((slide, i) => {
+      const other = b[i]!;
+      return slide.html === other.html && slide.css === other.css && slide.js === other.js;
+    })
+  );
+}
+
+/**
+ * Returns the stored copies of retired starters that nobody has edited.
+ *
+ * A copy counts as untouched when it still has the old title and the same
+ * slide code as the deck that replaced it. An edited copy is the user's
+ * content now, so it stays.
+ */
+export function staleStarters(
+  stored: readonly StoredDeck[],
+  retired: readonly RetiredStarter[],
+  starters: readonly StoredDeck[],
+): StoredDeck[] {
+  return stored.filter((deck) => {
+    const retirement = retired.find((entry) => entry.starter === deck.starter);
+    if (!retirement || deck.title !== retirement.title) {
+      return false;
+    }
+    const replacement = starters.find((starter) => starter.starter === retirement.replacedBy);
+    return replacement !== undefined && sameCode(deck.slides, replacement.slides);
+  });
+}
+
 /** Formats an ISO timestamp as "today", "3 days ago", and so on. */
 export function relativeTime(iso: string, now = new Date()): string {
   const then = new Date(iso).getTime();

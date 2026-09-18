@@ -18,6 +18,7 @@ import {
   relativeTime,
   slideIndex,
   slugify,
+  staleStarters,
   toDeckFile,
   uniqueId,
 } from './deck-model.ts';
@@ -265,4 +266,23 @@ test('renaming a deck does not move its id', () => {
   const deck = makeDeck('Untitled', [], NOW);
   const renamed = {...deck, title: 'Three levels of strictness'};
   assert.equal(renamed.id, 'untitled');
+});
+
+test('staleStarters finds untouched copies seeded under a retired key', () => {
+  const retired = [{starter: 'old', replacedBy: 'new', title: 'Old title'}];
+  const starters = [deck('new', {starter: 'new', title: 'New title'})];
+  const untouched = deck('old', {starter: 'old', title: 'Old title'});
+  const renamed = deck('old', {starter: 'old', title: 'My deck'});
+  const edited = deck('old', {
+    starter: 'old',
+    title: 'Old title',
+    slides: [makeSlide({id: 'slide-1', title: 'Slide 1', html: 'changed'})],
+  });
+  const unrelated = deck('mine');
+
+  assert.deepEqual(
+    staleStarters([untouched, renamed, edited, unrelated], retired, starters),
+    [untouched],
+  );
+  assert.deepEqual(staleStarters([untouched], retired, []), []);
 });

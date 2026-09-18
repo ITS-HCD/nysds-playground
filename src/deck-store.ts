@@ -13,9 +13,10 @@ import {
   makeDeck,
   missingStarters,
   normalizeImport,
+  staleStarters,
   toDeckFile,
 } from './deck-model';
-import {STARTER_DECKS} from './starters';
+import {RETIRED_STARTERS, STARTER_DECKS} from './starters';
 
 export type {Slide, StoredDeck};
 
@@ -122,9 +123,15 @@ export async function exportDeck(id: string): Promise<string | undefined> {
 /**
  * Adds any bundled deck the store has not seen.
  *
+ * First drops untouched copies of starters that now ship under a new name, so
+ * a rename in `decks/` does not leave the old deck beside the new one.
  * Returns how many decks it added, so the home page can say so.
  */
 export async function seedStarters(): Promise<number> {
+  const stale = staleStarters(await listDecks(), RETIRED_STARTERS, STARTER_DECKS);
+  for (const deck of stale) {
+    await del(keyFor(deck.id));
+  }
   const stored = await listDecks();
   const additions = missingStarters(STARTER_DECKS, stored);
   // Starters carry a fixed timestamp so seeding is deterministic. Stamp them

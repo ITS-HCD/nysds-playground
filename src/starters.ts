@@ -6,7 +6,7 @@
  * file in `decks/` becomes a starter deck, and all of `presets/` becomes one
  * starter deck called the component library.
  */
-import type {StoredDeck} from './deck-model.ts';
+import type {RetiredStarter, StoredDeck} from './deck-model.ts';
 import {makeSlide} from './deck-model.ts';
 import type {Preset} from './preset-schema.ts';
 import {idFromPresetPath, parseDeck, parsePreset} from './preset-schema.ts';
@@ -68,3 +68,19 @@ const bundledDecks: StoredDeck[] = Object.keys(deckModules)
 export const STARTER_DECKS: StoredDeck[] = [libraryDeck, ...bundledDecks].filter(
   (deck) => deck.slides.length > 0,
 );
+
+/**
+ * Starter keys that earlier builds seeded under a different file name.
+ *
+ * Renaming a file in `decks/` changes the deck's id and starter key, so a
+ * browser that seeded the old name keeps that copy and seeds the new name
+ * beside it. Listing the old name here lets `seedStarters` drop the stale copy
+ * when nothing in it has changed.
+ */
+export const RETIRED_STARTERS: readonly RetiredStarter[] = [
+  {
+    starter: 'styling-levels',
+    replacedBy: 'customizing-components',
+    title: 'Three levels of strictness',
+  },
+];

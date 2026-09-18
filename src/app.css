@@ -114,6 +114,8 @@ body {
 
 .home__title {
   display: flex;
+  flex: 1 1 auto;
+  min-width: 0;
   align-items: center;
   gap: 16px;
   margin: 0;
@@ -125,6 +127,7 @@ body {
 .home__logo {
   display: block;
   width: auto;
+  max-width: 100%;
   height: 72px;
 }
 
@@ -138,12 +141,25 @@ body {
   color: var(--pg-muted);
 }
 
+/* On a phone the wordmark and "Playground" no longer fit beside the settings
+   button on one line, so stack them and drop the divider. */
 @media (max-width: 640px) {
+  .home {
+    padding-inline: 16px;
+  }
+  .home__title {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
   .home__logo {
-    height: 44px;
+    width: min(100%, 220px);
+    height: auto;
   }
   .home__title-text {
-    font-size: 1rem;
+    padding-left: 0;
+    border-left: 0;
+    font-size: 0.875rem;
   }
 }
 
