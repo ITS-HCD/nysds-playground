@@ -131,6 +131,24 @@ settings modal uses `nys-select` for multi-option settings instead.
   reset, `chevron_*` for collapse and navigation, `more_vert` for
   overflow menus, and a text label when nothing fits.
 
+## Build slides with the design system
+
+Slides demonstrate NYSDS, so build them from NYSDS, in this order:
+
+1. Components (`nys-*`), found with `mcp__nysds__find_components`.
+2. Utility classes for layout and spacing: grid, flex, spacing, display,
+   type roles, and responsive prefixes, found with
+   `mcp__nysds__get_utility_classes`.
+3. Tokens (`var(--nys-…)`) in any custom CSS that remains, found with
+   `mcp__nysds__find_tokens`.
+
+Don't invent a parallel class system (for example `g-slide`, `g-card`) or
+hard-code colors, font sizes, or spacing. Custom CSS is fine when the
+slide's point is customization or it shows something NYSDS doesn't ship;
+keep it on tokens. NYSDS has no stat component, so use `nys-card` with
+the number as its `heading`. `presets/README.md` has a before/after
+example.
+
 ## Add or edit a preset or deck
 
 There is no per-slide export in the app — only **Export deck**, which
@@ -140,7 +158,8 @@ pull one slide out of the export). In every case:
 
 1. Build the example in the running app.
 2. Check every component attribute against
-   `mcp__nysds__validate_component_api` before saving the file.
+   `mcp__nysds__validate_component_api` before saving the file, and check
+   that the slide follows the guidance in the preceding section.
 3. Save the JSON as `presets/NN-slug.json` or `decks/<id>.json`.
 4. Run `npm run build`, then open the app in a browser that has not
    seeded yet, or select **Restore starter decks** on the home page, to

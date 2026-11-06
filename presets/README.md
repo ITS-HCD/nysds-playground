@@ -29,6 +29,69 @@ Each file in `presets/` is a JSON object with these fields.
 Don't put an `id` field in a file in this directory. The id comes from
 the filename instead.
 
+## Build slides with the design system
+
+A slide demonstrates the design system, so it should look like it. Slides
+built from NYSDS pieces also keep working when the version or theme
+changes. Build each slide in this order:
+
+1. **Components.** Use `nys-*` components for anything a design system
+   plausibly ships, such as cards, buttons, alerts, tables, and tabs.
+   Search with `mcp__nysds__find_components` first.
+2. **Utility classes.** Use `nys-*` classes for layout and spacing: the
+   12-column grid (`nys-grid-row`, `nys-grid-col-*`), flex
+   (`nys-display-flex`, `nys-flex-gap-*`), margin and padding
+   (`nys-margin-b-*`, `nys-padding-*`), type roles (`nys-font-*`), and
+   responsive prefixes (`nys-tablet:`, `nys-desktop:`). Look them up with
+   `mcp__nysds__get_utility_classes`.
+3. **Tokens.** When the first two can't express a style, write custom CSS
+   that reads `var(--nys-…)` tokens. Look them up with
+   `mcp__nysds__find_tokens`.
+
+Don't invent a parallel class system, such as `g-slide` or `g-card`, and
+don't hard-code colors, font sizes, or spacing. Custom CSS is fine when
+the slide's point is customization, as in
+`decks/customizing-components.json`, or when you build something the
+system doesn't ship, such as a diagram. Keep it on tokens even then.
+
+For example, this slide uses a homegrown layer:
+
+```html
+<main class="g-slide">
+  <h1 class="g-title">Where we stand</h1>
+  <div class="g-grid g-grid--3">
+    <section class="g-card">
+      <p class="g-stat">~8 weeks</p>
+      <p>From first commit to production for Click to Renew</p>
+    </section>
+  </div>
+</main>
+```
+
+It needs custom CSS for `g-slide`, `g-grid`, `g-card`, and `g-stat`.
+This version needs none:
+
+```html
+<div class="nys-grid-container nys-padding-y-400">
+  <h1 class="nys-font-h1 nys-margin-b-400">Where we stand</h1>
+  <div class="nys-grid-row nys-grid-gap-300">
+    <div class="nys-grid-col-12 nys-tablet:nys-grid-col-6 nys-desktop:nys-grid-col-4 nys-display-flex">
+      <nys-card
+        heading="~8 weeks"
+        description="From first commit to production for Click to Renew, which launched on NYSDS on October 28"
+      ></nys-card>
+    </div>
+    <!-- more columns -->
+  </div>
+</div>
+```
+
+`nys-card` carries the statistic in its `heading`. NYSDS has no stat or
+metric component, so the card is the closest documented option. If you
+need a larger number, set the card's `size` or its documented
+`--nys-card-font-size--heading` property to a token rather than a pixel
+value.
+
 ## Naming and ordering
 
 Name files `NN-slug.json`, for example `01-button.json` or
@@ -104,6 +167,10 @@ downloaded file into `decks/` under the filename you want as its id.
 - Check every component attribute you use against
   `mcp__nysds__validate_component_api` before committing a preset. Don't
   read `node_modules/@nysds` for this — use the NYSDS MCP server.
+- Check that the slide follows
+  [Build slides with the design system](#build-slides-with-the-design-system):
+  no custom layout classes, and no hard-coded colors, sizes, or spacing
+  unless the slide demonstrates customization.
 - Keep examples short. Presentation mode puts the editors in a drawer
   over the bottom of the preview, and a slide that needs scrolling to
   read from the back of a room is too long.

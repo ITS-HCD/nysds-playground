@@ -238,6 +238,11 @@ opening a browser, run `nysds-playground link --html snippet.html` and
 share the printed link. Either one opens the scratch pad, so it never
 touches a saved deck.
 
+Build slides from NYSDS components first, then NYSDS utility classes for
+layout and spacing, then `var(--nys-…)` tokens for any custom CSS that
+remains. Don't invent your own layout classes or hard-code colors, sizes,
+and spacing. See `presets/README.md` for the reasoning and an example.
+
 ## Starter decks and presets
 
 `presets/*.json` and `decks/*.json` are starter content, bundled at
