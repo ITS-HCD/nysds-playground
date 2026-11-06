@@ -62,6 +62,12 @@ jsDelivr at request time.
 - `src/slide-list.ts`: the slide list inside Deck settings: rename,
   regroup, reorder (drag, or Move up and Move down), and remove slides,
   applied on Done through `arrangeSlides` in `src/deck-model.ts`.
+- `src/modal-dismiss.ts`: closes a modal on a click outside it, which
+  `nys-modal` doesn't do itself. A modal holding unapplied changes stays
+  open on an outside click or Escape and moves focus to Done; the close
+  button still discards. `src/main.ts` says which modals can hold changes,
+  comparing against `deckDraftOf` and `slideDraftOf` in
+  `src/deck-model.ts`.
 - `src/main.ts`: boots the app, routes between the home page, a deck, and
   the scratch pad (`routeFor`), and drives the toolbar, autosave, deck
   and slide settings modals, and Share.

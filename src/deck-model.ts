@@ -6,8 +6,8 @@
  * id generation, import normalization, the export shape, and seed diffing
  * without a browser.
  */
-import type {Preset} from './preset-schema.ts';
-import {parseDeck, parsePreset} from './preset-schema.ts';
+import type {PaneId, Preset} from './preset-schema.ts';
+import {PANE_IDS, parseDeck, parsePreset} from './preset-schema.ts';
 
 /** One slide. Same shape as a bundled preset. */
 export type Slide = Preset;
@@ -323,6 +323,84 @@ export function arrangeSlides(slides: readonly Slide[], edits: readonly SlideEdi
     result.push({...slide, title: edit.title.trim() || slide.title, group: edit.group.trim()});
   }
   return result.length > 0 ? result : slides.map((slide) => ({...slide}));
+}
+
+/** What Deck settings holds while it is open. */
+export interface DeckDraft {
+  title: string;
+  description: string;
+  baseCss: string;
+  slides: SlideEdit[];
+}
+
+/** Deck settings as it opens for a deck, before any edit. */
+export function deckDraftOf(deck: StoredDeck): DeckDraft {
+  return {
+    title: deck.title,
+    description: deck.description,
+    baseCss: deck.baseCss,
+    slides: deck.slides.map((slide) => ({id: slide.id, title: slide.title, group: slide.group})),
+  };
+}
+
+/**
+ * Whether two Deck settings drafts hold the same content.
+ *
+ * A row removed and then restored matches a row never removed, so undoing an
+ * edit by hand leaves the modal unchanged.
+ */
+export function sameDeckDraft(a: DeckDraft, b: DeckDraft): boolean {
+  return (
+    a.title === b.title &&
+    a.description === b.description &&
+    a.baseCss === b.baseCss &&
+    a.slides.length === b.slides.length &&
+    a.slides.every((row, index) => {
+      const other = b.slides[index]!;
+      return (
+        row.id === other.id &&
+        row.title === other.title &&
+        row.group === other.group &&
+        !!row.removed === !!other.removed
+      );
+    })
+  );
+}
+
+/** What Slide settings holds while it is open. */
+export interface SlideDraft {
+  title: string;
+  group: string;
+  description: string;
+  notes: string;
+  /** A pinned version, or `latest`. */
+  version: string;
+  /** The editors to open, in column order. */
+  editors: PaneId[];
+}
+
+/** Slide settings as it opens for a slide, before any edit. */
+export function slideDraftOf(slide: Slide): SlideDraft {
+  return {
+    title: slide.title,
+    group: slide.group,
+    description: slide.description,
+    notes: slide.notes,
+    version: slide.version || 'latest',
+    editors: PANE_IDS.filter((pane) => slide.editors?.includes(pane) ?? false),
+  };
+}
+
+/** Whether two Slide settings drafts hold the same content. */
+export function sameSlideDraft(a: SlideDraft, b: SlideDraft): boolean {
+  return (
+    a.title === b.title &&
+    a.group === b.group &&
+    a.description === b.description &&
+    a.notes === b.notes &&
+    a.version === b.version &&
+    a.editors.join() === b.editors.join()
+  );
 }
 
 /** Formats an ISO timestamp as "today", "3 days ago", and so on. */

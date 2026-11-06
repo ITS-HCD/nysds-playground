@@ -8,18 +8,24 @@ import './app.css';
 import 'playground-elements/playground-code-editor.js';
 import type {PlaygroundProject} from 'playground-elements/playground-project.js';
 
-import type {Slide, StoredDeck} from './deck-model';
+import type {DeckDraft, Slide, SlideDraft, StoredDeck} from './deck-model';
 import {
   BLANK_SLIDE_HTML,
   arrangeSlides,
+  deckDraftOf,
   hasContent,
   getSlide,
   makeSlide,
   nextSlideId,
+  sameDeckDraft,
+  sameSlideDraft,
+  slideDraftOf,
   slideIndex,
   toDeckFile,
 } from './deck-model';
 import * as store from './deck-store';
+import {guardDismissal} from './modal-dismiss';
+import {PANE_IDS} from './preset-schema';
 import {HomeView} from './home';
 import type {Route} from './routing';
 import {needsReboot, routeFor, slideIdFromHash} from './routing';
@@ -155,6 +161,12 @@ class PlaygroundApp {
   private toastOpener: Element | null = null;
   private leaveListeners: AbortController | undefined;
   private presentation: Presentation | undefined;
+  /** Deck settings as it opened, to tell whether anything has changed since. */
+  private deckDraftAtOpen: DeckDraft | null = null;
+  /** Slide settings as it opened, to tell whether anything has changed since. */
+  private slideDraftAtOpen: SlideDraft | null = null;
+  /** True until Slide settings has filled its version menu for this slide. */
+  private slideVersionsLoading = false;
 
   private readonly syncHash = debounce(() => this.writeHash(), HASH_DEBOUNCE_MS);
 
@@ -212,6 +224,7 @@ class PlaygroundApp {
     this.syncSettingsControls();
     this.bindToolbar();
     this.bindSettings();
+    this.bindDismissal();
     this.renderBuildButton(false);
     this.updateTitle();
     this.applyPresetPanes(this.activePresetId);
@@ -373,6 +386,35 @@ class PlaygroundApp {
     // views has to be turned into a reload.
     window.addEventListener('popstate', () => this.handleHistoryMove());
     window.addEventListener('hashchange', () => this.handleHistoryMove());
+  }
+
+  /**
+   * Lets a click outside a modal close it when that loses nothing.
+   *
+   * Deck settings and Slide settings hold a draft that only Done applies, so
+   * once it differs from how the modal opened, an outside click or Escape
+   * leaves the modal open and moves focus to Done. Settings applies each
+   * change as it is made and Share edits nothing, so both always close. An
+   * outside click answers the confirm modal with Cancel and the leave modal
+   * with Stay, never with the action they ask about.
+   */
+  private bindDismissal(): void {
+    guardDismissal(required('#deck-modal'), {
+      isDirty: () =>
+        this.deckDraftAtOpen !== null &&
+        !sameDeckDraft(this.deckDraftAtOpen, this.readDeckDraft()),
+      done: required('#deck-modal-done'),
+    });
+    guardDismissal(required('#slide-modal'), {
+      isDirty: () =>
+        this.slideDraftAtOpen !== null &&
+        !sameSlideDraft(this.slideDraftAtOpen, this.readSlideDraft(this.slideDraftAtOpen)),
+      done: required('#slide-modal-done'),
+    });
+    guardDismissal(this.settingsModal);
+    guardDismissal(required('#share-modal'));
+    guardDismissal(required('#confirm-modal'), {dismiss: closeConfirm});
+    guardDismissal(required('#leave-modal'), {dismiss: () => this.stay()});
   }
 
   private setTheme(theme: EditorTheme): void {
@@ -606,7 +648,18 @@ class PlaygroundApp {
     setFieldValue('#deck-description-input', this.deck.description);
     setFieldValue('#deck-base-css-input', this.deck.baseCss);
     this.slideList.load(this.deck.slides);
+    this.deckDraftAtOpen = deckDraftOf(this.deck);
     modal.open = true;
+  }
+
+  /** Deck settings as the fields hold it now. */
+  private readDeckDraft(): DeckDraft {
+    return {
+      title: fieldValue('#deck-title-input'),
+      description: fieldValue('#deck-description-input'),
+      baseCss: fieldValue('#deck-base-css-input'),
+      slides: this.slideList.value(),
+    };
   }
 
   private async applyDeckSettings(): Promise<void> {
@@ -616,8 +669,9 @@ class PlaygroundApp {
     // Write the editors out first, so a slide the list removed cannot take
     // the current editor contents with it.
     await this.flushSave();
-    const title = fieldValue('#deck-title-input').trim() || this.deck.title;
-    const slides = arrangeSlides(this.deck.slides, this.slideList.value());
+    const draft = this.readDeckDraft();
+    const title = draft.title.trim() || this.deck.title;
+    const slides = arrangeSlides(this.deck.slides, draft.slides);
     const activeSurvives = slides.some((slide) => slide.id === this.activePresetId);
     if (!activeSurvives) {
       this.saveSoon.cancel();
@@ -626,8 +680,8 @@ class PlaygroundApp {
     await this.updateDeck({
       ...this.deck,
       title,
-      description: fieldValue('#deck-description-input'),
-      baseCss: fieldValue('#deck-base-css-input'),
+      description: draft.description,
+      baseCss: draft.baseCss,
       slides,
     });
     if (!activeSurvives && slides[0]) {
@@ -647,12 +701,38 @@ class PlaygroundApp {
     setFieldValue('#slide-group-input', slide.group);
     setFieldValue('#slide-description-input', slide.description);
     setFieldValue('#slide-notes-input', slide.notes);
-    void this.renderSlideVersionOptions(slide.version);
-    for (const pane of ['html', 'css', 'js'] as const) {
+    this.slideVersionsLoading = true;
+    void this.renderSlideVersionOptions(slide.version).finally(() => {
+      this.slideVersionsLoading = false;
+    });
+    for (const pane of PANE_IDS) {
       const box = required<HTMLElement & {checked?: boolean}>(`#slide-editor-${pane}`);
       box.checked = slide.editors?.includes(pane) ?? false;
     }
+    this.slideDraftAtOpen = slideDraftOf(slide);
     required<HTMLElement & {open?: boolean}>('#slide-modal').open = true;
+  }
+
+  /**
+   * Slide settings as the fields hold it now.
+   *
+   * The version menu fills in after the modal opens, and until it does it
+   * still shows the last slide's versions, so `opened` stands in for it.
+   */
+  private readSlideDraft(opened: SlideDraft): SlideDraft {
+    return {
+      title: fieldValue('#slide-title-input'),
+      group: fieldValue('#slide-group-input'),
+      description: fieldValue('#slide-description-input'),
+      notes: fieldValue('#slide-notes-input'),
+      version: this.slideVersionsLoading
+        ? opened.version
+        : fieldValue('#slide-version-select').trim() || 'latest',
+      editors: PANE_IDS.filter(
+        (pane) =>
+          required<HTMLElement & {checked?: boolean}>(`#slide-editor-${pane}`).checked === true,
+      ),
+    };
   }
 
   /**
@@ -692,19 +772,16 @@ class PlaygroundApp {
     if (!slide) {
       return;
     }
-    const chosen = (['html', 'css', 'js'] as const).filter(
-      (pane) =>
-        required<HTMLElement & {checked?: boolean}>(`#slide-editor-${pane}`).checked === true,
-    );
+    const draft = this.readSlideDraft(this.slideDraftAtOpen ?? slideDraftOf(slide));
     const slides = [...this.deck.slides];
     slides[index] = {
       ...slide,
-      title: fieldValue('#slide-title-input').trim() || slide.title,
-      group: fieldValue('#slide-group-input'),
-      description: fieldValue('#slide-description-input'),
-      notes: fieldValue('#slide-notes-input'),
-      version: fieldValue('#slide-version-select').trim() || 'latest',
-      editors: chosen.length > 0 ? [...chosen] : null,
+      title: draft.title.trim() || slide.title,
+      group: draft.group,
+      description: draft.description,
+      notes: draft.notes,
+      version: draft.version,
+      editors: draft.editors.length > 0 ? draft.editors : null,
     };
     await this.updateDeck({...this.deck, slides});
   }
@@ -799,16 +876,19 @@ class PlaygroundApp {
     return url.toString();
   }
 
+  /** Closes the leave modal without leaving, which is what Stay does. */
+  private stay(): void {
+    required<HTMLElement & {open?: boolean}>('#leave-modal').open = false;
+    this.leaveListeners?.abort();
+    this.leaveListeners = undefined;
+  }
+
   private askBeforeLeaving(destination: string): void {
     const modal = required<HTMLElement & {open?: boolean}>('#leave-modal');
     this.leaveListeners?.abort();
     this.leaveListeners = new AbortController();
     const {signal} = this.leaveListeners;
-    const close = (): void => {
-      modal.open = false;
-      this.leaveListeners?.abort();
-      this.leaveListeners = undefined;
-    };
+    const close = (): void => this.stay();
     required('#leave-stay').addEventListener('nys-click', close, {signal});
     required('#leave-discard').addEventListener(
       'nys-click',
@@ -1186,21 +1266,23 @@ function confirmAction(message: string, onConfirm: () => void): void {
   confirmListeners?.abort();
   confirmListeners = new AbortController();
   const {signal} = confirmListeners;
-  const close = (): void => {
-    modal.open = false;
-    confirmListeners?.abort();
-    confirmListeners = undefined;
-  };
   required('#confirm-ok').addEventListener(
     'nys-click',
     () => {
-      close();
+      closeConfirm();
       onConfirm();
     },
     {signal},
   );
-  required('#confirm-cancel').addEventListener('nys-click', close, {signal});
+  required('#confirm-cancel').addEventListener('nys-click', closeConfirm, {signal});
   modal.open = true;
+}
+
+/** Closes the confirm modal and forgets its question. On its own, that is Cancel. */
+function closeConfirm(): void {
+  required<HTMLElement & {open?: boolean}>('#confirm-modal').open = false;
+  confirmListeners?.abort();
+  confirmListeners = undefined;
 }
 
 /** Hands the browser a file to save. */
