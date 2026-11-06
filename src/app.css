@@ -195,6 +195,9 @@ body {
 
 .home__decks {
   --nys-card-height: 100%;
+  margin-block: 0;
+  padding-inline-start: 0;
+  list-style: none;
 }
 
 .home__empty {
@@ -269,6 +272,11 @@ body {
   display: none;
 }
 
+.deck-missing__heading {
+  margin: 0 0 16px;
+  font-size: 1.75rem;
+}
+
 .deck-missing nys-button {
   margin-top: 16px;
 }
@@ -334,17 +342,23 @@ body {
   white-space: nowrap;
 }
 
-/* The title is the rename control: plain text until you reach for it. */
+.toolbar__title[hidden] {
+  display: none;
+}
+
+/* The title is the rename control: plain text until you reach for it. It
+   sits inside the heading, so it takes the heading's type. */
 .toolbar__rename {
   display: inline-flex;
   align-items: center;
   gap: 6px;
+  max-width: 100%;
   padding: 4px 6px;
   border: none;
   border-radius: 4px;
   background: none;
   color: inherit;
-  font-family: inherit;
+  font: inherit;
   cursor: text;
 }
 
@@ -864,8 +878,9 @@ nys-toggle[hidden] {
   pointer-events: none;
 }
 
+/* The text after the slash is what screen readers read instead. */
 .caption__group:not(:empty)::after {
-  content: " · ";
+  content: " · " / ", ";
 }
 
 .caption__description {
@@ -892,8 +907,10 @@ nys-toggle[hidden] {
   white-space: nowrap;
 }
 
-.caption__count:not(:empty)::before {
-  content: "\2022  ";
+/* A bullet for the eye only: the counter's words carry it for screen
+   readers. */
+.caption__count:not(.caption__count--empty)::before {
+  content: "\2022  " / "";
 }
 
 /*
@@ -1115,6 +1132,31 @@ nys-toggle[hidden] {
   inset-inline-end: 24px;
   z-index: 30;
   max-width: 320px;
+}
+
+/* In a deck, the toast sits above the slide bar, so it never covers the
+   button that has focus, such as Add slide or Next. */
+.app:not(.app--home) .toast {
+  inset-block-end: 80px;
+}
+
+@media (max-width: 720px) {
+  .app:not(.app--home) .toast {
+    inset-block-end: 128px;
+    inset-inline-start: 16px;
+    inset-inline-end: 16px;
+    max-width: none;
+  }
+}
+
+/* Reduced motion ------------------------------------------------------- */
+
+@media (prefers-reduced-motion: reduce) {
+  .toolbar__saved,
+  .toolbar__rename-icon,
+  .present-hint {
+    transition: none;
+  }
 }
 
 /* Narrow screens ------------------------------------------------------- */

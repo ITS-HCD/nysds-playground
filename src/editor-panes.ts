@@ -127,7 +127,12 @@ export class EditorPanes {
     for (const pane of PANE_IDS) {
       const {label, collapse} = this.columns[pane];
       label.addEventListener('click', () => this.togglePane(pane));
-      collapse.addEventListener('nys-click', () => this.togglePane(pane));
+      // The collapse button disappears with its column, so focus moves to
+      // the column's label, which stays on screen and brings it back.
+      collapse.addEventListener('nys-click', () => {
+        this.togglePane(pane);
+        label.focus();
+      });
     }
   }
 

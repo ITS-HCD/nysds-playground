@@ -24,7 +24,12 @@ import {
   toDeckFile,
 } from './deck-model';
 import * as store from './deck-store';
+import {announce} from './announce';
+import {makeEditorAccessible} from './editor-a11y';
 import {guardDismissal} from './modal-dismiss';
+import {repairModalShiftTab} from './modal-tab';
+import type {ToastType} from './toast';
+import {showToast} from './toast';
 import {PANE_IDS} from './preset-schema';
 import {HomeView} from './home';
 import type {Route} from './routing';
@@ -45,22 +50,28 @@ import {
 } from './state';
 import {EditorPanes} from './editor-panes';
 import type {EditorLayout} from './editors';
-import {collapsedForPreset, layoutUrl} from './editors';
+import {PANE_FILES, collapsedForPreset, layoutUrl} from './editors';
 import {isBuildShortcut} from './keys';
-import type {FontSize, UpdateMode} from './settings';
+import type {DrawerSize, FontSize, UpdateMode} from './settings';
 import {
   DEFAULTS,
+  DRAWER_LIMITS,
+  DRAWER_SIZES,
   STORAGE_KEYS,
   applyFontSize,
   clearAllSettings,
+  drawerSizeText,
   initialFontSize,
   initialUpdateMode,
+  nearestDrawerSize,
   readPrereleases,
   readRatio,
+  readSingleKeys,
   settingUrl,
   writeKey,
   writePrereleases,
   writeRatio,
+  writeSingleKeys,
 } from './settings';
 import type {EditorTheme} from './theme';
 import {applyEditorTheme, initialTheme, writeTheme} from './theme';
@@ -68,14 +79,6 @@ import {isPrerelease, loadVersions, resolveVersion} from './versions';
 
 /** How long to wait after a keystroke before writing the URL. */
 const HASH_DEBOUNCE_MS = 300;
-
-/**
- * How long a toast stays on screen, in milliseconds.
- *
- * Long enough to read two short sentences. The timer pauses while the
- * pointer or focus is on the toast, and the toast can be dismissed sooner.
- */
-const TOAST_DURATION_MS = 6000;
 
 /** The name every new deck starts with, until someone types over it. */
 export const UNTITLED_DECK = 'Untitled';
@@ -123,10 +126,12 @@ class PlaygroundApp {
   private readonly themeToggle: HTMLElement & {checked?: boolean};
   private readonly fontSizeSelect: HTMLElement;
   private readonly updateModeSelect: HTMLElement;
+  private readonly shortcutsToggle: HTMLElement & {checked?: boolean};
+  private readonly drawerSizeSelect: HTMLElement;
   private readonly settingsModal: HTMLElement & {open?: boolean};
   private readonly buildButton: HTMLElement;
   private readonly panes: EditorPanes;
-  private readonly toast: HTMLElement;
+  private readonly drawer: Drawer;
   private readonly savedIndicator: HTMLElement;
   private deck: StoredDeck;
   /** True when the deck came from the store rather than the scratch pad. */
@@ -155,10 +160,8 @@ class PlaygroundApp {
   private fontSize: FontSize = initialFontSize();
   private updateMode: UpdateMode = initialUpdateMode();
   private theme: EditorTheme = initialTheme();
+  private singleKeys = readSingleKeys();
   private readonly slideList: SlideList;
-  private toastTimer: number | undefined;
-  /** The element that had focus when the toast appeared. */
-  private toastOpener: Element | null = null;
   private leaveListeners: AbortController | undefined;
   private presentation: Presentation | undefined;
   /** Deck settings as it opened, to tell whether anything has changed since. */
@@ -179,8 +182,10 @@ class PlaygroundApp {
     presetId: string | null,
     present: boolean,
     panes: EditorPanes,
+    drawer: Drawer,
   ) {
     this.panes = panes;
+    this.drawer = drawer;
     this.deck = deck;
     this.hasDeck = deck.id !== '';
     this.present = present;
@@ -194,21 +199,12 @@ class PlaygroundApp {
     this.themeToggle = required('#theme-toggle');
     this.fontSizeSelect = required('#font-size-select');
     this.updateModeSelect = required('#update-mode-select');
+    this.shortcutsToggle = required('#shortcuts-toggle');
+    this.drawerSizeSelect = required('#drawer-size-select');
     this.settingsModal = required('#settings-modal');
     this.buildButton = required('#build-button');
     this.savedIndicator = required('#saved-indicator');
-    this.toast = required('#toast');
     this.slideList = new SlideList(required('#slide-list'), required('#slide-list-status'));
-    // A toast waits while someone is reading it with the pointer or has
-    // tabbed to its close button.
-    this.toast.addEventListener('mouseenter', () => this.clearToastTimer());
-    this.toast.addEventListener('mouseleave', () => this.resumeToastTimer());
-    this.toast.addEventListener('focusin', () => this.clearToastTimer());
-    this.toast.addEventListener('focusout', (event) => {
-      if (!this.toast.contains(event.relatedTarget as Node | null)) {
-        this.resumeToastTimer();
-      }
-    });
     this.openedWith = {html: initial.html, css: initial.css, js: initial.js};
     this.host = new PlaygroundHost(project, initial, deck.baseCss);
     this.host.setUpdateMode(this.updateMode);
@@ -292,10 +288,15 @@ class PlaygroundApp {
 
   private syncSettingsControls(): void {
     this.syncColumnsToggle();
+    // The t key switches the theme without going through this class, so read
+    // the theme back rather than trusting the last one set here.
+    this.theme = initialTheme();
     this.themeToggle.checked = this.theme === 'dark';
     this.prereleaseToggle.checked = this.showPrereleases;
+    this.shortcutsToggle.checked = this.singleKeys;
     this.setSelectValue(this.fontSizeSelect, this.fontSize);
     this.setSelectValue(this.updateModeSelect, this.updateMode);
+    this.setSelectValue(this.drawerSizeSelect, nearestDrawerSize(this.drawer.size));
   }
 
   private bindSettings(): void {
@@ -311,7 +312,7 @@ class PlaygroundApp {
     bindClick('#settings-done-button', () => {
       this.settingsModal.open = false;
     });
-    bindClick('#build-button', () => this.host.buildNow());
+    bindClick('#build-button', () => this.buildNow());
 
     this.themeToggle.addEventListener('nys-change', () => {
       this.setTheme(this.themeToggle.checked === true ? 'dark' : 'light');
@@ -328,6 +329,17 @@ class PlaygroundApp {
       const value = detailValue(event);
       if (value === 'typing' || value === 'pause' || value === 'manual') {
         this.setUpdateMode(value);
+      }
+    });
+
+    this.shortcutsToggle.addEventListener('nys-change', () => {
+      this.setSingleKeys(this.shortcutsToggle.checked === true);
+    });
+
+    this.drawerSizeSelect.addEventListener('nys-change', (event) => {
+      const value = detailValue(event);
+      if (value && value in DRAWER_SIZES) {
+        this.drawer.set(DRAWER_SIZES[value as DrawerSize]);
       }
     });
 
@@ -424,6 +436,12 @@ class PlaygroundApp {
     replaceQuery('theme', theme);
   }
 
+  private setSingleKeys(on: boolean): void {
+    this.singleKeys = on;
+    writeSingleKeys(on);
+    this.presentation?.setSingleKeys(on);
+  }
+
   private setFontSize(size: FontSize): void {
     this.fontSize = size;
     applyFontSize(size);
@@ -446,6 +464,8 @@ class PlaygroundApp {
     this.setFontSize(DEFAULTS.fontSize);
     this.setUpdateMode(DEFAULTS.updateMode);
     this.showPrereleases = DEFAULTS.prereleases;
+    this.setSingleKeys(DEFAULTS.singleKeys);
+    this.drawer.set(DEFAULTS.drawerSize, false);
     void this.renderVersionOptions();
     this.panes.reset();
     // The stored choice is gone, so bring a hidden code drawer back too.
@@ -464,9 +484,16 @@ class PlaygroundApp {
     );
   }
 
-  /** Rebuilds the preview now, whatever the update mode is. */
+  /**
+   * Rebuilds the preview now, whatever the update mode is.
+   *
+   * Someone asked for this, with Update preview or Cmd or Ctrl plus Enter,
+   * so a screen reader hears that it happened. Automatic rebuilds while
+   * typing stay quiet.
+   */
   buildNow(): void {
     this.host.buildNow();
+    announce('Preview updated.');
   }
 
   /** Discards this session's edits to the current slide. */
@@ -622,20 +649,31 @@ class PlaygroundApp {
       const slides = this.deck.slides.filter((slide) => slide.id !== current.id);
       // Move to the survivor first so nothing redraws against a slide that is
       // no longer in the deck.
-      const next = slides[Math.min(index, slides.length - 1)];
+      const nextIndex = Math.min(index, slides.length - 1);
+      const next = slides[nextIndex];
       this.activePresetId = next?.id ?? null;
       await this.updateDeck({...this.deck, slides});
       if (next) {
         this.loadPreset(next);
       }
       this.presentation?.refresh();
+      // Focus stays on Delete slide, so say where that left things.
+      announce(
+        next
+          ? `Deleted "${current.title}". Slide ${nextIndex + 1} of ${slides.length}: ${next.title}.`
+          : `Deleted "${current.title}".`,
+      );
     };
     // A blank slide has nothing to lose, so it goes without a question. The
     // editors may hold something not yet saved, so check what is on screen.
     const onScreen = this.host.getState();
     const asEdited = {...current, html: onScreen.html, css: onScreen.css, js: onScreen.js};
     if (hasContent(asEdited)) {
-      confirmAction(`Delete the slide "${current.title}"? This cannot be undone.`, remove);
+      confirmAction(
+        'Delete this slide?',
+        `Delete the slide "${current.title}"? This cannot be undone.`,
+        remove,
+      );
     } else {
       void remove();
     }
@@ -985,11 +1023,23 @@ class PlaygroundApp {
     return {...this.host.getState(), version: this.version};
   }
 
+  /**
+   * Names the page and the preview frame after what is on screen.
+   *
+   * The scratch pad says so, because its one slide is called "Scratch pad"
+   * too. The preview frame's name is what a screen reader reads on the way
+   * into the slide.
+   */
   private updateTitle(): void {
     const preset = this.customCode() ? undefined : getSlide(this.deck, this.activePresetId);
-    document.title = preset
-      ? `${preset.title} · ${this.deck.title}`
-      : PLAYGROUND_CONFIG.title;
+    if (!this.hasDeck) {
+      document.title = `Scratch pad · ${PLAYGROUND_CONFIG.title}`;
+    } else {
+      document.title = preset
+        ? `${preset.title} · ${this.deck.title}`
+        : `${this.deck.title} · ${PLAYGROUND_CONFIG.title}`;
+    }
+    nameThePreview(this.hasDeck && preset ? `Preview of ${preset.title}` : 'Preview');
   }
 
   /** Whether the toolbar should present the session as edited code. */
@@ -999,12 +1049,13 @@ class PlaygroundApp {
 
   /* Toolbar ------------------------------------------------------------ */
 
+  /**
+   * Shows the deck title. The rename button's name is the title itself, so
+   * voice control users can say what they see; "Rename deck" is its
+   * description.
+   */
   private renderDeckChrome(): void {
     required('#deck-title-text').textContent = this.deck.title;
-    required('#deck-title').setAttribute(
-      'aria-label',
-      `Rename deck: ${this.deck.title}`,
-    );
     required('#deck-title-static').textContent = this.deck.title;
   }
 
@@ -1020,6 +1071,9 @@ class PlaygroundApp {
     if (!this.hasDeck) {
       return;
     }
+    // The heading holds the button, so the whole heading steps aside while
+    // the field is up, rather than leaving an empty heading behind.
+    const heading = required('#deck-heading');
     const button = required('#deck-title');
     const field = required<HTMLInputElement>('#deck-title-field');
     if (!field.hidden) {
@@ -1028,7 +1082,7 @@ class PlaygroundApp {
     const original = this.deck.title;
     field.value = original;
     field.hidden = false;
-    button.hidden = true;
+    heading.hidden = true;
     field.focus();
     field.select();
 
@@ -1037,19 +1091,24 @@ class PlaygroundApp {
     const close = (): void => {
       controller.abort();
       field.hidden = true;
-      button.hidden = false;
+      heading.hidden = false;
     };
     const commit = (): void => {
       const next = field.value.trim();
       close();
       if (next && next !== original) {
-        void this.updateDeck({...this.deck, title: next});
+        void this.updateDeck({...this.deck, title: next}).then(() =>
+          announce(`Deck renamed to ${next}.`),
+        );
       }
     };
     field.addEventListener('keydown', (event) => {
       if (event.key === 'Enter') {
         event.preventDefault();
         commit();
+        // Enter keeps the keyboard where it was; a click away has already
+        // put focus somewhere else.
+        button.focus();
       } else if (event.key === 'Escape') {
         event.preventDefault();
         close();
@@ -1156,52 +1215,9 @@ class PlaygroundApp {
     });
   }
 
-  /**
-   * Shows a toast and lets screen readers announce it.
-   *
-   * The container is a live region that is always in the page, so inserting
-   * the alert is the change that gets announced. Warnings use the alert's own
-   * assertive region as well. The toast goes away on its own, when its close
-   * button is used, and dismissing it hands focus back to the control that
-   * raised it.
-   */
-  private showToast(type: string, heading: string, text: string): void {
-    const alert = document.createElement('nys-alert');
-    alert.setAttribute('type', type);
-    alert.setAttribute('heading', heading);
-    alert.setAttribute('text', text);
-    alert.setAttribute('dismissible', '');
-    alert.addEventListener('nys-close', () => this.hideToast());
-    this.toastOpener = document.activeElement;
-    this.toast.replaceChildren(alert);
-    this.resumeToastTimer();
-  }
-
-  /** Removes the toast. Focus goes back where it came from if it was inside. */
-  private hideToast(): void {
-    this.clearToastTimer();
-    const hadFocus = this.toast.contains(document.activeElement);
-    this.toast.replaceChildren();
-    const opener = this.toastOpener;
-    this.toastOpener = null;
-    if (hadFocus && opener instanceof HTMLElement && opener.isConnected) {
-      opener.focus();
-    }
-  }
-
-  private clearToastTimer(): void {
-    if (this.toastTimer !== undefined) {
-      window.clearTimeout(this.toastTimer);
-      this.toastTimer = undefined;
-    }
-  }
-
-  /** Starts the countdown over, if there is a toast to count down. */
-  private resumeToastTimer(): void {
-    this.clearToastTimer();
-    if (this.toast.childElementCount > 0) {
-      this.toastTimer = window.setTimeout(() => this.hideToast(), TOAST_DURATION_MS);
-    }
+  /** Shows a toast. See `src/toast.ts`. */
+  private showToast(type: ToastType, heading: string, text: string): void {
+    showToast(type, heading, text);
   }
 }
 
@@ -1248,17 +1264,19 @@ function setFieldValue(selector: string, value: string): void {
   required<HTMLElement & {value?: string}>(selector).value = value;
 }
 
+/** Drops the listeners from whichever question the modal asked last. */
+let confirmListeners: AbortController | undefined;
+
 /**
  * Asks before doing something destructive.
  *
  * It uses the design system modal rather than `window.confirm`, which blocks
- * the page and the automated checks along with it.
+ * the page and the automated checks along with it. The heading names the
+ * dialog for screen readers, so it says what is about to be deleted.
  */
-/** Drops the listeners from whichever question the modal asked last. */
-let confirmListeners: AbortController | undefined;
-
-function confirmAction(message: string, onConfirm: () => void): void {
+function confirmAction(heading: string, message: string, onConfirm: () => void): void {
   const modal = required<HTMLElement & {open?: boolean}>('#confirm-modal');
+  modal.setAttribute('heading', heading);
   required('#confirm-message').textContent = message;
   // Dismissing the modal with its own close button or Escape skips the Cancel
   // handler, so listeners from an earlier question would otherwise pile up and
@@ -1302,22 +1320,64 @@ function replaceQuery(name: string, value: string): void {
 }
 
 /**
+ * Names the preview frame.
+ *
+ * `playground-preview` titles its iframe "Project preview" whatever it shows,
+ * and offers no way to change that, so the title is set on the frame inside
+ * its shadow root.
+ */
+function nameThePreview(title: string): void {
+  const preview = document.querySelector<HTMLElement & {updateComplete?: Promise<unknown>}>(
+    '#preview',
+  );
+  const apply = (): void => {
+    const frame = preview?.shadowRoot?.querySelector('iframe');
+    if (frame && frame.title !== title) {
+      frame.title = title;
+    }
+  };
+  apply();
+  void preview?.updateComplete?.then(apply);
+}
+
+/** The code drawer's height, as a percentage of the stage. */
+interface Drawer {
+  /** The height now. */
+  readonly size: number;
+  /** Sets the height and, unless `persist` is false, remembers it. */
+  set(ratio: number, persist?: boolean): void;
+}
+
+/**
  * Makes the drawer divider draggable and remembers its height.
  *
  * The drawer sits over the bottom of the stage, so a larger pointer Y means a
- * shorter drawer.
+ * shorter drawer. The divider is a focusable separator, so it reports its
+ * value to screen readers, and the up and down arrow keys, Home, and End move
+ * it. Settings offers a choice of heights without a drag.
  */
-function setupSplitter(): void {
+function setupDrawer(): Drawer {
   const stage = required('#split');
   const divider = required('#divider');
-  const MIN = 15;
-  const MAX = 85;
+  const {min: MIN, max: MAX} = DRAWER_LIMITS;
+  let size = readRatio(STORAGE_KEYS.drawerSize, DEFAULTS.drawerSize, MIN, MAX);
 
   const apply = (ratio: number): void => {
-    stage.style.setProperty('--pg-drawer-size', `${ratio.toFixed(2)}%`);
+    size = Math.min(Math.max(ratio, MIN), MAX);
+    stage.style.setProperty('--pg-drawer-size', `${size.toFixed(2)}%`);
+    divider.setAttribute('aria-valuenow', String(Math.round(size)));
+    divider.setAttribute('aria-valuetext', drawerSizeText(size));
+  };
+  const set = (ratio: number, persist = true): void => {
+    apply(ratio);
+    if (persist) {
+      writeRatio(STORAGE_KEYS.drawerSize, size);
+    }
   };
 
-  apply(readRatio(STORAGE_KEYS.drawerSize, DEFAULTS.drawerSize, MIN, MAX));
+  divider.setAttribute('aria-valuemin', String(MIN));
+  divider.setAttribute('aria-valuemax', String(MAX));
+  apply(size);
 
   let dragging = false;
   const move = (clientY: number): void => {
@@ -1325,9 +1385,7 @@ function setupSplitter(): void {
     if (rect.height === 0) {
       return;
     }
-    const ratio = Math.min(Math.max(((rect.bottom - clientY) / rect.height) * 100, MIN), MAX);
-    apply(ratio);
-    writeRatio(STORAGE_KEYS.drawerSize, ratio);
+    set(((rect.bottom - clientY) / rect.height) * 100);
   };
 
   divider.addEventListener('pointerdown', (event) => {
@@ -1354,14 +1412,28 @@ function setupSplitter(): void {
   divider.addEventListener('pointerup', stop);
   divider.addEventListener('pointercancel', stop);
   divider.addEventListener('keydown', (event) => {
-    const step = event.key === 'ArrowDown' ? -2 : event.key === 'ArrowUp' ? 2 : 0;
-    if (step === 0) {
+    // As in the APG window splitter: the arrows move the divider, and Home
+    // and End give the drawer its smallest and largest height.
+    const steps: Record<string, number> = {
+      ArrowUp: size + 2,
+      ArrowDown: size - 2,
+      Home: MIN,
+      End: MAX,
+    };
+    const next = steps[event.key];
+    if (next === undefined || event.altKey || event.ctrlKey || event.metaKey) {
       return;
     }
     event.preventDefault();
-    const rect = stage.getBoundingClientRect();
-    move(divider.getBoundingClientRect().top - (step / 100) * rect.height);
+    set(next);
   });
+
+  return {
+    get size() {
+      return size;
+    },
+    set,
+  };
 }
 
 /** Works out which slide the URL asks for inside a deck. */
@@ -1392,6 +1464,7 @@ async function resolveInitialState(deck: StoredDeck): Promise<{
 /** Shows the "that deck is not here" message. */
 function showMissingDeck(): void {
   document.querySelector('#app')?.classList.add('app--missing');
+  document.title = `Deck not found · ${PLAYGROUND_CONFIG.title}`;
   required('#deck-missing').hidden = false;
   required('#deck-missing-home').addEventListener('nys-click', () => {
     window.location.href = './';
@@ -1419,9 +1492,9 @@ async function startHome(openSettings: () => void): Promise<void> {
     }
     await refresh();
     if (added > 0) {
-      toast('success', added === 1 ? 'Deck imported' : `${added} decks imported`, '');
+      showToast('success', added === 1 ? 'Deck imported' : `${added} decks imported`);
     } else {
-      toast('warning', 'Nothing imported', failure || 'That file is not a deck.');
+      showToast('warning', 'Nothing imported', failure || 'That file is not a deck.');
     }
   };
 
@@ -1433,8 +1506,11 @@ async function startHome(openSettings: () => void): Promise<void> {
       window.location.href = `./?deck=${encodeURIComponent(id)}&present=1`;
     },
     duplicate: async (id) => {
-      await store.duplicateDeck(id);
+      const copy = await store.duplicateDeck(id);
       await refresh();
+      if (copy) {
+        showToast('success', 'Deck duplicated', `"${copy.title}" is in the list.`);
+      }
     },
     exportDeck: async (id) => {
       const json = await store.exportDeck(id);
@@ -1443,10 +1519,18 @@ async function startHome(openSettings: () => void): Promise<void> {
       }
     },
     remove: (deck) => {
-      confirmAction(`Delete the deck "${deck.title}"? This cannot be undone.`, async () => {
-        await store.deleteDeck(deck.id);
-        await refresh();
-      });
+      confirmAction(
+        'Delete this deck?',
+        `Delete the deck "${deck.title}"? This cannot be undone.`,
+        async () => {
+          await store.deleteDeck(deck.id);
+          await refresh();
+          // The card and its buttons are gone, so focus moves to the next
+          // deck, or to New deck when the list is empty.
+          home.focusAfterRemoval();
+          announce(`Deleted "${deck.title}".`);
+        },
+      );
     },
     create: () => {
       // No prompt: the deck appears at once and the editor opens with its name
@@ -1459,7 +1543,7 @@ async function startHome(openSettings: () => void): Promise<void> {
     restoreStarters: async () => {
       const added = await store.seedStarters();
       await refresh();
-      toast(
+      showToast(
         'success',
         added === 0 ? 'Nothing to restore' : `${added} starter deck${added === 1 ? '' : 's'} added`,
         added === 0 ? 'Every starter deck is already here.' : '',
@@ -1475,24 +1559,6 @@ async function startHome(openSettings: () => void): Promise<void> {
   });
 
   home.show(await store.listDecks());
-}
-
-/** Shows a toast outside the editor. */
-function toast(type: string, heading: string, text: string): void {
-  const host = required('#toast');
-  const alert = document.createElement('nys-alert');
-  alert.setAttribute('type', type);
-  alert.setAttribute('heading', heading);
-  if (text) {
-    alert.setAttribute('text', text);
-  }
-  alert.setAttribute('dismissible', '');
-  host.replaceChildren(alert);
-  host.hidden = false;
-  window.setTimeout(() => {
-    host.hidden = true;
-    host.replaceChildren();
-  }, 2600);
 }
 
 /** Binds the always-on shortcut that rebuilds the preview immediately. */
@@ -1516,9 +1582,12 @@ async function main(): Promise<void> {
   applyEditorTheme(initialTheme());
   applyFontSize(initialFontSize());
 
+  repairModalShiftTab();
+
   // The bundled decks and presets only seed an empty store.
   await store.seedStarters();
 
+  const drawer = setupDrawer();
   const route = routeFor(window.location.search, window.location.hash);
   if (route.kind === 'home') {
     await startHome(() => {
@@ -1534,13 +1603,21 @@ async function main(): Promise<void> {
       null,
       false,
       panes,
+      drawer,
     );
     await app.start();
+    // That editor instance names the page after the scratch pad it stands
+    // on, so put the home page's title back.
+    document.title = PLAYGROUND_CONFIG.title;
     document.querySelector('#app')?.classList.add('app--home');
     return;
   }
 
-  setupSplitter();
+  makeEditorAccessible(required('#file-editor'));
+  for (const pane of PANE_IDS) {
+    makeEditorAccessible(required(`#column-${pane}-editor`), PANE_FILES[pane].label);
+  }
+  makeEditorAccessible(required('#deck-base-css-input'), 'Base CSS');
 
   let deck: StoredDeck;
   if (route.kind === 'deck') {
@@ -1566,7 +1643,7 @@ async function main(): Promise<void> {
     window.history.replaceState(null, '', layoutUrl(layout, window.location.href));
     app?.syncColumnsToggle();
   });
-  app = new PlaygroundApp(project, deck, state, presetId, present, panes);
+  app = new PlaygroundApp(project, deck, state, presetId, present, panes, drawer);
   await app.start();
   bindBuildShortcut(() => app?.buildNow());
 

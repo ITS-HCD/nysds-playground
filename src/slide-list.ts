@@ -68,8 +68,10 @@ export class SlideList {
 
     // The handle is a button like the row's other controls. The pointer drags
     // it; from the keyboard, the up and down arrow keys move the row while it
-    // has focus.
-    const handle = this.circle('handle', 'menu', 'Drag to reorder', !!row.removed, () => undefined);
+    // has focus. Every row has the same buttons, so their names say which
+    // slide they act on.
+    const slide = `slide ${index + 1}`;
+    const handle = this.circle('handle', 'menu', `Reorder ${slide}`, !!row.removed, () => undefined);
     handle.classList.add('slide-row__handle');
     handle.draggable = !row.removed;
     handle.addEventListener('keydown', (event) => {
@@ -117,16 +119,27 @@ export class SlideList {
       restore.dataset.control = 'restore';
       restore.setAttribute('size', 'sm');
       restore.setAttribute('variant', 'ghost');
-      restore.setAttribute('label', 'Restore');
+      // The visible label stays "Restore"; screen readers also hear which
+      // slide.
+      const which = document.createElement('span');
+      which.className = 'visually-hidden';
+      which.textContent = ` ${slide}`;
+      restore.append('Restore', which);
       restore.addEventListener('nys-click', () => this.restore(row));
       actions.append(restore);
     } else {
       actions.append(
-        this.circle('up', 'arrow_upward', 'Move up', index === 0, () => this.move(row, -1)),
-        this.circle('down', 'arrow_downward', 'Move down', index === this.rows.length - 1, () =>
-          this.move(row, 1),
+        this.circle('up', 'arrow_upward', `Move ${slide} up`, index === 0, () =>
+          this.move(row, -1),
         ),
-        this.circle('remove', 'delete', 'Remove', this.kept === 1, () => this.remove(row)),
+        this.circle(
+          'down',
+          'arrow_downward',
+          `Move ${slide} down`,
+          index === this.rows.length - 1,
+          () => this.move(row, 1),
+        ),
+        this.circle('remove', 'delete', `Remove ${slide}`, this.kept === 1, () => this.remove(row)),
       );
     }
 

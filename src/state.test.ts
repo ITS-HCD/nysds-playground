@@ -8,15 +8,20 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import {deckUrl, decodeState, encodeState, parseHash, presentUrl, slugify} from './state.ts';
-import {hintText, isButtonPress, isTypingContext, routeKey} from './keys.ts';
+import type {PathEntry} from './keys.ts';
+import {hintText, isButtonPress, isTypingContext, isWidgetContext, routeKey} from './keys.ts';
 import {parseDeck, parsePreset} from './preset-schema.ts';
 import {collapsedForPreset, layoutUrl, readLayoutParam} from './editors.ts';
 import {createQuietDebounce} from './debounce.ts';
 import {
   DEFAULTS,
+  DRAWER_LIMITS,
+  DRAWER_SIZES,
   FONT_SIZES,
   UPDATE_DELAYS,
   clampRatio,
+  drawerSizeText,
+  nearestDrawerSize,
   readFontParam,
   readUpdateParam,
   settingUrl,
@@ -260,21 +265,71 @@ test('chooseVersion trusts the requested version when the catalog is the fallbac
 
 const KEY = {altKey: false, ctrlKey: false, metaKey: false};
 
-test('isTypingContext spots the editors and form controls', () => {
-  assert.equal(isTypingContext(['div', 'playground-code-editor', 'body']), true);
-  assert.equal(isTypingContext(['playground-file-editor']), true);
-  assert.equal(isTypingContext(['input']), true);
-  assert.equal(isTypingContext(['select', 'nys-select']), true);
-  assert.equal(isTypingContext(['textarea']), true);
-  assert.equal(isTypingContext(['nys-button', 'footer', 'body']), false);
+/** Builds a composed path from tag names, with `tag[role=x]` for a role. */
+function path(...entries: string[]): PathEntry[] {
+  return entries.map((entry) => {
+    const match = /^([a-z-]+)(?:\[role=([a-z]+)\])?(\[contenteditable\])?$/.exec(entry);
+    assert.ok(match, entry);
+    return {tag: match[1]!, role: match[2] ?? null, editable: match[3] !== undefined};
+  });
+}
+
+test('isTypingContext spots the code text box and form controls', () => {
+  assert.equal(
+    isTypingContext(path('div[role=textbox]', 'div', 'playground-code-editor', 'body')),
+    true,
+  );
+  assert.equal(isTypingContext(path('div[contenteditable]', 'body')), true);
+  assert.equal(isTypingContext(path('input')), true);
+  assert.equal(isTypingContext(path('select', 'nys-select')), true);
+  assert.equal(isTypingContext(path('textarea')), true);
+  assert.equal(isTypingContext(path('nys-button', 'section', 'body')), false);
+});
+
+test('isTypingContext lets keys through from the frame around a code editor', () => {
+  // The frame takes focus before editing starts. Escape there should leave
+  // presentation mode rather than be swallowed.
+  assert.equal(
+    isTypingContext(path('div[role=group]', 'playground-code-editor', 'playground-file-editor')),
+    false,
+  );
+});
+
+test('isWidgetContext spots widgets that own the arrow keys', () => {
+  assert.equal(isWidgetContext(path('div[role=separator]', 'main', 'body')), true);
+  assert.equal(isWidgetContext(path('button[role=tab]', 'div[role=tablist]')), true);
+  assert.equal(isWidgetContext(path('button', 'nys-button', 'section')), false);
 });
 
 test('isButtonPress leaves Space to a focused button', () => {
-  const onButton = ['button', 'nys-button', 'div', 'footer', 'body'];
+  const onButton = path('button', 'nys-button', 'div', 'section', 'body');
   assert.equal(isButtonPress({...KEY, key: ' '}, onButton), true);
-  assert.equal(isButtonPress({...KEY, key: ' '}, ['footer', 'body']), false);
+  assert.equal(isButtonPress({...KEY, key: ' '}, path('div[role=button]')), true);
+  assert.equal(isButtonPress({...KEY, key: ' '}, path('section', 'body')), false);
   assert.equal(isButtonPress({...KEY, key: 'ArrowRight'}, onButton), false);
   assert.equal(isButtonPress({...KEY, key: 'c'}, onButton), false);
+});
+
+test('routeKey leaves arrows, Home, and End to a widget that owns them', () => {
+  const widget = {widget: true};
+  for (const key of ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Home', 'End']) {
+    assert.equal(routeKey({...KEY, key}, false, false, widget), null, key);
+  }
+  assert.equal(routeKey({...KEY, altKey: true, key: 'ArrowRight'}, false, false, widget), 'next');
+  assert.equal(routeKey({...KEY, key: 'Escape'}, false, false, widget), 'exit');
+  assert.equal(routeKey({...KEY, key: 'c'}, false, false, widget), 'toggle-code');
+});
+
+test('routeKey ignores every single-key shortcut once they are off', () => {
+  const off = {singleKeys: false};
+  for (const key of ['c', 'C', 'e', 't', 'n', '1', '2', '3']) {
+    assert.equal(routeKey({...KEY, key}, false, true, off), null, key);
+  }
+  // Keys that aren't characters keep working.
+  assert.equal(routeKey({...KEY, key: 'ArrowRight'}, false, true, off), 'next');
+  assert.equal(routeKey({...KEY, key: ' '}, false, true, off), 'next');
+  assert.equal(routeKey({...KEY, key: 'Escape'}, false, true, off), 'exit');
+  assert.equal(routeKey({...KEY, altKey: true, key: 'ArrowLeft'}, true, true, off), 'prev');
 });
 
 test('routeKey steps the deck when the presenter is not typing', () => {
@@ -409,7 +464,38 @@ test('hintText names the column shortcuts only in the columns layout', () => {
   assert.ok(!columns.includes('n notes'));
 });
 
+test('hintText leaves out the single-key shortcuts once they are off', () => {
+  const off = hintText(true, true, false);
+  assert.ok(off.includes('change slides'));
+  assert.ok(off.includes('Esc exit'));
+  for (const part of ['c code', 'e layout', '1 2 3 panes', 't theme', 'n notes']) {
+    assert.ok(!off.includes(part), part);
+  }
+});
+
 /* Settings --------------------------------------------------------------- */
+
+test('the drawer presets sit inside the range the divider allows', () => {
+  for (const size of Object.values(DRAWER_SIZES)) {
+    assert.ok(size >= DRAWER_LIMITS.min && size <= DRAWER_LIMITS.max, String(size));
+  }
+  assert.equal(DRAWER_SIZES.medium, DEFAULTS.drawerSize);
+});
+
+test('nearestDrawerSize picks the preset closest to a dragged height', () => {
+  assert.equal(nearestDrawerSize(DEFAULTS.drawerSize), 'medium');
+  assert.equal(nearestDrawerSize(15), 'small');
+  assert.equal(nearestDrawerSize(45), 'large');
+  assert.equal(nearestDrawerSize(85), 'x-large');
+});
+
+test('drawerSizeText reads the drawer height as a whole percentage', () => {
+  assert.equal(drawerSizeText(31.6), 'Code drawer 32% of the stage height');
+});
+
+test('single-key shortcuts are on by default', () => {
+  assert.equal(DEFAULTS.singleKeys, true);
+});
 
 test('readFontParam and readUpdateParam accept only known values', () => {
   assert.equal(readFontParam('?font=small'), 'small');

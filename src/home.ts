@@ -59,11 +59,20 @@ export class HomeView {
     this.render(decks);
   }
 
-  /** Draws the deck cards. */
+  /**
+   * Draws the deck cards.
+   *
+   * Redrawing replaces every button, so a control that had focus, such as a
+   * deck's Duplicate button, gets it back on its replacement.
+   */
   render(decks: StoredDeck[]): void {
+    const focusedId = this.list.contains(document.activeElement)
+      ? (document.activeElement as HTMLElement).id
+      : '';
+    this.lastFocusIndex = this.focusIndex();
     this.list.replaceChildren();
     if (decks.length === 0) {
-      const empty = document.createElement('p');
+      const empty = document.createElement('li');
       empty.className = 'home__empty';
       empty.textContent = 'No decks yet. Create one, or restore the starter decks.';
       this.list.append(empty);
@@ -72,10 +81,34 @@ export class HomeView {
     for (const deck of decks) {
       this.list.append(this.card(deck));
     }
+    const replacement = focusedId ? document.getElementById(focusedId) : null;
+    if (replacement) {
+      focusWhenShown(replacement);
+    }
+  }
+
+  /**
+   * Moves focus after a deck is deleted: to the deck that took its place in
+   * the list, the one before it at the end, or New deck when none are left.
+   */
+  focusAfterRemoval(): void {
+    const links = [...this.list.querySelectorAll<HTMLElement>('.deck-card__title a')];
+    const target = links[Math.min(this.lastFocusIndex, links.length - 1)];
+    (target ?? document.querySelector<HTMLElement>('#new-deck-button'))?.focus();
+  }
+
+  /** The position of the card that holds focus, or of the last card focused. */
+  private lastFocusIndex = 0;
+
+  private focusIndex(): number {
+    const cards = [...this.list.querySelectorAll('nys-card')];
+    const active = document.activeElement;
+    const index = cards.findIndex((card) => active !== null && card.contains(active));
+    return index === -1 ? this.lastFocusIndex : index;
   }
 
   private card(deck: StoredDeck): HTMLElement {
-    const column = document.createElement('div');
+    const column = document.createElement('li');
     column.className =
       'nys-mobile-lg:nys-grid-col-6 nys-tablet:nys-grid-col-4 nys-display-flex';
 
@@ -107,27 +140,44 @@ export class HomeView {
     const footer = document.createElement('div');
     footer.slot = 'footer';
     footer.className = 'deck-card__actions';
-    footer.append(this.action('Edit', 'filled', () => this.actions.open(deck.id)));
+    footer.append(this.action(deck, 'Edit', 'filled', () => this.actions.open(deck.id)));
     footer.append(
-      ...this.circle(deck.id, 'Present', PLAY_ICON, () => this.actions.present(deck.id)),
-      ...this.circle(deck.id, 'Duplicate', 'content_copy', () =>
+      ...this.circle(deck, 'Present', PLAY_ICON, () => this.actions.present(deck.id)),
+      ...this.circle(deck, 'Duplicate', 'content_copy', () =>
         void this.actions.duplicate(deck.id),
       ),
-      ...this.circle(deck.id, 'Export', 'download', () =>
-        void this.actions.exportDeck(deck.id),
-      ),
-      ...this.circle(deck.id, 'Delete', 'delete', () => this.actions.remove(deck)),
+      ...this.circle(deck, 'Export', 'download', () => void this.actions.exportDeck(deck.id)),
+      ...this.circle(deck, 'Delete', 'delete', () => this.actions.remove(deck)),
     );
     card.append(footer);
     column.append(card);
     return column;
   }
 
-  private action(label: string, variant: string, handler: () => void): HTMLElement {
+  /**
+   * Builds a labeled action.
+   *
+   * Every card has the same buttons, so each one's name ends with the deck's
+   * title, in text only screen readers get. The name still starts with the
+   * visible label, so voice control users can say what they see.
+   */
+  private action(
+    deck: StoredDeck,
+    label: string,
+    variant: string,
+    handler: () => void,
+  ): HTMLElement {
     const button = document.createElement('nys-button');
-    button.setAttribute('label', label);
+    // Set the attribute, not the property: the component reflects its `id`
+    // property only when it first renders, so until then the element can't
+    // be found by id.
+    button.setAttribute('id', `deck-${slug(deck.id)}-${label.toLowerCase()}`);
     button.setAttribute('size', 'sm');
     button.setAttribute('variant', variant);
+    const hidden = document.createElement('span');
+    hidden.className = 'visually-hidden';
+    hidden.textContent = ` ${deck.title}`;
+    button.append(label, hidden);
     button.addEventListener('nys-click', handler);
     return button;
   }
@@ -135,26 +185,29 @@ export class HomeView {
   /**
    * Builds one icon-only action and the tooltip that names it.
    *
-   * `label` is the accessible name, which circle buttons render as
-   * visually hidden text, so the tooltip is the only visible hint.
+   * Circle buttons render `label` as visually hidden text, so the tooltip is
+   * the only visible hint. The name adds the deck's title after the word the
+   * tooltip shows, so each card's buttons can be told apart.
    */
   private circle(
-    deckId: string,
+    deck: StoredDeck,
     label: string,
     icon: string,
     handler: () => void,
   ): HTMLElement[] {
-    const id = `deck-${slug(deckId)}-${label.toLowerCase()}`;
+    const id = `deck-${slug(deck.id)}-${label.toLowerCase()}`;
     const tooltip = document.createElement('nys-tooltip');
     tooltip.setAttribute('for', id);
     tooltip.setAttribute('text', label);
 
     const button = document.createElement('nys-button');
-    button.id = id;
+    // The attribute, so the tooltip can find its trigger as soon as both are
+    // in the page. See `action`.
+    button.setAttribute('id', id);
     button.setAttribute('circle', '');
     button.setAttribute('size', 'sm');
     button.setAttribute('variant', 'outline');
-    button.setAttribute('label', label);
+    button.setAttribute('label', `${label} ${deck.title}`);
     if (icon === PLAY_ICON) {
       // NYSDS ships no play glyph, so this one comes in through the slot.
       const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
@@ -209,6 +262,20 @@ export class HomeView {
         void this.actions.importFiles(files);
       }
     });
+  }
+}
+
+/**
+ * Focuses an element that was just added to the page.
+ *
+ * A card shows its footer, and the buttons in it, only after a render or two
+ * of its own, and a button can't take focus before then. So this tries once a
+ * frame for a short while.
+ */
+function focusWhenShown(element: HTMLElement, frames = 20): void {
+  element.focus();
+  if (document.activeElement !== element && frames > 0) {
+    window.requestAnimationFrame(() => focusWhenShown(element, frames - 1));
   }
 }
 

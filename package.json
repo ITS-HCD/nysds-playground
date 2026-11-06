@@ -23,6 +23,7 @@
   },
   "type": "module",
   "dependencies": {
+    "@codemirror/view": "^6.43.15",
     "@nysds/components": "1.21.0",
     "@nysds/styles": "1.21.0",
     "idb-keyval": "6.2.2",

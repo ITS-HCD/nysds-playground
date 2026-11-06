@@ -44,8 +44,44 @@ export const DEFAULTS = {
   fontSize: 'medium' as FontSize,
   updateMode: 'typing' as UpdateMode,
   prereleases: false,
+  singleKeys: true,
   drawerSize: 32,
 };
+
+/** The smallest and largest code drawer, as a percentage of the stage. */
+export const DRAWER_LIMITS = {min: 15, max: 85};
+
+/**
+ * The drawer heights the settings modal offers, as a percentage of the stage.
+ *
+ * Dragging the divider sets any height in between. These presets do the same
+ * without a drag, which WCAG 2.5.7 asks for.
+ */
+export const DRAWER_SIZES = {
+  small: 20,
+  medium: DEFAULTS.drawerSize,
+  large: 50,
+  'x-large': 70,
+} as const;
+
+/** One of the drawer heights the settings modal offers. */
+export type DrawerSize = keyof typeof DRAWER_SIZES;
+
+/** Returns the preset closest to a drawer height, for the settings menu to show. */
+export function nearestDrawerSize(ratio: number): DrawerSize {
+  let best: DrawerSize = 'medium';
+  for (const [name, size] of Object.entries(DRAWER_SIZES) as [DrawerSize, number][]) {
+    if (Math.abs(size - ratio) < Math.abs(DRAWER_SIZES[best] - ratio)) {
+      best = name;
+    }
+  }
+  return best;
+}
+
+/** Returns a drawer height as the text a screen reader reads for the divider. */
+export function drawerSizeText(ratio: number): string {
+  return `Code drawer ${Math.round(ratio)}% of the stage height`;
+}
 
 /** Every key the playground writes, so "Reset settings" can clear them all. */
 export const STORAGE_KEYS = {
@@ -54,6 +90,7 @@ export const STORAGE_KEYS = {
   fontSize: 'nysds-playground:font-size',
   updateMode: 'nysds-playground:update-mode',
   prereleases: 'nysds-playground:prereleases',
+  singleKeys: 'nysds-playground:single-key-shortcuts',
   collapsedPanes: 'nysds-playground:collapsed-panes',
   drawerSize: 'nysds-playground:present-editor-size',
   codeCollapsed: 'nysds-playground:present-code-collapsed',
@@ -144,6 +181,17 @@ export function readPrereleases(): boolean {
 /** Remembers whether the version menu lists prereleases. */
 export function writePrereleases(on: boolean): void {
   writeKey(STORAGE_KEYS.prereleases, on ? '1' : '0');
+}
+
+/** Whether the single-key shortcuts, such as `c` for the code drawer, are on. */
+export function readSingleKeys(): boolean {
+  const stored = readKey(STORAGE_KEYS.singleKeys);
+  return stored === null ? DEFAULTS.singleKeys : stored === '1';
+}
+
+/** Remembers whether the single-key shortcuts are on. */
+export function writeSingleKeys(on: boolean): void {
+  writeKey(STORAGE_KEYS.singleKeys, on ? '1' : '0');
 }
 
 /** Reads a remembered pane ratio, clamped to the range the layout allows. */

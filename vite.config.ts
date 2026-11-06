@@ -51,8 +51,12 @@ export default defineConfig({
   },
   optimizeDeps: {
     // Serve playground-elements unbundled in dev so its relative worker URL
-    // resolves against /node_modules/playground-elements/.
-    exclude: ['playground-elements'],
+    // resolves against /node_modules/playground-elements/. Its CodeMirror
+    // packages then load unbundled too, so `src/editor-a11y.ts` has to import
+    // `@codemirror/view` the same way: a pre-bundled copy would bring its own
+    // `@codemirror/state`, and CodeMirror rejects extensions from a second
+    // copy.
+    exclude: ['playground-elements', '@codemirror/view'],
   },
   // The preview iframe runs on unpkg.com and loads the fonts from this
   // server. Font requests always need CORS, and Vite only allows localhost

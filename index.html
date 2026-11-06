@@ -62,7 +62,7 @@
       </p>
     </noscript>
     <div id="app" class="app">
-      <main class="home" id="home" hidden>
+      <div class="home" id="home" hidden>
         <header class="home__header">
           <h1 class="home__title">
             <img class="home__logo" src="./nysds-logo.svg" alt="NYS Design System" width="1037" height="114" />
@@ -84,6 +84,7 @@
           </nys-button>
         </header>
 
+        <main class="home__main">
         <p class="home__lede">
           Decks are saved in this browser only, not on a server. Edit one, present it, share a slide as a link, or export a deck as JSON to back it up or move it to another browser.
         </p>
@@ -104,7 +105,9 @@
           ></nys-button>
         </div>
 
-        <div class="home__decks nys-grid-row nys-grid-gap" id="deck-list"></div>
+        <!-- role="list" keeps the list semantics that Safari drops once the
+             bullets are styled away. -->
+        <ul class="home__decks nys-grid-row nys-grid-gap" id="deck-list" role="list" aria-label="Decks"></ul>
 
         <div class="home__footer">
           <nys-button
@@ -123,10 +126,12 @@
           accept=".json,application/json"
           hidden
         />
-      </main>
+        </main>
+      </div>
 
       <header class="toolbar" id="toolbar">
-        <a class="toolbar__home" id="toolbar-home" href="./" aria-label="NYSDS Playground home">
+        <nys-tooltip for="toolbar-home" text="Home"></nys-tooltip>
+        <a class="toolbar__home" id="toolbar-home" href="./" aria-label="Home">
           <svg
               class="toolbar__mark"
               viewBox="13 3 205 205"
@@ -146,14 +151,21 @@
 
         <h1 class="toolbar__title scratch-only" id="deck-title-static">Scratch pad</h1>
 
-        <button
-          class="toolbar__title toolbar__rename deck-only edit-only"
-          id="deck-title"
-          type="button"
-        >
-          <span id="deck-title-text"></span>
-          <nys-icon class="toolbar__rename-icon" name="edit_square" size="sm"></nys-icon>
-        </button>
+        <!-- The deck title is the page's heading and its rename control. The
+             button's name is the title, so voice control users can say what
+             they see, and "Rename deck" is its description. -->
+        <h1 class="toolbar__title deck-only edit-only" id="deck-heading">
+          <button
+            class="toolbar__rename"
+            id="deck-title"
+            type="button"
+            aria-describedby="deck-title-hint"
+          >
+            <span id="deck-title-text"></span>
+            <nys-icon class="toolbar__rename-icon" name="edit_square" size="sm"></nys-icon>
+          </button>
+        </h1>
+        <span id="deck-title-hint" hidden>Rename deck</span>
 
         <input
           class="toolbar__rename-input deck-only"
@@ -390,7 +402,16 @@
         </section>
       </main>
 
-      <div class="notes" id="notes" role="dialog" aria-labelledby="notes-heading" hidden>
+      <!-- A non-modal dialog. It takes focus when it opens, and Escape or
+           Close notes hands focus back. -->
+      <div
+        class="notes"
+        id="notes"
+        role="dialog"
+        aria-labelledby="notes-heading"
+        tabindex="-1"
+        hidden
+      >
         <h2 class="notes__heading" id="notes-heading">Presenter notes</h2>
         <div class="notes__body" id="notes-body"></div>
         <nys-button
@@ -402,11 +423,16 @@
         ></nys-button>
       </div>
 
-      <footer class="caption" id="caption" tabindex="-1">
+      <!-- The slide bar. It takes focus after a slide change so the arrow
+           keys keep working, which is why it has tabindex="-1". -->
+      <section class="caption" id="caption" tabindex="-1" aria-label="Slide bar">
+        <!-- The toolbar, and the deck title in it, is hidden while
+             presenting, so the deck title moves here. -->
+        <h1 class="visually-hidden present-only" id="present-deck-title"></h1>
         <div class="caption__left">
           <div class="caption__headline">
             <p class="caption__title">
-              <span class="present-only">
+              <span class="present-only" role="heading" aria-level="2">
                 <span class="caption__group" id="caption-group"></span>
                 <span id="caption-title"></span>
               </span>
@@ -500,7 +526,9 @@
           ></nys-button>
           <!-- Shows in both modes, so the way back to a hidden drawer never
                moves. The app keeps the label, tooltip, and ariaExpanded in
-               step with the drawer. -->
+               step with the drawer. No ariaControls: it lands on the button
+               inside the component's shadow root, where the id "editors"
+               doesn't resolve. -->
           <nys-tooltip for="code-toggle-button" text="Hide code (c)" inverted></nys-tooltip>
           <nys-button
             inverted
@@ -511,7 +539,6 @@
             icon="code"
             label="Hide code"
             ariaExpanded="true"
-            ariaControls="editors"
           ></nys-button>
           <!-- The overflow menu is the last control before the arrows. -->
           <nys-tooltip class="present-only" for="present-settings-button" text="Settings" inverted></nys-tooltip>
@@ -544,9 +571,11 @@
             label="Next slide"
           ></nys-button>
         </div>
-      </footer>
 
-      <p class="present-hint" id="present-hint" hidden></p>
+        <!-- Fixed to the corner of the screen, but kept in the slide bar so it
+             belongs to a landmark. -->
+        <p class="present-hint" id="present-hint" hidden></p>
+      </section>
 
       <nys-modal id="deck-modal" heading="Deck settings" width="lg">
         <div class="settings">
@@ -564,8 +593,9 @@
           <fieldset class="settings__fieldset">
             <legend class="settings__legend">Slides</legend>
             <p class="settings__hint">
-              Rename, regroup, reorder, or remove slides. Drag a row by its handle, press the up
-              and down keys on the handle, or use the arrows. Changes apply when you select Done.
+              Rename, regroup, reorder, or remove slides. Drag a row by its handle, focus the
+              handle and press the up and down arrow keys, or use the arrow buttons. Changes
+              apply when you select Done.
             </p>
             <ol class="slide-list" id="slide-list"></ol>
             <p class="visually-hidden" id="slide-list-status" role="status" aria-live="polite"></p>
@@ -575,14 +605,14 @@
             <p class="settings__hint" id="deck-base-css-hint">
               CSS applied to every slide in this deck, without taking up room in the CSS tab.
             </p>
+            <!-- The app names this editor "Base CSS" from src/editor-a11y.ts;
+                 ARIA on the host would not reach the text box inside it. -->
             <playground-code-editor
               id="deck-base-css-input"
               class="settings__editor"
               type="css"
               line-numbers
               line-wrapping
-              aria-labelledby="deck-base-css-label"
-              aria-describedby="deck-base-css-hint"
             ></playground-code-editor>
           </div>
         </div>
@@ -714,6 +744,29 @@
             <option value="manual" label="Manually"></option>
           </nys-select>
 
+          <nys-select
+            id="drawer-size-select"
+            class="settings__field"
+            width="md"
+            label="Code drawer height"
+            description="How much of the stage the code drawer covers. You can also drag the divider above it, or focus the divider and press the up and down arrow keys."
+          >
+            <option value="small" label="Small (20%)"></option>
+            <option value="medium" label="Medium (32%)"></option>
+            <option value="large" label="Large (50%)"></option>
+            <option value="x-large" label="Extra large (70%)"></option>
+          </nys-select>
+
+          <nys-toggle
+            id="shortcuts-toggle"
+            class="settings__field"
+            size="sm"
+            label="Single-key shortcuts"
+            description="Press c to hide the code, e to switch the editor layout, t to switch the editor theme, n for presenter notes, or 1, 2, or 3 to collapse a column. Turn these off if you use speech input, so dictated words don't trigger them. The arrow keys, Escape, and Alt plus an arrow keep working."
+            name="single-keys"
+            value="on"
+          ></nys-toggle>
+
           <nys-toggle
             id="prerelease-toggle"
             class="settings__field"
@@ -737,18 +790,22 @@
         </div>
       </nys-modal>
 
-      <div class="deck-missing" id="deck-missing" hidden>
+      <main class="deck-missing" id="deck-missing" hidden>
+        <h1 class="deck-missing__heading">Deck not found</h1>
         <nys-alert
           type="warning"
-          heading="Deck not found"
           text="That deck is not in this browser. Decks are stored per browser, so a deck link only opens where it was made."
         ></nys-alert>
         <nys-button id="deck-missing-home" label="Go home" prefixIcon="arrow_back"></nys-button>
-      </div>
+      </main>
 
       <!-- Always in the page, never hidden, so the live region exists before
            a toast lands in it and the change is what gets announced. -->
       <div class="toast" id="toast" role="status" aria-live="polite" aria-atomic="true"></div>
+
+      <!-- Reads out results that have no other spoken feedback, such as a
+           slide change from the arrow keys. See src/announce.ts. -->
+      <p class="visually-hidden" id="announcer" role="status" aria-live="polite"></p>
     </div>
 
     <playground-project id="project"></playground-project>

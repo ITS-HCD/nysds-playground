@@ -1,20 +1,21 @@
 /**
- * Presentation mode.
+ * Presentation mode and the slide bar.
  *
  * With `?present=1` the toolbar is hidden and the preview fills most of the
  * viewport, but the editors stay visible and editable so the presenter can
  * change a slide live. A caption bar at the bottom names the slide and carries
  * the controls.
  */
+import {announce} from './announce';
 import type {Slide, StoredDeck} from './deck-model';
 import {slideIndex} from './deck-model';
 import type {EditorPanes} from './editor-panes';
 import type {PaneId} from './editors';
-import {PANE_IDS} from './editors';
-import type {PresentationAction} from './keys';
-import {hintText, isButtonPress, isTypingContext, routeKey} from './keys';
+import {PANE_FILES, PANE_IDS} from './editors';
+import type {PathEntry, PresentationAction} from './keys';
+import {hintText, isButtonPress, isTypingContext, isWidgetContext, routeKey} from './keys';
 import {applyEditorTheme, initialTheme, otherTheme, themeUrl, writeTheme} from './theme';
-import {STORAGE_KEYS, readKey, writeKey} from './settings';
+import {STORAGE_KEYS, readKey, readSingleKeys, writeKey} from './settings';
 import {presentUrl} from './state';
 
 /** What presentation mode needs from the application shell. */
@@ -34,7 +35,7 @@ export interface PresentationTarget {
 /** How long the keyboard hint stays on screen, in milliseconds. */
 const HINT_DURATION_MS = 6000;
 
-
+type BarButton = HTMLElement & {disabled?: boolean};
 
 /** Drives the slideshow. */
 export class Presentation {
@@ -43,18 +44,24 @@ export class Presentation {
   private readonly caption: HTMLElement;
   private readonly group: HTMLElement;
   private readonly title: HTMLElement;
+  private readonly deckTitle: HTMLElement;
   private readonly description: HTMLElement;
   private readonly hint: HTMLElement;
   private readonly notes: HTMLElement;
   private readonly notesBody: HTMLElement;
-  private readonly notesButton: HTMLElement;
-  private readonly prevButton: HTMLElement & {disabled?: boolean};
-  private readonly nextButton: HTMLElement & {disabled?: boolean};
-  private readonly codeButton: HTMLElement;
+  private readonly notesButton: BarButton;
+  private readonly prevButton: BarButton;
+  private readonly nextButton: BarButton;
+  private readonly codeButton: BarButton;
   private readonly panes: EditorPanes;
   private collapsed = false;
   private notesOpen = false;
+  /** Where focus was when the notes opened, to hand it back when they close. */
+  private notesOpener: Element | null = null;
   private presenting = false;
+  private singleKeys = readSingleKeys();
+  /** Whether the slide bar's last press came from a pointer rather than a key. */
+  private pointer = false;
 
   constructor(
     target: PresentationTarget,
@@ -67,6 +74,7 @@ export class Presentation {
     this.caption = required(root, '#caption');
     this.group = required(root, '#caption-group');
     this.title = required(root, '#caption-title');
+    this.deckTitle = required(root, '#present-deck-title');
     this.description = required(root, '#caption-description');
     this.hint = required(root, '#present-hint');
     this.notes = required(root, '#notes');
@@ -82,16 +90,25 @@ export class Presentation {
     this.collapsed = readCollapsed();
     this.applyCollapsed();
     this.hidePreviewToolbar();
-    bindClick('#prev-button', () => this.step(-1));
-    bindClick('#next-button', () => this.step(1));
-    bindClick('#reset-slide-button', () => {
+    // A press in the slide bar from a pointer hands focus to the bar itself,
+    // so Space keeps changing slides. A press from the keyboard leaves focus
+    // on the button, so pressing it again does the same thing again.
+    this.caption.addEventListener('pointerdown', () => {
+      this.pointer = true;
+    });
+    this.caption.addEventListener('keydown', () => {
+      this.pointer = false;
+    });
+    this.bindBarButton('#prev-button', () => this.step(-1));
+    this.bindBarButton('#next-button', () => this.step(1));
+    this.bindBarButton('#reset-slide-button', () => {
       this.target.resetSlide();
       this.refresh();
-      this.takeFocus();
+      announce('Slide reset.');
     });
-    bindClick('#notes-button', () => this.toggleNotes());
-    bindClick('#notes-close', () => this.closeNotes());
-    this.bindCodeButton();
+    this.bindBarButton('#notes-button', () => this.toggleNotes());
+    bindClick('#notes-close', () => this.closeNotes(true));
+    this.bindBarButton('#code-toggle-button', () => this.setCodeHidden(!this.collapsed));
     window.addEventListener('keydown', (event) => this.onKeyDown(event), true);
     this.refresh();
     if (present) {
@@ -108,20 +125,45 @@ export class Presentation {
   enter(): void {
     void document.documentElement.requestFullscreen?.().catch(() => undefined);
     this.setPresenting(true);
-    this.takeFocus();
+    this.takeFocus(true);
   }
 
-  /** Leaves presentation mode, keeping the deck and slide in the URL. */
+  /**
+   * Leaves presentation mode, keeping the deck and slide in the URL.
+   *
+   * Focus goes back to Present when it was on a control that only shows while
+   * presenting, such as Edit slides, or on nothing in particular.
+   */
   exit(): void {
     if (document.fullscreenElement) {
       void document.exitFullscreen?.().catch(() => undefined);
     }
+    const active = document.activeElement;
+    const stranded =
+      !active ||
+      active === document.body ||
+      active === this.caption ||
+      active.closest('.present-only') !== null;
     this.setPresenting(false);
+    if (stranded) {
+      document.querySelector<HTMLElement>('#present-button')?.focus();
+    }
   }
 
   /** Whether the playground is presenting. */
   get isPresenting(): boolean {
     return this.presenting;
+  }
+
+  /**
+   * Turns the single-key shortcuts on or off.
+   *
+   * The hint and the Hide code tooltip only mention `c` while it works.
+   */
+  setSingleKeys(on: boolean): void {
+    this.singleKeys = on;
+    this.applyCollapsed();
+    this.refresh();
   }
 
   private setPresenting(presenting: boolean): void {
@@ -137,6 +179,11 @@ export class Presentation {
     this.target.setPresent(presenting);
     window.history.replaceState(null, '', presentUrl(presenting));
     this.refresh();
+    announce(
+      presenting
+        ? `Presenting ${this.target.getDeck().title}. ${this.slideSummary()}`
+        : 'Stopped presenting. Back to editing.',
+    );
   }
 
   /** Redraws the caption and the notes from whatever is currently loaded. */
@@ -145,6 +192,7 @@ export class Presentation {
     const id = this.target.getActivePresetId();
     const index = slideIndex(deck, id);
     const preset = index >= 0 ? deck.slides[index] : undefined;
+    this.deckTitle.textContent = deck.title;
     this.group.textContent = preset?.group ?? '';
     this.title.textContent = preset?.title ?? 'Custom code';
     this.description.textContent = preset?.description ?? '';
@@ -152,10 +200,21 @@ export class Presentation {
       deck.slides.length === 0
         ? ''
         : `${index >= 0 ? index + 1 : '—'} / ${deck.slides.length}`;
+    const spoken =
+      deck.slides.length === 0
+        ? ''
+        : index >= 0
+          ? `Slide ${index + 1} of ${deck.slides.length}`
+          : `${deck.slides.length} slides`;
     // One counter sits with the icons and another rides with the title on
-    // narrow screens; only one of them is ever visible.
+    // narrow screens; only one of them is ever visible. Screen readers get
+    // words rather than "1 slash 8".
     for (const element of document.querySelectorAll<HTMLElement>('[data-count]')) {
-      element.textContent = counter;
+      element.replaceChildren(
+        span(counter, {hidden: true}),
+        span(spoken, {className: 'visually-hidden'}),
+      );
+      element.classList.toggle('caption__count--empty', counter === '');
     }
     // The arrows go quiet at the ends of the deck. From a shared code link,
     // where no slide is current, both still work: forward starts the deck and
@@ -175,7 +234,11 @@ export class Presentation {
     if (!notes) {
       this.closeNotes();
     }
-    this.hint.textContent = hintText(notes !== '', this.panes.layout === 'columns');
+    this.hint.textContent = hintText(
+      notes !== '',
+      this.panes.layout === 'columns',
+      this.singleKeys,
+    );
   }
 
   /** Moves to the slide at `index`, clamped to the deck. */
@@ -191,7 +254,16 @@ export class Presentation {
       this.target.loadPreset(preset);
       this.refresh();
       this.takeFocus();
+      announce(this.slideSummary());
     }
+  }
+
+  /** Names the slide on screen, as in "Slide 2 of 8: Alert". */
+  private slideSummary(): string {
+    const deck = this.target.getDeck();
+    const index = slideIndex(deck, this.target.getActivePresetId());
+    const slide = index >= 0 ? deck.slides[index] : undefined;
+    return slide ? `Slide ${index + 1} of ${deck.slides.length}: ${slide.title}.` : 'Custom code.';
   }
 
   private step(delta: number): void {
@@ -203,6 +275,28 @@ export class Presentation {
     this.goTo(next);
   }
 
+  /**
+   * Whether a key should reach the slide bar.
+   *
+   * While presenting, keys work from anywhere outside a dialog. While editing,
+   * they work when focus is in the slide bar or on nothing in particular, as
+   * right after the page loads, so they never fire from a toolbar control or
+   * the drawer. Alt plus an arrow works from anywhere.
+   */
+  private keysApply(event: KeyboardEvent): boolean {
+    if (this.presenting || event.altKey) {
+      return true;
+    }
+    const target = event.target as Node | null;
+    return (
+      target === null ||
+      target === document.body ||
+      target === document.documentElement ||
+      this.caption.contains(target) ||
+      this.notes.contains(target)
+    );
+  }
+
   private onKeyDown(event: KeyboardEvent): void {
     // A dialog owns the keyboard while it is open, including its own Escape.
     // Read the property rather than the attribute: the attribute only lands on
@@ -210,28 +304,27 @@ export class Presentation {
     if (anyModalOpen()) {
       return;
     }
-    // While editing, these keys belong to the slide bar. Alt plus an arrow
-    // still steps from anywhere, as it does while presenting.
-    if (!this.presenting && !event.altKey && !this.caption.contains(event.target as Node)) {
-      return;
-    }
-    const tags = tagNamesFor(event);
-    if (isButtonPress(event, tags)) {
-      return;
-    }
-    const typing = isTypingContext(tags);
-    const action = routeKey(event, typing, this.panes.layout === 'columns');
-    if (action === null) {
-      return;
-    }
-    // Escape closes the notes before it leaves presentation mode.
-    if (action === 'exit' && this.notesOpen) {
+    const path = pathFor(event);
+    const typing = isTypingContext(path);
+    // Escape closes the notes from anywhere but a text field, before it does
+    // anything else.
+    if (event.key === 'Escape' && this.notesOpen && !typing) {
       event.preventDefault();
-      this.closeNotes();
-      this.takeFocus();
+      this.closeNotes(true);
+      return;
+    }
+    if (!this.keysApply(event) || isButtonPress(event, path)) {
+      return;
+    }
+    const action = routeKey(event, typing, this.panes.layout === 'columns', {
+      widget: isWidgetContext(path),
+      singleKeys: this.singleKeys,
+    });
+    if (action === null || (action === 'exit' && !this.presenting)) {
       return;
     }
     event.preventDefault();
+    this.pointer = false;
     this.run(action);
   }
 
@@ -251,11 +344,9 @@ export class Presentation {
         break;
       case 'toggle-code':
         this.setCodeHidden(!this.collapsed);
-        // Focus may have been in the drawer that just went away. Leave it
-        // alone when it is already in the slide bar, such as on Hide code.
-        if (!this.caption.contains(document.activeElement)) {
-          this.takeFocus();
-        }
+        // Focus may have been in the drawer that just went away.
+        this.takeFocus();
+        announce(this.collapsed ? 'Code hidden.' : 'Code shown.');
         break;
       case 'toggle-notes':
         this.toggleNotes();
@@ -264,6 +355,9 @@ export class Presentation {
         this.panes.toggleLayout();
         this.refresh();
         this.takeFocus();
+        announce(
+          this.panes.layout === 'columns' ? 'Side-by-side editors.' : 'Tabbed editor.',
+        );
         break;
       case 'toggle-theme':
         this.toggleTheme();
@@ -276,6 +370,8 @@ export class Presentation {
         if (pane) {
           this.panes.togglePane(pane);
           this.takeFocus();
+          const name = PANE_FILES[pane].label;
+          announce(this.panes.isCollapsed(pane) ? `${name} collapsed.` : `${name} expanded.`);
         }
         break;
       }
@@ -289,32 +385,49 @@ export class Presentation {
     writeTheme(next);
     window.history.replaceState(null, '', themeUrl(next, window.location.href));
     this.takeFocus();
+    announce(next === 'dark' ? 'Dark editor theme.' : 'Light editor theme.');
   }
 
   /**
-   * Binds Hide code in the slide bar.
+   * Binds one slide bar button.
    *
-   * From the keyboard, focus stays on the button, so its new state is read
-   * out and pressing it again undoes it. A click hands focus to the slide
-   * bar, the way Next and Reset slide do, so Space and the arrow keys keep
-   * changing slides. `nys-click` doesn't say which input fired it, so a
-   * pointer press is noted first.
+   * After a pointer press, focus moves to the slide bar, so Space and the
+   * arrow keys keep changing slides. After a key press, focus stays on the
+   * button, so its new state is read out and pressing it again repeats it.
    */
-  private bindCodeButton(): void {
-    let pointer = false;
-    this.codeButton.addEventListener('pointerdown', () => {
-      pointer = true;
-    });
-    this.codeButton.addEventListener('keydown', () => {
-      pointer = false;
-    });
-    this.codeButton.addEventListener('nys-click', () => {
-      this.setCodeHidden(!this.collapsed);
-      if (pointer) {
-        this.takeFocus();
+  private bindBarButton(selector: string, handler: () => void): void {
+    const button = document.querySelector<BarButton>(selector);
+    button?.addEventListener('nys-click', () => {
+      handler();
+      const active = document.activeElement;
+      // The handler may have sent focus somewhere on purpose, such as into
+      // the notes. Only a press that left focus in the bar is settled here.
+      const inBar = active === document.body || (active !== null && this.caption.contains(active));
+      if (this.pointer && inBar) {
+        this.takeFocus(true);
+      } else if (!this.pointer && inBar) {
+        this.keepFocusOn(button);
       }
-      pointer = false;
+      this.pointer = false;
     });
+  }
+
+  /**
+   * Leaves focus on a slide bar button, unless the press just disabled or hid
+   * it. Next goes quiet on the last slide, so focus moves to Previous, and
+   * the other way round.
+   */
+  private keepFocusOn(button: BarButton): void {
+    if (usable(button)) {
+      return;
+    }
+    const other =
+      button === this.nextButton ? this.prevButton : button === this.prevButton ? this.nextButton : null;
+    if (other && usable(other)) {
+      other.focus();
+      return;
+    }
+    this.takeFocus(true);
   }
 
   /**
@@ -341,26 +454,43 @@ export class Presentation {
     this.codeButton.setAttribute('ariaExpanded', String(!this.collapsed));
     document
       .querySelector('nys-tooltip[for="code-toggle-button"]')
-      ?.setAttribute('text', `${label} (c)`);
+      ?.setAttribute('text', this.singleKeys ? `${label} (c)` : label);
   }
 
   private toggleNotes(): void {
     if (this.notesOpen) {
-      this.closeNotes();
-      this.takeFocus();
+      this.closeNotes(true);
       return;
     }
     if (!this.notesBody.textContent) {
       return;
     }
     this.notesOpen = true;
+    this.notesOpener = document.activeElement;
     this.notes.hidden = false;
-    this.notes.focus?.();
+    this.notesButton.setAttribute('ariaExpanded', 'true');
+    this.notes.focus();
   }
 
-  private closeNotes(): void {
+  /**
+   * Hides the notes. With `restoreFocus`, focus goes back to whatever opened
+   * them, or to the slide bar when that is gone.
+   */
+  private closeNotes(restoreFocus = false): void {
+    const hadFocus = this.notes.contains(document.activeElement);
     this.notesOpen = false;
     this.notes.hidden = true;
+    this.notesButton.setAttribute('ariaExpanded', 'false');
+    if (!restoreFocus && !hadFocus) {
+      return;
+    }
+    const opener = this.notesOpener;
+    this.notesOpener = null;
+    if (opener instanceof HTMLElement && opener !== document.body && usable(opener)) {
+      opener.focus();
+    } else {
+      this.takeFocus(true);
+    }
   }
 
   /**
@@ -368,10 +498,22 @@ export class Presentation {
    *
    * The preview is a cross-origin iframe. Once it holds focus, key events go
    * to the sandbox instead of this page, so the deck stops responding to the
-   * arrow keys. Reclaiming focus after every step keeps them working. After an
-   * edit, focus stays in the editor, which is what the presenter wants.
+   * arrow keys. Reclaiming focus after every step keeps them working. Focus
+   * already on a slide bar control stays put, unless `force` is set, so a
+   * keyboard user keeps their place. After an edit, focus stays in the
+   * editor, which is what the presenter wants.
    */
-  private takeFocus(): void {
+  private takeFocus(force = false): void {
+    const active = document.activeElement;
+    if (
+      !force &&
+      active instanceof HTMLElement &&
+      active !== this.caption &&
+      this.caption.contains(active) &&
+      usable(active)
+    ) {
+      return;
+    }
     this.caption.focus({preventScroll: true});
   }
 
@@ -417,20 +559,36 @@ function paneFor(action: PresentationAction): PaneId | undefined {
   return PANE_IDS.find((candidate) => candidate === pane);
 }
 
-/** Returns the lowercase tag names on a key event's composed path. */
-function tagNamesFor(event: KeyboardEvent): string[] {
-  const path = typeof event.composedPath === 'function' ? event.composedPath() : [];
-  const names: string[] = [];
-  for (const node of path) {
-    const tag = (node as Element).tagName;
-    if (typeof tag === 'string') {
-      names.push(tag.toLowerCase());
-    }
+/** Describes the elements on a key event's composed path. */
+function pathFor(event: KeyboardEvent): PathEntry[] {
+  const nodes = typeof event.composedPath === 'function' ? event.composedPath() : [];
+  const elements = nodes.filter((node): node is HTMLElement => node instanceof HTMLElement);
+  if (elements.length === 0 && event.target instanceof HTMLElement) {
+    elements.push(event.target);
   }
-  if (names.length === 0 && event.target instanceof Element) {
-    names.push(event.target.tagName.toLowerCase());
+  return elements.map((element) => ({
+    tag: element.tagName.toLowerCase(),
+    role: element.getAttribute('role'),
+    editable: element.isContentEditable,
+  }));
+}
+
+/** Whether an element can hold focus right now: shown and not disabled. */
+function usable(element: HTMLElement & {disabled?: boolean}): boolean {
+  return element.isConnected && element.disabled !== true && element.getClientRects().length > 0;
+}
+
+/** Builds a span of text, hidden from screen readers or from sight. */
+function span(text: string, options: {hidden?: boolean; className?: string}): HTMLElement {
+  const element = document.createElement('span');
+  element.textContent = text;
+  if (options.hidden) {
+    element.setAttribute('aria-hidden', 'true');
   }
-  return names;
+  if (options.className) {
+    element.className = options.className;
+  }
+  return element;
 }
 
 function readCollapsed(): boolean {
@@ -452,8 +610,11 @@ function bindClick(selector: string, handler: () => void): void {
   document.querySelector(selector)?.addEventListener('nys-click', handler);
 }
 
-function required(root: Document | HTMLElement, selector: string): HTMLElement {
-  const element = root.querySelector<HTMLElement>(selector);
+function required<T extends HTMLElement = HTMLElement>(
+  root: Document | HTMLElement,
+  selector: string,
+): T {
+  const element = root.querySelector<T>(selector);
   if (!element) {
     throw new Error(`The page is missing the element "${selector}".`);
   }
