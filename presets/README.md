@@ -71,28 +71,48 @@ For example, this slide uses a homegrown layer:
 ```
 
 It needs custom CSS for `g-slide`, `g-grid`, `g-card`, and `g-stat`.
-This version needs none:
+This version uses NYSDS utilities for the layout:
 
 ```html
 <div class="nys-grid-container nys-padding-y-400">
   <h1 class="nys-font-h1 nys-margin-b-400">Where we stand</h1>
   <div class="nys-grid-row nys-grid-gap-300">
-    <div class="nys-grid-col-12 nys-tablet:nys-grid-col-6 nys-desktop:nys-grid-col-4 nys-display-flex">
-      <nys-card
-        heading="~8 weeks"
-        description="From first commit to production for Click to Renew, which launched on NYSDS on October 28"
-      ></nys-card>
+    <div class="nys-grid-col-12 nys-tablet:nys-grid-col-6 nys-desktop:nys-grid-col-4">
+      <p class="stat">
+        <span class="stat__value">~8 weeks</span>
+        from first commit to production for Click to Renew, which launched
+        on NYSDS on October 28
+      </p>
     </div>
     <!-- more columns -->
   </div>
 </div>
 ```
 
-`nys-card` carries the statistic in its `heading`. NYSDS has no stat or
-metric component, so the card is the closest documented option. If you
-need a larger number, set the card's `size` or its documented
-`--nys-card-font-size--heading` property to a token rather than a pixel
-value.
+NYSDS has no stat or metric component, so the stat is custom. Don't use
+a heading or a component's `heading` for the number: a number isn't a
+section title, and screen reader users navigate by headings. A paragraph
+reads as one sentence, and a few lines of CSS on tokens style it:
+
+```css
+.stat {
+  margin: 0;
+  padding-inline-start: var(--nys-space-200);
+  border-inline-start: var(--nys-border-width-lg) solid var(--nys-color-theme);
+}
+
+.stat__value {
+  display: block;
+  font-family: var(--nys-font-family-display);
+  font-size: var(--nys-font-size-display-md);
+  font-weight: var(--nys-font-weight-bold);
+  line-height: var(--nys-font-lineheight-display-md);
+}
+```
+
+When several slides in a deck show stats, put these rules in the deck's
+**Base CSS** in **Deck settings** rather than repeating them on each
+slide.
 
 ## Naming and ordering
 

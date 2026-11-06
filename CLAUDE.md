@@ -168,9 +168,9 @@ Slides demonstrate NYSDS, so build them from NYSDS, in this order:
 Don't invent a parallel class system (for example `g-slide`, `g-card`) or
 hard-code colors, font sizes, or spacing. Custom CSS is fine when the
 slide's point is customization or it shows something NYSDS doesn't ship;
-keep it on tokens. NYSDS has no stat component, so use `nys-card` with
-the number as its `heading`. `presets/README.md` has a before/after
-example.
+keep it on tokens. NYSDS has no stat component, so build one: semantic
+markup where the number is not a heading, styled with token-based CSS.
+`presets/README.md` has a before/after example.
 
 ## Add or edit a preset or deck
 
