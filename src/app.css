@@ -12,10 +12,13 @@
   --pg-divider-width: 10px;
   --pg-surface: var(--nys-color-ink-reverse, #ffffff);
   --pg-border: var(--nys-color-neutral-100, #d0d0ce);
-  --pg-muted: var(--nys-color-text-weaker, #62666a);
+  /* Secondary text. The design system's "weaker" text color measures about
+     4.2:1 on white, short of the 4.5:1 that body-size text needs, so muted
+     text uses "weak" instead. */
+  --pg-muted: var(--nys-color-text-weak, #4a4d4f);
   --pg-editor-surface: var(--nys-color-ink-reverse, #ffffff);
   --pg-editor-border: var(--nys-color-neutral-100, #d0d0ce);
-  --pg-editor-label: var(--nys-color-text-weaker, #62666a);
+  --pg-editor-label: var(--nys-color-text-weak, #4a4d4f);
   --pg-editor-label-strong: var(--nys-color-text, #1b1b1b);
   --pg-column-strip-width: 32px;
 
@@ -34,6 +37,14 @@
   --playground-tab-bar-indicator-color: var(--nys-color-theme, #154973);
 }
 
+/* The light editor theme (Eclipse) draws two kinds of token below 4.5:1 on
+   white; these darker reds keep their hue and pass. The selector matches the
+   theme's own class, on `body`, so it wins over it. */
+body[data-editor-theme="light"] {
+  --playground-code-meta-color: #cc0000;
+  --playground-code-string-2-color: #b33c00;
+}
+
 /* Dark editor theme. Only the editor pane changes: the preview keeps showing
    the design system as it is, and the caption bar keeps the theme color. */
 body[data-editor-theme="dark"] {
@@ -46,6 +57,10 @@ body[data-editor-theme="dark"] {
   --playground-tab-bar-active-color: #ffffff;
   --playground-tab-bar-indicator-color: #82aaff;
   --playground-code-font-size: 15px;
+  /* The Material Darker theme draws line numbers and comments at about
+     2.1:1. These grays reach 5:1 and 6:1 on its background. */
+  --playground-code-linenumber-color: #909090;
+  --playground-code-comment-color: #9e9e9e;
 }
 
 body[data-editor-theme="dark"] .split__pane--editors {

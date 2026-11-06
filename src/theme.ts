@@ -74,6 +74,11 @@ export function applyEditorTheme(theme: EditorTheme): void {
     document.body.classList.toggle(className, name === theme);
   }
   document.body.dataset.editorTheme = theme;
+  // The column collapse buttons sit on the editor surface, so on the dark one
+  // they need the design system's colors for dark backgrounds to be seen.
+  for (const button of document.querySelectorAll('.column__collapse')) {
+    button.toggleAttribute('inverted', theme === 'dark');
+  }
 }
 
 /** Remembers the theme for the next visit. */
