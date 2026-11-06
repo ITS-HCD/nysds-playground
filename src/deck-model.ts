@@ -142,6 +142,15 @@ export function slideIndex(deck: StoredDeck, id: string | null | undefined): num
 }
 
 /** Returns a slide by id. */
+/**
+ * Says where a slide sits in its deck, as in "Slide 2 of 8", or, given a
+ * title, "Slide 2 of 8: Alert". `index` counts from 0.
+ */
+export function describeSlide(index: number, total: number, title?: string): string {
+  const position = `Slide ${index + 1} of ${total}`;
+  return title === undefined ? position : `${position}: ${title}`;
+}
+
 export function getSlide(deck: StoredDeck, id: string | null | undefined): Slide | undefined {
   return id ? deck.slides.find((slide) => slide.id === id) : undefined;
 }

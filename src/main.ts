@@ -12,6 +12,7 @@ import type {DeckDraft, Slide, SlideDraft, StoredDeck} from './deck-model';
 import {
   BLANK_SLIDE_HTML,
   arrangeSlides,
+  describeSlide,
   hasContent,
   getSlide,
   makeSlide,
@@ -155,6 +156,10 @@ class PlaygroundApp {
   private updateMode: UpdateMode = initialUpdateMode();
   private readonly slideList: SlideList;
   private presentation: Presentation | undefined;
+  /** The preview frame's last name, so typing doesn't rename it on every key. */
+  private previewTitle = '';
+  /** The slide picker's last options, so typing doesn't rebuild it on every key. */
+  private presetOptions = '';
 
   private readonly syncHash = debounce(() => this.writeHash(), HASH_DEBOUNCE_MS);
 
@@ -635,7 +640,7 @@ class PlaygroundApp {
       // Focus stays on Delete slide, so say where that left things.
       announce(
         next
-          ? `Deleted "${current.title}". Slide ${nextIndex + 1} of ${slides.length}: ${next.title}.`
+          ? `Deleted "${current.title}". ${describeSlide(nextIndex, slides.length, next.title)}.`
           : `Deleted "${current.title}".`,
       );
     };
@@ -930,7 +935,6 @@ class PlaygroundApp {
       this.saveSoon();
     }
     this.syncHash();
-    this.presentation?.refresh();
   }
 
   private writeHash(): void {
@@ -969,7 +973,11 @@ class PlaygroundApp {
         ? `${preset.title} · ${this.deck.title}`
         : `${this.deck.title} · ${PLAYGROUND_CONFIG.title}`;
     }
-    nameThePreview(this.hasDeck && preset ? `Preview of ${preset.title}` : 'Preview');
+    const previewTitle = this.hasDeck && preset ? `Preview of ${preset.title}` : 'Preview';
+    if (previewTitle !== this.previewTitle) {
+      this.previewTitle = previewTitle;
+      nameThePreview(previewTitle);
+    }
   }
 
   /** Whether the toolbar should present the session as edited code. */
@@ -1072,7 +1080,12 @@ class PlaygroundApp {
     if (openGroup) {
       parts.push('</optgroup>');
     }
-    this.presetSelect.innerHTML = parts.join('');
+    const options = parts.join('');
+    if (options === this.presetOptions) {
+      return;
+    }
+    this.presetOptions = options;
+    this.presetSelect.innerHTML = options;
     this.setSelectValue(
       this.presetSelect,
       this.customCode() ? '__custom__' : (this.activePresetId ?? ''),

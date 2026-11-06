@@ -909,7 +909,7 @@ nys-toggle[hidden] {
 
 /* A bullet for the eye only: the counter's words carry it for screen
    readers. */
-.caption__count:not(.caption__count--empty)::before {
+.caption__count:not(:empty)::before {
   content: "\2022  " / "";
 }
 

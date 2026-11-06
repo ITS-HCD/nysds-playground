@@ -11,6 +11,7 @@ import test from 'node:test';
 import {
   arrangeSlides,
   copyOfDeck,
+  describeSlide,
   hasContent,
   makeDeck,
   makeSlide,
@@ -74,6 +75,12 @@ test('copyOfDeck takes a free id and drops the starter link', () => {
   assert.equal(copy.id, 'library-copy-2');
   assert.equal(copy.title, 'Copy of library');
   assert.equal(copy.starter, undefined);
+});
+
+test('describeSlide counts from 1 and adds the title when there is one', () => {
+  assert.equal(describeSlide(0, 8), 'Slide 1 of 8');
+  assert.equal(describeSlide(1, 8, 'Alert'), 'Slide 2 of 8: Alert');
+  assert.equal(describeSlide(7, 8, ''), 'Slide 8 of 8: ');
 });
 
 test('slideIndex finds a slide or reports -1', () => {

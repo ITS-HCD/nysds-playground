@@ -11,7 +11,7 @@ import type {RememberedFocus} from './focus';
 import {rememberFocus, usable} from './focus';
 import {anyModalOpen} from './modals';
 import type {Slide, StoredDeck} from './deck-model';
-import {slideIndex} from './deck-model';
+import {describeSlide, slideIndex} from './deck-model';
 import type {EditorPanes} from './editor-panes';
 import type {PaneId} from './editors';
 import {PANE_FILES, PANE_IDS} from './editors';
@@ -48,6 +48,7 @@ export class Presentation {
   private readonly group: HTMLElement;
   private readonly title: HTMLElement;
   private readonly deckTitle: HTMLElement;
+  private readonly count: HTMLElement;
   private readonly description: HTMLElement;
   private readonly hint: HTMLElement;
   private readonly notes: HTMLElement;
@@ -78,6 +79,7 @@ export class Presentation {
     this.group = required(root, '#caption-group');
     this.title = required(root, '#caption-title');
     this.deckTitle = required(root, '#present-deck-title');
+    this.count = required(root, '#caption-count');
     this.description = required(root, '#caption-description');
     this.hint = required(root, '#present-hint');
     this.notes = required(root, '#notes');
@@ -191,26 +193,19 @@ export class Presentation {
     this.group.textContent = preset?.group ?? '';
     this.title.textContent = preset?.title ?? 'Custom code';
     this.description.textContent = preset?.description ?? '';
-    const counter =
-      deck.slides.length === 0
-        ? ''
-        : `${index >= 0 ? index + 1 : '—'} / ${deck.slides.length}`;
-    const spoken =
-      deck.slides.length === 0
-        ? ''
-        : index >= 0
-          ? `Slide ${index + 1} of ${deck.slides.length}`
-          : `${deck.slides.length} slides`;
-    // One counter sits with the icons and another rides with the title on
-    // narrow screens; only one of them is ever visible. Screen readers get
-    // words rather than "1 slash 8".
-    for (const element of document.querySelectorAll<HTMLElement>('[data-count]')) {
-      element.replaceChildren(
-        span(counter, {hidden: true}),
-        span(spoken, {className: 'visually-hidden'}),
-      );
-      element.classList.toggle('caption__count--empty', counter === '');
-    }
+    // Screen readers get words rather than "1 slash 8". With no slides, the
+    // counter stays empty, so its bullet goes too.
+    const total = deck.slides.length;
+    this.count.replaceChildren(
+      ...(total === 0
+        ? []
+        : [
+            span(`${index >= 0 ? index + 1 : '—'} / ${total}`, {hidden: true}),
+            span(index >= 0 ? describeSlide(index, total) : `${total} slides`, {
+              className: 'visually-hidden',
+            }),
+          ]),
+    );
     // The arrows go quiet at the ends of the deck. From a shared code link,
     // where no slide is current, both still work: forward starts the deck and
     // back lands on its last slide.
@@ -258,7 +253,7 @@ export class Presentation {
     const deck = this.target.getDeck();
     const index = slideIndex(deck, this.target.getActivePresetId());
     const slide = index >= 0 ? deck.slides[index] : undefined;
-    return slide ? `Slide ${index + 1} of ${deck.slides.length}: ${slide.title}.` : 'Custom code.';
+    return slide ? `${describeSlide(index, deck.slides.length, slide.title)}.` : 'Custom code.';
   }
 
   private step(delta: number): void {
