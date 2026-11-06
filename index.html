@@ -498,20 +498,9 @@
             icon="refresh"
             label="Reset slide"
           ></nys-button>
-          <nys-tooltip class="present-only" for="present-settings-button" text="Settings" inverted></nys-tooltip>
-          <nys-button
-            class="present-only"
-            inverted
-            id="present-settings-button"
-            size="sm"
-            variant="ghost"
-            circle
-            icon="more_vert"
-            label="Settings"
-          ></nys-button>
-          <!-- Shows in both modes, next to the arrows, so the way back to a
-               hidden drawer never moves. The app keeps the label, tooltip,
-               and ariaExpanded in step with the drawer. -->
+          <!-- Shows in both modes, so the way back to a hidden drawer never
+               moves. The app keeps the label, tooltip, and ariaExpanded in
+               step with the drawer. -->
           <nys-tooltip for="code-toggle-button" text="Hide code (c)" inverted></nys-tooltip>
           <nys-button
             inverted
@@ -523,6 +512,18 @@
             label="Hide code"
             ariaExpanded="true"
             ariaControls="editors"
+          ></nys-button>
+          <!-- The overflow menu is the last control before the arrows. -->
+          <nys-tooltip class="present-only" for="present-settings-button" text="Settings" inverted></nys-tooltip>
+          <nys-button
+            class="present-only"
+            inverted
+            id="present-settings-button"
+            size="sm"
+            variant="ghost"
+            circle
+            icon="more_vert"
+            label="Settings"
           ></nys-button>
           <nys-button
             inverted

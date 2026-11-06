@@ -68,8 +68,8 @@ stage, and its own "Result" bar stays hidden — press Cmd+Enter or
 Ctrl+Enter, or Cmd+S or Ctrl+S, or use the manual-mode **Update preview**
 button, to force a rebuild. The HTML, CSS, and JS editors float in a
 drawer over the bottom of the stage — drag the divider to resize it. To
-hide the drawer, select **Hide code** (the code icon beside **Previous**
-in the slide bar) or press `c`. The same button, now **Show code**,
+hide the drawer, select **Hide code** (the code icon in the slide bar)
+or press `c`. The same button, now **Show code**,
 brings it back, and the playground remembers your choice. The slide bar
 along the bottom shows a slide picker in place of a title, grouped the
 way your slides are grouped, with the slide count and **Slide settings**
@@ -150,11 +150,10 @@ Select **Present** in the editor toolbar, or **Present** on a deck card,
 to present a deck. Presenting reuses the same layout: it hides the
 toolbar and the slide-editing controls, and requests fullscreen. In
 place of the edit-only controls, the slide bar shows, in order, **Edit**
-(returns to
-editing), presenter **Notes**, **Reset slide** (discards this session's
-edits to the current slide and reloads what's saved), and **Settings**
-(opens the settings modal without leaving the presentation), followed by
-**Hide code**, **Previous**, and **Next**. Opening a
+(returns to editing), presenter **Notes**, **Reset slide** (discards this
+session's edits to the current slide and reloads what's saved), **Hide
+code**, and **Settings** (opens the settings modal without leaving the
+presentation), followed by **Previous** and **Next**. Opening a
 deck with `?present=1` presents it directly. Escape exits presentation
 mode, and leaves fullscreen with it.
 
