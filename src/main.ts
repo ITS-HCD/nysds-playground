@@ -22,12 +22,10 @@ import {
 } from './deck-model';
 import * as store from './deck-store';
 import {announce} from './announce';
-import {makeEditorAccessible} from './editor-a11y';
+import {makeEditorAccessible, nameThePreview} from './editor-a11y';
 import type {Modal} from './modals';
 import {ModalQuestion, bindModalKeys, guardDismissal, modal} from './modals';
-import type {ToastType} from './toast';
 import {showToast} from './toast';
-import {PANE_IDS} from './preset-schema';
 import {HomeView} from './home';
 import type {Route} from './routing';
 import {needsReboot, routeFor, slideIdFromHash} from './routing';
@@ -47,7 +45,7 @@ import {
 } from './state';
 import {EditorPanes} from './editor-panes';
 import type {EditorLayout} from './editors';
-import {PANE_FILES, collapsedForPreset, layoutUrl} from './editors';
+import {PANE_FILES, PANE_IDS, collapsedForPreset, layoutUrl} from './editors';
 import {isBuildShortcut} from './keys';
 import type {DrawerSize, FontSize, UpdateMode} from './settings';
 import {
@@ -457,7 +455,7 @@ class PlaygroundApp {
     clearAllSettings();
     void this.renderVersionOptions();
     this.syncSettingsControls();
-    this.showToast('success', 'Settings reset', 'The playground is back to its defaults.');
+    showToast('success', 'Settings reset', 'The playground is back to its defaults.');
   }
 
   /** Shows the manual update button, and marks it when a build is waiting. */
@@ -601,7 +599,7 @@ class PlaygroundApp {
     this.loadPreset(slide);
     // The slide opens ready to code. A toast points at Slide settings for the
     // title and notes, rather than a modal standing in the way.
-    this.showToast('success', `${title} added`, 'Name it and add notes in Slide settings.');
+    showToast('success', `${title} added`, 'Name it and add notes in Slide settings.');
   }
 
   /** Copies the current slide in place. */
@@ -626,7 +624,7 @@ class PlaygroundApp {
       return;
     }
     if (this.deck.slides.length === 1) {
-      this.showToast('warning', 'Keep one slide', 'A deck needs at least one slide.');
+      showToast('warning', 'Keep one slide', 'A deck needs at least one slide.');
       return;
     }
     const remove = async () => {
@@ -795,7 +793,7 @@ class PlaygroundApp {
   private async exportDeck(): Promise<void> {
     await this.flushSave();
     download(`${this.deck.id || 'deck'}.json`, `${JSON.stringify(toDeckFile(this.deck), null, 2)}\n`);
-    this.showToast('success', 'Deck exported', 'Import the file to open it in another browser.');
+    showToast('success', 'Deck exported', 'Import the file to open it in another browser.');
   }
 
   /**
@@ -917,9 +915,9 @@ class PlaygroundApp {
   private async copy(text: string, heading: string, detail: string): Promise<void> {
     try {
       await navigator.clipboard.writeText(text);
-      this.showToast('success', heading, detail);
+      showToast('success', heading, detail);
     } catch {
-      this.showToast(
+      showToast(
         'warning',
         'Copy the link yourself',
         'The browser blocked clipboard access. Copy the URL from the address bar.',
@@ -1157,11 +1155,6 @@ class PlaygroundApp {
       this.presentation?.enter();
     });
   }
-
-  /** Shows a toast. See `src/toast.ts`. */
-  private showToast(type: ToastType, heading: string, text: string): void {
-    showToast(type, heading, text);
-  }
 }
 
 /* Helpers ------------------------------------------------------------- */
@@ -1245,27 +1238,6 @@ function download(filename: string, text: string): void {
 /** Records a setting in the URL so a copied link opens the same way. */
 function replaceQuery(name: string, value: string): void {
   window.history.replaceState(null, '', settingUrl(name, value, window.location.href));
-}
-
-/**
- * Names the preview frame.
- *
- * `playground-preview` titles its iframe "Project preview" whatever it shows,
- * and offers no way to change that, so the title is set on the frame inside
- * its shadow root.
- */
-function nameThePreview(title: string): void {
-  const preview = document.querySelector<HTMLElement & {updateComplete?: Promise<unknown>}>(
-    '#preview',
-  );
-  const apply = (): void => {
-    const frame = preview?.shadowRoot?.querySelector('iframe');
-    if (frame && frame.title !== title) {
-      frame.title = title;
-    }
-  };
-  apply();
-  void preview?.updateComplete?.then(apply);
 }
 
 /** The code drawer's height, as a percentage of the stage. */

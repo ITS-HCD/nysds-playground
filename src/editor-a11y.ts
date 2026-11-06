@@ -1,5 +1,6 @@
 /**
- * Names the code editors and keeps Tab from getting stuck in them.
+ * Names the code editors and the preview frame, and keeps Tab from getting
+ * stuck in the editors.
  *
  * `playground-code-editor` wraps CodeMirror in a frame that takes focus first
  * and shows "Press Enter to start editing, Press Escape to exit editor". The
@@ -16,17 +17,20 @@
  * frame has no such hook, so its name is set on the element directly each
  * time focus reaches it, since the editor redraws the frame when it switches
  * between editable and read-only.
+ *
+ * `playground-preview` titles its iframe "Project preview" whatever it shows,
+ * and offers no way to change that, so `nameThePreview` sets the title on the
+ * frame inside its shadow root.
  */
 import {EditorView} from '@codemirror/view';
 
-/** The editor elements from `playground-elements` this module works on. */
-type CodeEditorHost = HTMLElement & {extensions?: unknown; filename?: string};
+import {PANE_FILES} from './editors';
 
-/** What each project file is called out loud. */
-const FILE_NAMES: Record<string, string> = {
-  'snippet.html': 'HTML',
-  'styles.css': 'CSS',
-  'script.js': 'JS',
+/** The `playground-elements` elements this module works on. */
+type PlaygroundHost = HTMLElement & {
+  extensions?: unknown;
+  filename?: string;
+  updateComplete?: Promise<unknown>;
 };
 
 /** How to start and stop editing, read after the frame's name. */
@@ -38,10 +42,11 @@ const INSTRUCTIONS = 'Press Enter to edit. Press Escape to stop editing, then Ta
  * Pass a fixed `name` for an editor that always shows one file. Leave it out
  * for the tabbed editor, which is named after the file it is showing.
  */
-export function makeEditorAccessible(editor: CodeEditorHost, name?: string): void {
+export function makeEditorAccessible(editor: PlaygroundHost, name?: string): void {
   let applied = '';
   const apply = (): void => {
-    const label = name ?? FILE_NAMES[editor.filename ?? ''] ?? 'Code';
+    const file = Object.values(PANE_FILES).find((pane) => pane.file === editor.filename);
+    const label = name ?? file?.label ?? 'Code';
     if (label !== applied) {
       applied = label;
       editor.extensions = EditorView.contentAttributes.of({
@@ -51,10 +56,31 @@ export function makeEditorAccessible(editor: CodeEditorHost, name?: string): voi
     }
     nameFrame(editor, `${label} editor`);
   };
-  apply();
   editor.addEventListener('focusin', apply);
-  // The frame only exists once the editor has rendered.
-  void (editor as HTMLElement & {updateComplete?: Promise<unknown>}).updateComplete?.then(apply);
+  whenRendered(editor, apply);
+}
+
+/** Names the preview frame, which is what a screen reader reads on the way in. */
+export function nameThePreview(title: string): void {
+  const preview = document.querySelector<PlaygroundHost>('#preview');
+  if (!preview) {
+    return;
+  }
+  whenRendered(preview, () => {
+    const frame = preview.shadowRoot?.querySelector('iframe');
+    if (frame && frame.title !== title) {
+      frame.title = title;
+    }
+  });
+}
+
+/**
+ * Runs `apply` now, and again once `host` has rendered, since what it changes
+ * in the host's shadow root only exists after a render.
+ */
+function whenRendered(host: PlaygroundHost, apply: () => void): void {
+  apply();
+  void host.updateComplete?.then(apply);
 }
 
 /** Gives the frame around CodeMirror a role, a name, and instructions. */

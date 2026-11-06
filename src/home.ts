@@ -1,6 +1,7 @@
 /**
  * The home view: the list of decks in this browser and the ways to add one.
  */
+import {visuallyHidden} from './announce';
 import type {StoredDeck} from './deck-model';
 import {relativeTime} from './deck-model';
 import {focusWhenReady} from './focus';
@@ -164,10 +165,7 @@ export class HomeView {
     button.setAttribute('id', actionId(deck, label));
     button.setAttribute('size', 'sm');
     button.setAttribute('variant', variant);
-    const hidden = document.createElement('span');
-    hidden.className = 'visually-hidden';
-    hidden.textContent = ` ${deck.title}`;
-    button.append(label, hidden);
+    button.append(label, visuallyHidden(` ${deck.title}`));
     button.addEventListener('nys-click', handler);
     return button;
   }

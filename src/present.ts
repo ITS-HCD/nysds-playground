@@ -6,7 +6,7 @@
  * change a slide live. A caption bar at the bottom names the slide and carries
  * the controls.
  */
-import {announce} from './announce';
+import {announce, visuallyHidden} from './announce';
 import type {RememberedFocus} from './focus';
 import {rememberFocus, usable} from './focus';
 import {anyModalOpen} from './modals';
@@ -196,16 +196,17 @@ export class Presentation {
     // Screen readers get words rather than "1 slash 8". With no slides, the
     // counter stays empty, so its bullet goes too.
     const total = deck.slides.length;
-    this.count.replaceChildren(
-      ...(total === 0
-        ? []
-        : [
-            span(`${index >= 0 ? index + 1 : '—'} / ${total}`, {hidden: true}),
-            span(index >= 0 ? describeSlide(index, total) : `${total} slides`, {
-              className: 'visually-hidden',
-            }),
-          ]),
-    );
+    if (total === 0) {
+      this.count.replaceChildren();
+    } else {
+      const shown = document.createElement('span');
+      shown.textContent = `${index >= 0 ? index + 1 : '—'} / ${total}`;
+      shown.setAttribute('aria-hidden', 'true');
+      this.count.replaceChildren(
+        shown,
+        visuallyHidden(index >= 0 ? describeSlide(index, total) : `${total} slides`),
+      );
+    }
     // The arrows go quiet at the ends of the deck. From a shared code link,
     // where no slide is current, both still work: forward starts the deck and
     // back lands on its last slide.
@@ -396,7 +397,11 @@ export class Presentation {
         return;
       }
       const sibling =
-        button === this.nextButton ? this.prevButton : button === this.prevButton ? this.nextButton : null;
+        button === this.nextButton
+          ? this.prevButton
+          : button === this.prevButton
+            ? this.nextButton
+            : null;
       this.settleFocus(this.caption, sibling, this.caption);
     });
   }
@@ -493,7 +498,8 @@ export class Presentation {
       scope.contains(active) &&
       usable(active);
     if (!stays) {
-      fallbacks.find((element) => element !== null && usable(element))?.focus({preventScroll: true});
+      const next = fallbacks.find((element) => element !== null && usable(element));
+      next?.focus({preventScroll: true});
     }
   }
 
@@ -551,19 +557,6 @@ function pathFor(event: KeyboardEvent): PathEntry[] {
     role: element.getAttribute('role'),
     editable: element.isContentEditable,
   }));
-}
-
-/** Builds a span of text, hidden from screen readers or from sight. */
-function span(text: string, options: {hidden?: boolean; className?: string}): HTMLElement {
-  const element = document.createElement('span');
-  element.textContent = text;
-  if (options.hidden) {
-    element.setAttribute('aria-hidden', 'true');
-  }
-  if (options.className) {
-    element.className = options.className;
-  }
-  return element;
 }
 
 function bindClick(selector: string, handler: () => void): void {

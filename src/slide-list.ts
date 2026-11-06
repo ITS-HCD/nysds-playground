@@ -9,6 +9,7 @@
  * Dragging is for the pointer; the arrows do the same job from the keyboard,
  * and a live region reads out each move.
  */
+import {announce, visuallyHidden} from './announce';
 import type {Slide, SlideEdit} from './deck-model';
 import {focusWhenReady} from './focus';
 
@@ -123,10 +124,7 @@ export class SlideList {
       restore.setAttribute('variant', 'ghost');
       // The visible label stays "Restore"; screen readers also hear which
       // slide.
-      const which = document.createElement('span');
-      which.className = 'visually-hidden';
-      which.textContent = ` ${slide}`;
-      restore.append('Restore', which);
+      restore.append('Restore', visuallyHidden(` ${slide}`));
       restore.addEventListener('nys-click', () => this.restore(row));
       actions.append(restore);
     } else {
@@ -199,7 +197,7 @@ export class SlideList {
     const arrow: Control =
       delta < 0 ? (to === 0 ? 'down' : 'up') : to === this.rows.length - 1 ? 'up' : 'down';
     this.render({id: row.id, control: from_control === 'handle' ? 'handle' : arrow});
-    this.announce(`Moved "${this.name(row)}" to position ${to + 1} of ${this.rows.length}.`);
+    this.announceMove(row, to);
   }
 
   private remove(row: SlideEdit): void {
@@ -208,25 +206,25 @@ export class SlideList {
     }
     row.removed = true;
     this.render({id: row.id, control: 'restore'});
-    this.announce(`"${this.name(row)}" goes when you select Done. Select Restore to keep it.`);
+    announce(
+      `"${this.name(row)}" goes when you select Done. Select Restore to keep it.`,
+      this.status,
+    );
   }
 
   private restore(row: SlideEdit): void {
     row.removed = false;
     this.render({id: row.id, control: 'remove'});
-    this.announce(`Restored "${this.name(row)}".`);
+    announce(`Restored "${this.name(row)}".`, this.status);
   }
 
   private name(row: SlideEdit): string {
     return row.title.trim() || 'Untitled slide';
   }
 
-  /** Reads a message to screen readers, even when it repeats the last one. */
-  private announce(text: string): void {
-    this.status.textContent = '';
-    window.requestAnimationFrame(() => {
-      this.status.textContent = text;
-    });
+  private announceMove(row: SlideEdit, to: number): void {
+    const name = this.name(row);
+    announce(`Moved "${name}" to position ${to + 1} of ${this.rows.length}.`, this.status);
   }
 
   private onDragOver(event: DragEvent): void {
@@ -270,7 +268,7 @@ export class SlideList {
     }
     this.rows.splice(to, 0, row!);
     this.render();
-    this.announce(`Moved "${this.name(row!)}" to position ${to + 1} of ${this.rows.length}.`);
+    this.announceMove(row!, to);
   }
 
   /** The row under a drag event, or the last row when the event is on the list itself. */

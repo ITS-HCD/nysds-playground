@@ -273,8 +273,8 @@ body {
 }
 
 .deck-missing__heading {
-  margin: 0 0 16px;
-  font-size: 1.75rem;
+  margin: 0 0 var(--nys-space-200, 16px);
+  font-size: var(--nys-font-size-h3, 1.75rem);
 }
 
 .deck-missing nys-button {
