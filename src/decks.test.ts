@@ -11,7 +11,6 @@ import test from 'node:test';
 import {
   arrangeSlides,
   copyOfDeck,
-  deckDraftOf,
   hasContent,
   makeDeck,
   makeSlide,
@@ -19,16 +18,13 @@ import {
   nextSlideId,
   normalizeImport,
   relativeTime,
-  sameDeckDraft,
-  sameSlideDraft,
-  slideDraftOf,
   slideIndex,
   slugify,
   staleStarters,
   toDeckFile,
   uniqueId,
 } from './deck-model.ts';
-import type {DeckDraft, SlideDraft, StoredDeck} from './deck-model.ts';
+import type {StoredDeck} from './deck-model.ts';
 
 const NOW = new Date('2026-09-16T12:00:00.000Z');
 
@@ -344,63 +340,4 @@ test('hasContent is true once anything was typed or set', () => {
   assert.equal(hasContent(makeSlide({...blank, notes: 'n'})), true);
   assert.equal(hasContent(makeSlide({...blank, version: '1.21.0'})), true);
   assert.equal(hasContent(makeSlide({...blank, editors: ['html']})), true);
-});
-
-/* Modal drafts ------------------------------------------------------------ */
-
-test('a Deck settings draft matches the deck it opened for', () => {
-  const opened = deck('talk', {
-    title: 'Talk',
-    description: 'One sentence.',
-    baseCss: 'body{}',
-    slides: [makeSlide({id: 'one', title: 'One', group: 'A'}), makeSlide({id: 'two', title: 'Two'})],
-  });
-  assert.equal(sameDeckDraft(deckDraftOf(opened), deckDraftOf(opened)), true);
-});
-
-test('a Deck settings draft changes with any field or row', () => {
-  const opened = deckDraftOf(
-    deck('talk', {slides: [makeSlide({id: 'one', title: 'One'}), makeSlide({id: 'two', title: 'Two'})]}),
-  );
-  const [one, two] = opened.slides;
-  const edits: Partial<DeckDraft>[] = [
-    {title: 'Renamed'},
-    {description: 'New'},
-    {baseCss: 'p{}'},
-    {slides: [two!, one!]},
-    {slides: [{...one!, title: 'Uno'}, two!]},
-    {slides: [{...one!, group: 'A'}, two!]},
-    {slides: [{...one!, removed: true}, two!]},
-  ];
-  for (const edit of edits) {
-    assert.equal(sameDeckDraft(opened, {...opened, ...edit}), false, JSON.stringify(edit));
-  }
-});
-
-test('undoing a Deck settings edit by hand leaves the draft unchanged', () => {
-  const opened = deckDraftOf(deck('talk'));
-  const restored = {...opened, slides: opened.slides.map((row) => ({...row, removed: false}))};
-  assert.equal(sameDeckDraft(opened, restored), true);
-});
-
-test('a Slide settings draft reads latest for an unpinned slide and orders its editors', () => {
-  const draft = slideDraftOf(makeSlide({id: 'one', title: 'One', version: '', editors: ['js', 'html']}));
-  assert.equal(draft.version, 'latest');
-  assert.deepEqual(draft.editors, ['html', 'js']);
-});
-
-test('a Slide settings draft changes with any field', () => {
-  const opened = slideDraftOf(makeSlide({id: 'one', title: 'One'}));
-  assert.equal(sameSlideDraft(opened, {...opened}), true);
-  const edits: Partial<SlideDraft>[] = [
-    {title: 'Uno'},
-    {group: 'A'},
-    {description: 'd'},
-    {notes: 'n'},
-    {version: '1.21.0'},
-    {editors: ['css']},
-  ];
-  for (const edit of edits) {
-    assert.equal(sameSlideDraft(opened, {...opened, ...edit}), false, JSON.stringify(edit));
-  }
 });

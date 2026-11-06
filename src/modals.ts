@@ -92,11 +92,11 @@ function repairShiftTab(event: KeyboardEvent): void {
 
 /** Keeps Escape from closing a modal that holds changes. */
 function guardEscape(event: KeyboardEvent): void {
-  for (const [guardedModal, options] of guarded) {
-    if (guardedModal.open === true && options.isDirty?.()) {
+  for (const [guardedModal, guard] of guarded) {
+    if (guardedModal.open === true && guard.isDirty()) {
       event.preventDefault();
       event.stopImmediatePropagation();
-      refuse(options);
+      refuse(guard.done);
       return;
     }
   }
@@ -105,8 +105,12 @@ function guardEscape(event: KeyboardEvent): void {
 /* Outside click -------------------------------------------------------- */
 
 export interface DismissOptions {
-  /** Whether the modal holds changes that only Done applies. Omit when it never does. */
-  isDirty?: () => boolean;
+  /**
+   * Reads what a modal holds now, as plain data, for a modal whose changes
+   * only Done applies. Once it reads differently from when the modal opened,
+   * the modal holds changes. Omit it when the modal never does.
+   */
+  draft?: () => unknown;
   /** The button that applies the changes. It takes focus when a dismissal is refused. */
   done?: HTMLElement;
   /**
@@ -116,11 +120,33 @@ export interface DismissOptions {
   dismiss?: () => void;
 }
 
-const guarded = new Map<Modal, DismissOptions>();
+/** What the Escape rule needs to know about one modal. */
+interface Guard {
+  isDirty(): boolean;
+  done?: HTMLElement;
+}
+
+const guarded = new Map<Modal, Guard>();
 
 /** Applies the outside-click and Escape rule to one modal. */
 export function guardDismissal(target: Modal, options: DismissOptions = {}): void {
-  guarded.set(target, options);
+  const {draft, done, dismiss} = options;
+  let opened = '';
+  if (draft) {
+    // The fields are filled before the modal opens, so the draft as the
+    // modal opens is the one to compare against. Comparing whole drafts means
+    // a field changed and changed back counts as unchanged.
+    target.addEventListener('nys-open', (event) => {
+      if (event.target === target) {
+        opened = JSON.stringify(draft());
+      }
+    });
+  }
+  const guard: Guard = {
+    isDirty: () => draft !== undefined && JSON.stringify(draft()) !== opened,
+    done,
+  };
+  guarded.set(target, guard);
 
   // Both ends of the click have to land outside, so selecting text in a field
   // and letting go over the backdrop does not count as a click outside.
@@ -134,12 +160,12 @@ export function guardDismissal(target: Modal, options: DismissOptions = {}): voi
     if (!outside || target.open !== true) {
       return;
     }
-    if (options.isDirty?.()) {
-      refuse(options);
+    if (guard.isDirty()) {
+      refuse(done);
       return;
     }
-    if (options.dismiss) {
-      options.dismiss();
+    if (dismiss) {
+      dismiss();
     } else {
       target.open = false;
     }
@@ -147,10 +173,10 @@ export function guardDismissal(target: Modal, options: DismissOptions = {}): voi
 }
 
 /** Points at Done, the way out that keeps the changes. */
-function refuse(options: DismissOptions): void {
+function refuse(done: HTMLElement | undefined): void {
   // `focusVisible` shows the focus ring even after a pointer click, in the
   // browsers that support it.
-  options.done?.focus({focusVisible: true} as FocusOptions);
+  done?.focus({focusVisible: true} as FocusOptions);
 }
 
 /**

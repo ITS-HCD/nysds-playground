@@ -12,14 +12,10 @@ import type {DeckDraft, Slide, SlideDraft, StoredDeck} from './deck-model';
 import {
   BLANK_SLIDE_HTML,
   arrangeSlides,
-  deckDraftOf,
   hasContent,
   getSlide,
   makeSlide,
   nextSlideId,
-  sameDeckDraft,
-  sameSlideDraft,
-  slideDraftOf,
   slideIndex,
   toDeckFile,
 } from './deck-model';
@@ -164,12 +160,6 @@ class PlaygroundApp {
   private singleKeys = readSingleKeys();
   private readonly slideList: SlideList;
   private presentation: Presentation | undefined;
-  /** Deck settings as it opened, to tell whether anything has changed since. */
-  private deckDraftAtOpen: DeckDraft | null = null;
-  /** Slide settings as it opened, to tell whether anything has changed since. */
-  private slideDraftAtOpen: SlideDraft | null = null;
-  /** True until Slide settings has filled its version menu for this slide. */
-  private slideVersionsLoading = false;
 
   private readonly syncHash = debounce(() => this.writeHash(), HASH_DEBOUNCE_MS);
 
@@ -413,15 +403,11 @@ class PlaygroundApp {
    */
   private bindDismissal(): void {
     guardDismissal(modal('#deck-modal'), {
-      isDirty: () =>
-        this.deckDraftAtOpen !== null &&
-        !sameDeckDraft(this.deckDraftAtOpen, this.readDeckDraft()),
+      draft: () => this.readDeckDraft(),
       done: required('#deck-modal-done'),
     });
     guardDismissal(modal('#slide-modal'), {
-      isDirty: () =>
-        this.slideDraftAtOpen !== null &&
-        !sameSlideDraft(this.slideDraftAtOpen, this.readSlideDraft(this.slideDraftAtOpen)),
+      draft: () => this.readSlideDraft(),
       done: required('#slide-modal-done'),
     });
     guardDismissal(this.settingsModal);
@@ -686,7 +672,6 @@ class PlaygroundApp {
     setFieldValue('#deck-description-input', this.deck.description);
     setFieldValue('#deck-base-css-input', this.deck.baseCss);
     this.slideList.load(this.deck.slides);
-    this.deckDraftAtOpen = deckDraftOf(this.deck);
     modal('#deck-modal').open = true;
   }
 
@@ -739,33 +724,22 @@ class PlaygroundApp {
     setFieldValue('#slide-group-input', slide.group);
     setFieldValue('#slide-description-input', slide.description);
     setFieldValue('#slide-notes-input', slide.notes);
-    this.slideVersionsLoading = true;
-    void this.renderSlideVersionOptions(slide.version).finally(() => {
-      this.slideVersionsLoading = false;
-    });
+    void this.renderSlideVersionOptions(slide.version);
     for (const pane of PANE_IDS) {
       const box = required<HTMLElement & {checked?: boolean}>(`#slide-editor-${pane}`);
       box.checked = slide.editors?.includes(pane) ?? false;
     }
-    this.slideDraftAtOpen = slideDraftOf(slide);
     modal('#slide-modal').open = true;
   }
 
-  /**
-   * Slide settings as the fields hold it now.
-   *
-   * The version menu fills in after the modal opens, and until it does it
-   * still shows the last slide's versions, so `opened` stands in for it.
-   */
-  private readSlideDraft(opened: SlideDraft): SlideDraft {
+  /** Slide settings as the fields hold it now. */
+  private readSlideDraft(): SlideDraft {
     return {
       title: fieldValue('#slide-title-input'),
       group: fieldValue('#slide-group-input'),
       description: fieldValue('#slide-description-input'),
       notes: fieldValue('#slide-notes-input'),
-      version: this.slideVersionsLoading
-        ? opened.version
-        : fieldValue('#slide-version-select').trim() || 'latest',
+      version: fieldValue('#slide-version-select').trim() || 'latest',
       editors: PANE_IDS.filter(
         (pane) =>
           required<HTMLElement & {checked?: boolean}>(`#slide-editor-${pane}`).checked === true,
@@ -777,31 +751,25 @@ class PlaygroundApp {
    * Fills the slide inspector's version menu from the same catalog the toolbar
    * uses, honouring the prerelease setting.
    *
-   * A version the catalog no longer lists is added anyway, so opening the
-   * inspector cannot quietly change what a slide pinned.
+   * The slide's own version shows at once, so the menu reads true before the
+   * catalog arrives. A version the catalog no longer lists stays in the menu,
+   * so opening the inspector cannot quietly change what a slide pinned.
    */
   private async renderSlideVersionOptions(current: string): Promise<void> {
     const select = required('#slide-version-select');
+    const selected = current || 'latest';
+    select.innerHTML = option(selected, versionLabel(selected), true);
+    this.setSelectValue(select, selected);
     const catalog = await loadVersions();
     const list = this.showPrereleases ? catalog.all : catalog.stable;
     const versions = ['latest', ...list];
-    if (current && !versions.includes(current)) {
-      versions.splice(1, 0, current);
+    if (!versions.includes(selected)) {
+      versions.splice(1, 0, selected);
     }
     select.innerHTML = versions
-      .map((version) =>
-        option(
-          version,
-          version === 'latest'
-            ? 'latest (follow the newest release)'
-            : isPrerelease(version)
-              ? `${version} (prerelease)`
-              : version,
-          version === current,
-        ),
-      )
+      .map((version) => option(version, versionLabel(version), version === selected))
       .join('');
-    this.setSelectValue(select, current || 'latest');
+    this.setSelectValue(select, selected);
   }
 
   private async applySlideSettings(): Promise<void> {
@@ -810,7 +778,7 @@ class PlaygroundApp {
     if (!slide) {
       return;
     }
-    const draft = this.readSlideDraft(this.slideDraftAtOpen ?? slideDraftOf(slide));
+    const draft = this.readSlideDraft();
     const slides = [...this.deck.slides];
     slides[index] = {
       ...slide,
@@ -1129,13 +1097,7 @@ class PlaygroundApp {
     // Keep a pinned version visible even when it is not in the catalog.
     const versions = list.includes(this.version) ? list : [this.version, ...list];
     this.versionSelect.innerHTML = versions
-      .map((version) =>
-        option(
-          version,
-          isPrerelease(version) ? `${version} (prerelease)` : version,
-          version === this.version,
-        ),
-      )
+      .map((version) => option(version, versionLabel(version), version === this.version))
       .join('');
     this.setSelectValue(this.versionSelect, this.version);
     if (catalog.usedFallback) {
@@ -1214,6 +1176,14 @@ function option(value: string, label: string, selected: boolean): string {
   return `<option value="${escapeAttribute(value)}" label="${escaped}"${
     selected ? ' selected' : ''
   }>${escaped}</option>`;
+}
+
+/** Names a version in a version menu. */
+function versionLabel(version: string): string {
+  if (version === 'latest') {
+    return 'latest (follow the newest release)';
+  }
+  return isPrerelease(version) ? `${version} (prerelease)` : version;
 }
 
 function detailValue(event: Event): string | undefined {

@@ -32,7 +32,12 @@ export class SlideList {
 
   /** Fills the list from the deck's slides, discarding any earlier edits. */
   load(slides: readonly Slide[]): void {
-    this.rows = slides.map((slide) => ({id: slide.id, title: slide.title, group: slide.group}));
+    this.rows = slides.map((slide) => ({
+      id: slide.id,
+      title: slide.title,
+      group: slide.group,
+      removed: false,
+    }));
     this.status.textContent = '';
     this.render();
   }
