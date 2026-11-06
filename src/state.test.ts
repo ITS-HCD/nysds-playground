@@ -8,8 +8,8 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import {deckUrl, decodeState, encodeState, parseHash, presentUrl, slugify} from './state.ts';
-import type {PathEntry} from './keys.ts';
-import {hintText, isButtonPress, isTypingContext, isWidgetContext, routeKey} from './keys.ts';
+import type {KeyContext, PathEntry} from './keys.ts';
+import {hintText, isButtonContext, isTypingContext, isWidgetContext, routeKey} from './keys.ts';
 import {parseDeck, parsePreset} from './preset-schema.ts';
 import {collapsedForPreset, layoutUrl, readLayoutParam} from './editors.ts';
 import {createQuietDebounce} from './debounce.ts';
@@ -301,72 +301,152 @@ test('isWidgetContext spots widgets that own the arrow keys', () => {
   assert.equal(isWidgetContext(path('button', 'nys-button', 'section')), false);
 });
 
-test('isButtonPress leaves Space to a focused button', () => {
-  const onButton = path('button', 'nys-button', 'div', 'section', 'body');
-  assert.equal(isButtonPress({...KEY, key: ' '}, onButton), true);
-  assert.equal(isButtonPress({...KEY, key: ' '}, path('div[role=button]')), true);
-  assert.equal(isButtonPress({...KEY, key: ' '}, path('section', 'body')), false);
-  assert.equal(isButtonPress({...KEY, key: 'ArrowRight'}, onButton), false);
-  assert.equal(isButtonPress({...KEY, key: 'c'}, onButton), false);
+test('isButtonContext spots a focused button', () => {
+  assert.equal(isButtonContext(path('button', 'nys-button', 'div', 'section', 'body')), true);
+  assert.equal(isButtonContext(path('div[role=button]')), true);
+  assert.equal(isButtonContext(path('section', 'body')), false);
 });
 
-test('routeKey leaves arrows, Home, and End to a widget that owns them', () => {
-  const widget = {widget: true};
-  for (const key of ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Home', 'End']) {
-    assert.equal(routeKey({...KEY, key}, false, false, widget), null, key);
-  }
-  assert.equal(routeKey({...KEY, altKey: true, key: 'ArrowRight'}, false, false, widget), 'next');
-  assert.equal(routeKey({...KEY, key: 'Escape'}, false, false, widget), 'exit');
-  assert.equal(routeKey({...KEY, key: 'c'}, false, false, widget), 'toggle-code');
-});
-
-test('routeKey ignores every single-key shortcut once they are off', () => {
-  const off = {singleKeys: false};
-  for (const key of ['c', 'C', 'e', 't', 'n', '1', '2', '3']) {
-    assert.equal(routeKey({...KEY, key}, false, true, off), null, key);
-  }
-  // Keys that aren't characters keep working.
-  assert.equal(routeKey({...KEY, key: 'ArrowRight'}, false, true, off), 'next');
-  assert.equal(routeKey({...KEY, key: ' '}, false, true, off), 'next');
-  assert.equal(routeKey({...KEY, key: 'Escape'}, false, true, off), 'exit');
-  assert.equal(routeKey({...KEY, altKey: true, key: 'ArrowLeft'}, true, true, off), 'prev');
-});
+/**
+ * A key context: presenting, with focus on nothing in particular, unless
+ * `overrides` says otherwise.
+ */
+function context(overrides: Partial<KeyContext> = {}): KeyContext {
+  return {
+    typing: false,
+    widget: false,
+    button: false,
+    inBar: true,
+    presenting: true,
+    notesOpen: false,
+    singleKeys: true,
+    columns: false,
+    ...overrides,
+  };
+}
 
 test('routeKey steps the deck when the presenter is not typing', () => {
-  assert.equal(routeKey({...KEY, key: 'ArrowRight'}, false), 'next');
-  assert.equal(routeKey({...KEY, key: 'PageDown'}, false), 'next');
-  assert.equal(routeKey({...KEY, key: ' '}, false), 'next');
-  assert.equal(routeKey({...KEY, key: 'ArrowLeft'}, false), 'prev');
-  assert.equal(routeKey({...KEY, key: 'Home'}, false), 'first');
-  assert.equal(routeKey({...KEY, key: 'End'}, false), 'last');
-  assert.equal(routeKey({...KEY, key: 'c'}, false), 'toggle-code');
-  assert.equal(routeKey({...KEY, key: 'n'}, false), 'toggle-notes');
-  assert.equal(routeKey({...KEY, key: 'Escape'}, false), 'exit');
+  const expected: Record<string, string> = {
+    ArrowRight: 'next',
+    ArrowDown: 'next',
+    PageDown: 'next',
+    ' ': 'next',
+    ArrowLeft: 'prev',
+    ArrowUp: 'prev',
+    PageUp: 'prev',
+    Home: 'first',
+    End: 'last',
+    c: 'toggle-code',
+    n: 'toggle-notes',
+    Escape: 'exit',
+  };
+  for (const [key, action] of Object.entries(expected)) {
+    assert.equal(routeKey({...KEY, key}, context()), action, key);
+  }
 });
 
 test('routeKey leaves every plain key to the editor while typing', () => {
   for (const key of ['ArrowRight', 'ArrowLeft', ' ', 'Home', 'End', 'c', 'n', 'Escape']) {
-    assert.equal(routeKey({...KEY, key}, true), null, key);
+    assert.equal(routeKey({...KEY, key}, context({typing: true})), null, key);
   }
 });
 
-test('routeKey steps on Alt plus an arrow even while typing', () => {
-  assert.equal(routeKey({...KEY, altKey: true, key: 'ArrowRight'}, true), 'next');
-  assert.equal(routeKey({...KEY, altKey: true, key: 'ArrowDown'}, true), 'next');
-  assert.equal(routeKey({...KEY, altKey: true, key: 'ArrowLeft'}, true), 'prev');
-  assert.equal(routeKey({...KEY, altKey: true, key: 'ArrowUp'}, true), 'prev');
-  assert.equal(routeKey({...KEY, altKey: true, key: 'c'}, true), null);
+test('routeKey steps on Alt plus an arrow from anywhere, even while typing', () => {
+  const anywhere = context({typing: true, inBar: false, presenting: false});
+  assert.equal(routeKey({...KEY, altKey: true, key: 'ArrowRight'}, anywhere), 'next');
+  assert.equal(routeKey({...KEY, altKey: true, key: 'ArrowDown'}, anywhere), 'next');
+  assert.equal(routeKey({...KEY, altKey: true, key: 'ArrowLeft'}, anywhere), 'prev');
+  assert.equal(routeKey({...KEY, altKey: true, key: 'ArrowUp'}, anywhere), 'prev');
+  assert.equal(routeKey({...KEY, altKey: true, key: 'c'}, anywhere), null);
 });
 
 test('routeKey ignores browser and system shortcuts', () => {
-  assert.equal(routeKey({...KEY, ctrlKey: true, key: 'ArrowRight'}, false), null);
-  assert.equal(routeKey({...KEY, metaKey: true, key: 'ArrowRight'}, false), null);
+  assert.equal(routeKey({...KEY, ctrlKey: true, key: 'ArrowRight'}, context()), null);
+  assert.equal(routeKey({...KEY, metaKey: true, key: 'ArrowRight'}, context()), null);
 });
 
-test('routeKey toggles the editor theme with t when not typing', () => {
-  assert.equal(routeKey({...KEY, key: 't'}, false), 'toggle-theme');
-  assert.equal(routeKey({...KEY, key: 'T'}, false), 'toggle-theme');
-  assert.equal(routeKey({...KEY, key: 't'}, true), null);
+test('routeKey works while editing only from the slide bar or from nowhere in particular', () => {
+  const toolbar = context({presenting: false, inBar: false});
+  for (const key of ['ArrowRight', ' ', 'Home', 'c', 't', 'e']) {
+    assert.equal(routeKey({...KEY, key}, toolbar), null, key);
+  }
+  const bar = context({presenting: false});
+  assert.equal(routeKey({...KEY, key: 'ArrowRight'}, bar), 'next');
+  assert.equal(routeKey({...KEY, key: 'c'}, bar), 'toggle-code');
+  // While presenting, the keys work wherever focus is.
+  assert.equal(routeKey({...KEY, key: 'ArrowRight'}, context({inBar: false})), 'next');
+});
+
+test('routeKey leaves presentation mode with Escape only while presenting', () => {
+  assert.equal(routeKey({...KEY, key: 'Escape'}, context()), 'exit');
+  assert.equal(routeKey({...KEY, key: 'Escape'}, context({presenting: false})), null);
+});
+
+test('routeKey closes the notes with Escape from anywhere but a text field', () => {
+  const notes = {notesOpen: true};
+  assert.equal(routeKey({...KEY, key: 'Escape'}, context(notes)), 'close-notes');
+  assert.equal(
+    routeKey({...KEY, key: 'Escape'}, context({...notes, presenting: false, inBar: false})),
+    'close-notes',
+  );
+  assert.equal(routeKey({...KEY, key: 'Escape'}, context({...notes, widget: true})), 'close-notes');
+  assert.equal(routeKey({...KEY, key: 'Escape'}, context({...notes, typing: true})), null);
+});
+
+test('routeKey leaves Space to a focused button, but not the other keys', () => {
+  const onButton = context({button: true});
+  assert.equal(routeKey({...KEY, key: ' '}, onButton), null);
+  assert.equal(routeKey({...KEY, key: 'ArrowRight'}, onButton), 'next');
+  assert.equal(routeKey({...KEY, key: 'c'}, onButton), 'toggle-code');
+});
+
+test('routeKey leaves arrows, Home, and End to a widget that owns them', () => {
+  const widget = context({widget: true});
+  for (const key of ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Home', 'End', ' ']) {
+    assert.equal(routeKey({...KEY, key}, widget), null, key);
+  }
+  assert.equal(routeKey({...KEY, altKey: true, key: 'ArrowRight'}, widget), 'next');
+  assert.equal(routeKey({...KEY, key: 'Escape'}, widget), 'exit');
+  assert.equal(routeKey({...KEY, key: 'c'}, widget), 'toggle-code');
+});
+
+test('routeKey ignores every single-key shortcut once they are off', () => {
+  const off = context({singleKeys: false, columns: true});
+  for (const key of ['c', 'C', 'e', 't', 'n', '1', '2', '3']) {
+    assert.equal(routeKey({...KEY, key}, off), null, key);
+  }
+  // Keys that aren't characters keep working.
+  assert.equal(routeKey({...KEY, key: 'ArrowRight'}, off), 'next');
+  assert.equal(routeKey({...KEY, key: ' '}, off), 'next');
+  assert.equal(routeKey({...KEY, key: 'Escape'}, off), 'exit');
+  assert.equal(routeKey({...KEY, altKey: true, key: 'ArrowLeft'}, off), 'prev');
+});
+
+test('routeKey toggles the editor theme with t in either case', () => {
+  assert.equal(routeKey({...KEY, key: 't'}, context()), 'toggle-theme');
+  assert.equal(routeKey({...KEY, key: 'T'}, context()), 'toggle-theme');
+});
+
+test('routeKey reads the focus path only for a key that has a shortcut', () => {
+  const unread = (): never => {
+    throw new Error('read the focus path');
+  };
+  const lazy: KeyContext = {
+    ...context(),
+    get typing() {
+      return unread();
+    },
+    get button() {
+      return unread();
+    },
+    get widget() {
+      return unread();
+    },
+  };
+  for (const key of ['x', 'Enter', 'Tab', 'Shift', 'F5']) {
+    assert.equal(routeKey({...KEY, key}, lazy), null, key);
+  }
+  assert.throws(() => routeKey({...KEY, key: 'ArrowRight'}, lazy), /focus path/);
 });
 
 test('readThemeParam accepts only light and dark', () => {
@@ -441,31 +521,32 @@ test('readLayoutParam and layoutUrl handle the editors query parameter', () => {
 });
 
 test('routeKey toggles the layout with e from anywhere but the editor', () => {
-  assert.equal(routeKey({...KEY, key: 'e'}, false), 'toggle-layout');
-  assert.equal(routeKey({...KEY, key: 'E'}, false), 'toggle-layout');
-  assert.equal(routeKey({...KEY, key: 'e'}, true), null);
+  assert.equal(routeKey({...KEY, key: 'e'}, context()), 'toggle-layout');
+  assert.equal(routeKey({...KEY, key: 'E'}, context()), 'toggle-layout');
+  assert.equal(routeKey({...KEY, key: 'e'}, context({typing: true})), null);
 });
 
 test('routeKey maps 1, 2, and 3 to columns only in the columns layout', () => {
-  assert.equal(routeKey({...KEY, key: '1'}, false, true), 'toggle-pane:html');
-  assert.equal(routeKey({...KEY, key: '2'}, false, true), 'toggle-pane:css');
-  assert.equal(routeKey({...KEY, key: '3'}, false, true), 'toggle-pane:js');
-  assert.equal(routeKey({...KEY, key: '4'}, false, true), null);
-  assert.equal(routeKey({...KEY, key: '1'}, false, false), null);
-  assert.equal(routeKey({...KEY, key: '1'}, true, true), null);
+  const columns = context({columns: true});
+  assert.equal(routeKey({...KEY, key: '1'}, columns), 'toggle-pane:html');
+  assert.equal(routeKey({...KEY, key: '2'}, columns), 'toggle-pane:css');
+  assert.equal(routeKey({...KEY, key: '3'}, columns), 'toggle-pane:js');
+  assert.equal(routeKey({...KEY, key: '4'}, columns), null);
+  assert.equal(routeKey({...KEY, key: '1'}, context()), null);
+  assert.equal(routeKey({...KEY, key: '1'}, context({columns: true, typing: true})), null);
 });
 
 test('hintText names the column shortcuts only in the columns layout', () => {
-  const tabs = hintText(true, false);
+  const tabs = hintText({hasNotes: true, columns: false, singleKeys: true});
   assert.ok(tabs.includes('e layout'));
   assert.ok(!tabs.includes('1 2 3 panes'));
-  const columns = hintText(false, true);
+  const columns = hintText({hasNotes: false, columns: true, singleKeys: true});
   assert.ok(columns.includes('1 2 3 panes'));
   assert.ok(!columns.includes('n notes'));
 });
 
 test('hintText leaves out the single-key shortcuts once they are off', () => {
-  const off = hintText(true, true, false);
+  const off = hintText({hasNotes: true, columns: true, singleKeys: false});
   assert.ok(off.includes('change slides'));
   assert.ok(off.includes('Esc exit'));
   for (const part of ['c code', 'e layout', '1 2 3 panes', 't theme', 'n notes']) {

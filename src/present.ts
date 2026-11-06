@@ -13,8 +13,8 @@ import {slideIndex} from './deck-model';
 import type {EditorPanes} from './editor-panes';
 import type {PaneId} from './editors';
 import {PANE_FILES, PANE_IDS} from './editors';
-import type {PathEntry, PresentationAction} from './keys';
-import {hintText, isButtonPress, isTypingContext, isWidgetContext, routeKey} from './keys';
+import type {KeyContext, PathEntry, PresentationAction} from './keys';
+import {hintText, isButtonContext, isTypingContext, isWidgetContext, routeKey} from './keys';
 import {applyEditorTheme, initialTheme, otherTheme, themeUrl, writeTheme} from './theme';
 import {STORAGE_KEYS, readKey, readSingleKeys, writeKey} from './settings';
 import {presentUrl} from './state';
@@ -235,11 +235,11 @@ export class Presentation {
     if (!notes) {
       this.closeNotes();
     }
-    this.hint.textContent = hintText(
-      notes !== '',
-      this.panes.layout === 'columns',
-      this.singleKeys,
-    );
+    this.hint.textContent = hintText({
+      hasNotes: notes !== '',
+      columns: this.panes.layout === 'columns',
+      singleKeys: this.singleKeys,
+    });
   }
 
   /** Moves to the slide at `index`, clamped to the deck. */
@@ -276,55 +276,51 @@ export class Presentation {
     this.goTo(next);
   }
 
-  /**
-   * Whether a key should reach the slide bar.
-   *
-   * While presenting, keys work from anywhere outside a dialog. While editing,
-   * they work when focus is in the slide bar or on nothing in particular, as
-   * right after the page loads, so they never fire from a toolbar control or
-   * the drawer. Alt plus an arrow works from anywhere.
-   */
-  private keysApply(event: KeyboardEvent): boolean {
-    if (this.presenting || event.altKey) {
-      return true;
-    }
-    const target = event.target as Node | null;
-    return (
-      target === null ||
-      target === document.body ||
-      target === document.documentElement ||
-      this.caption.contains(target) ||
-      this.notes.contains(target)
-    );
-  }
-
   private onKeyDown(event: KeyboardEvent): void {
     // A dialog owns the keyboard while it is open, including its own Escape.
     if (anyModalOpen()) {
       return;
     }
-    const path = pathFor(event);
-    const typing = isTypingContext(path);
-    // Escape closes the notes from anywhere but a text field, before it does
-    // anything else.
-    if (event.key === 'Escape' && this.notesOpen && !typing) {
-      event.preventDefault();
-      this.closeNotes(true);
-      return;
-    }
-    if (!this.keysApply(event) || isButtonPress(event, path)) {
-      return;
-    }
-    const action = routeKey(event, typing, this.panes.layout === 'columns', {
-      widget: isWidgetContext(path),
-      singleKeys: this.singleKeys,
-    });
-    if (action === null || (action === 'exit' && !this.presenting)) {
+    const action = routeKey(event, this.keyContext(event));
+    if (action === null) {
       return;
     }
     event.preventDefault();
     this.pointer = false;
     this.run(action);
+  }
+
+  /**
+   * Describes where a key press landed, for `routeKey`.
+   *
+   * The composed path is only walked if `routeKey` asks about it, which it
+   * does only for a key that has a shortcut.
+   */
+  private keyContext(event: KeyboardEvent): KeyContext {
+    let path: PathEntry[] | undefined;
+    const entries = (): PathEntry[] => (path ??= pathFor(event));
+    const target = event.target as Node | null;
+    return {
+      get typing() {
+        return isTypingContext(entries());
+      },
+      get widget() {
+        return isWidgetContext(entries());
+      },
+      get button() {
+        return isButtonContext(entries());
+      },
+      inBar:
+        target === null ||
+        target === document.body ||
+        target === document.documentElement ||
+        this.caption.contains(target) ||
+        this.notes.contains(target),
+      presenting: this.presenting,
+      notesOpen: this.notesOpen,
+      singleKeys: this.singleKeys,
+      columns: this.panes.layout === 'columns',
+    };
   }
 
   private run(action: PresentationAction): void {
@@ -360,6 +356,9 @@ export class Presentation {
         break;
       case 'toggle-theme':
         this.toggleTheme();
+        break;
+      case 'close-notes':
+        this.closeNotes(true);
         break;
       case 'exit':
         this.exit();

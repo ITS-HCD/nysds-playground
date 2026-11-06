@@ -23,6 +23,7 @@ export type PresentationAction =
   | 'toggle-theme'
   | 'toggle-layout'
   | TogglePaneAction
+  | 'close-notes'
   | 'exit';
 
 /** The column each number key toggles in the side-by-side layout. */
@@ -114,29 +115,44 @@ export function isWidgetContext(path: readonly PathEntry[]): boolean {
 }
 
 /**
- * Reports whether a key press activates the button that has focus.
- *
- * Space presses a focused button, such as Hide code in the slide bar, so it
- * must not also change slides. Arrow keys and letter shortcuts still work
- * there. A `nys-button` puts its inner `button` on the path.
+ * Reports whether a key press landed on a button. A `nys-button` puts its
+ * inner `button` on the path.
  */
-export function isButtonPress(event: KeyLike, path: readonly PathEntry[]): boolean {
-  return (
-    event.key === ' ' && path.some((entry) => entry.tag === 'button' || entry.role === 'button')
-  );
+export function isButtonContext(path: readonly PathEntry[]): boolean {
+  return path.some((entry) => entry.tag === 'button' || entry.role === 'button');
 }
 
-/** How a key press should be read, beyond the key itself. */
-export interface RouteOptions {
+/**
+ * Where a key press landed and what the playground is doing.
+ *
+ * `routeKey` reads only what it needs, so the fields that walk the event's
+ * composed path can be getters that do the walk on first use.
+ */
+export interface KeyContext {
+  /** Focus is in something the presenter types in. See `isTypingContext`. */
+  readonly typing: boolean;
   /** Focus is on a widget that owns the arrow keys, Home, and End. */
-  widget?: boolean;
+  readonly widget: boolean;
+  /** Focus is on a button, which Space presses. */
+  readonly button: boolean;
+  /** Focus is in the slide bar or the notes, or on nothing in particular. */
+  readonly inBar: boolean;
+  /** The playground is presenting. */
+  readonly presenting: boolean;
+  /** The presenter notes are open. */
+  readonly notesOpen: boolean;
   /**
-   * Whether the single-key shortcuts (`c`, `e`, `t`, `n`, and `1` to `3`) are
-   * on. They are unless someone turns them off in Settings, which WCAG 2.1.4
-   * asks for: speech input can type a dictated word as keystrokes, and each
-   * letter would fire a shortcut.
+   * The single-key shortcuts (`c`, `e`, `t`, `n`, and `1` to `3`) are on.
+   * They are unless someone turns them off in Settings, which WCAG 2.1.4 asks
+   * for: speech input can type a dictated word as keystrokes, and each letter
+   * would fire a shortcut.
    */
-  singleKeys?: boolean;
+  readonly singleKeys: boolean;
+  /**
+   * The side-by-side layout is on. The number keys toggle a column only
+   * then, so they stay free otherwise.
+   */
+  readonly columns: boolean;
 }
 
 /** Maps `ArrowRight` and friends to a step, or returns `null`. */
@@ -170,65 +186,69 @@ function navigationFor(key: string): PresentationAction | null {
   }
 }
 
+/** The single-key shortcuts, by lowercase key. */
+const SINGLE_KEYS: Record<string, PresentationAction> = {
+  c: 'toggle-code',
+  n: 'toggle-notes',
+  t: 'toggle-theme',
+  e: 'toggle-layout',
+};
+
 /** Maps the single-key shortcuts, or returns `null`. */
 function singleKeyFor(key: string, columns: boolean): PresentationAction | null {
-  switch (key) {
-    case 'c':
-    case 'C':
-      return 'toggle-code';
-    case 'n':
-    case 'N':
-      return 'toggle-notes';
-    case 't':
-    case 'T':
-      return 'toggle-theme';
-    case 'e':
-    case 'E':
-      return 'toggle-layout';
-    default: {
-      const pane = columns ? PANE_KEYS[key] : undefined;
-      return pane ? `toggle-pane:${pane}` : null;
-    }
-  }
+  const pane = columns ? PANE_KEYS[key] : undefined;
+  return SINGLE_KEYS[key.toLowerCase()] ?? (pane ? `toggle-pane:${pane}` : null);
 }
 
 /**
- * Decides what a key press does.
+ * Decides what a key press does, or returns `null` to leave it alone.
  *
- * `Alt` plus an arrow steps the deck from anywhere, including mid-edit. Every
- * other shortcut is ignored while the presenter is typing, so the editor keeps
- * its own arrow keys, space bar, and Escape. On a widget that uses the arrow
- * keys itself, those keys and Home and End stay with the widget.
+ * - Escape closes the notes from anywhere but a text field, before it does
+ *   anything else.
+ * - `Alt` plus an arrow steps the deck from anywhere, including mid-edit.
+ * - While presenting, the other keys work from anywhere. While editing, they
+ *   work when focus is in the slide bar or on nothing in particular, as
+ *   right after the page loads, so they never fire from a toolbar control or
+ *   the drawer.
+ * - Every shortcut is ignored while the presenter is typing, so the editor
+ *   keeps its own arrow keys, space bar, and Escape.
+ * - Escape leaves presentation mode, and does nothing while editing.
+ * - Space presses a focused button, such as Hide code in the slide bar, so it
+ *   doesn't also change slides. On a widget that uses the arrow keys itself,
+ *   those keys and Home and End stay with the widget.
  *
- * Set `columns` when the side-by-side layout is on. The number keys toggle a
- * column only then, so they stay free otherwise.
+ * It works out what the key alone would do before it reads `typing`,
+ * `button`, or `widget`, so most keys never look at the composed path.
  */
-export function routeKey(
-  event: KeyLike,
-  typing: boolean,
-  columns = false,
-  options: RouteOptions = {},
-): PresentationAction | null {
-  const {widget = false, singleKeys = true} = options;
+export function routeKey(event: KeyLike, context: KeyContext): PresentationAction | null {
+  const {key} = event;
+  if (key === 'Escape' && context.notesOpen && !context.typing) {
+    return 'close-notes';
+  }
   if (event.ctrlKey || event.metaKey) {
     return null;
   }
   if (event.altKey) {
-    return stepFor(event.key);
+    return stepFor(key);
   }
-  if (typing) {
+  if (!context.presenting && !context.inBar) {
     return null;
   }
-  if (event.key === 'Escape') {
-    return 'exit';
+  const navigation = navigationFor(key);
+  const action =
+    key === 'Escape'
+      ? 'exit'
+      : (navigation ?? (context.singleKeys ? singleKeyFor(key, context.columns) : null));
+  if (action === null || context.typing) {
+    return null;
   }
-  if (!widget) {
-    const step = navigationFor(event.key);
-    if (step) {
-      return step;
-    }
+  if (action === 'exit') {
+    return context.presenting ? action : null;
   }
-  return singleKeys ? singleKeyFor(event.key, columns) : null;
+  if ((key === ' ' && context.button) || (navigation !== null && context.widget)) {
+    return null;
+  }
+  return action;
 }
 
 /**
@@ -238,15 +258,17 @@ export function routeKey(
  * appear in the side-by-side layout, and the single-key shortcuts only appear
  * while they are on.
  */
-export function hintText(hasNotes: boolean, columns: boolean, singleKeys = true): string {
+export function hintText(
+  context: Pick<KeyContext, 'columns' | 'singleKeys'> & {hasNotes: boolean},
+): string {
   const parts = ['← → or Alt+← → to change slides'];
-  if (singleKeys) {
+  if (context.singleKeys) {
     parts.push('c code', 'e layout');
-    if (columns) {
+    if (context.columns) {
       parts.push('1 2 3 panes');
     }
     parts.push('t theme');
-    if (hasNotes) {
+    if (context.hasNotes) {
       parts.push('n notes');
     }
   }
