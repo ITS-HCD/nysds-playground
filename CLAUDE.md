@@ -36,38 +36,31 @@ jsDelivr at request time.
   default), and the collapsible HTML, CSS, and JS columns (`1`/`2`/`3`,
   or a slide's `editors` field).
 - `src/settings.ts`: owns every remembered setting and its URL query
-  parameter — theme, layout, font size, update mode, prereleases,
-  single-key shortcuts, and the drawer size (`DRAWER_SIZES` are the
-  presets Settings offers). `clearAllSettings` powers "Reset settings" in
-  the settings modal.
+  parameter — theme, layout, font size, update mode, the on/off flags
+  (`readFlag`), and the drawer height. `clearAllSettings` powers "Reset
+  settings" in the settings modal.
 - `src/present.ts` and `src/keys.ts`: presentation mode, the slide bar,
   and key routing. Editing and presenting share one layout — the drawer
   floats over the preview in both — so `Presentation` mainly toggles the
   toolbar, requests fullscreen, and swaps which slide-bar controls show.
-  It also owns the code drawer's hidden state: the `c` key and the slide
-  bar's Hide code button both go through `setCodeHidden`, which keeps
-  the button's label, tooltip, and `ariaExpanded` in step. A slide bar
-  button pressed from the keyboard keeps focus (`keepFocusOn` moves it to
-  the other arrow when Next or Previous goes quiet); a pointer press hands
-  focus to the bar. `src/keys.ts` decides when a key changes slides
-  versus reaching a text field, a focused button (`isButtonPress`), or a
-  widget that owns the arrow keys (`isWidgetContext`). While presenting,
-  shortcuts are live anywhere outside those; while editing, only when
-  focus is in the slide bar or on nothing (`keysApply`). The single-key
-  shortcuts can be turned off in Settings (WCAG 2.1.4), so `routeKey`
-  takes `singleKeys`.
+  It also owns where focus goes after a slide bar action and whether the
+  code drawer is hidden (`setCodeHidden`). `routeKey` in `src/keys.ts`
+  decides what every slide bar key does, as pure logic that
+  `src/state.test.ts` covers.
 - `src/announce.ts` and `src/toast.ts`: the two ways the app speaks.
-  `announce` writes one sentence to the `#announcer` live region, for
-  results with no other spoken feedback, such as a slide change from the
-  arrow keys; only announce what the person asked for. `showToast` shows
-  a `nys-alert` in the `#toast` live region, for anything a sighted user
-  also needs to see.
-- `src/editor-a11y.ts`: names each code editor and takes CodeMirror's
-  text box out of the tab order, so Tab passes an editor, Enter starts
-  editing, and Escape then Tab moves on. Without it, Tab from the editor's
-  frame lands in the text box, where Tab indents, a keyboard trap. It
-  imports `@codemirror/view`, which `vite.config.ts` keeps out of Vite's
-  dependency pre-bundling so there is only one copy of CodeMirror.
+  `announce` reads one sentence through a live region, for results with
+  no other spoken feedback; only announce what the person asked for.
+  `showToast` shows a `nys-alert` in the `#toast` live region, for
+  anything a sighted user also needs to see. `visuallyHidden` builds text
+  only screen readers read.
+- `src/focus.ts`: shared focus helpers. `focusWhenReady` focuses a design
+  system element once it has rendered, and `rememberFocus` hands focus
+  back after the notes or a toast close.
+- `src/editor-a11y.ts`: names the code editors and the preview frame, and
+  takes CodeMirror's text box out of the tab order so Tab can't get stuck
+  in an editor. It imports `@codemirror/view`, which `vite.config.ts`
+  keeps out of Vite's dependency pre-bundling so there is only one copy
+  of CodeMirror.
 - `src/playground.ts` and `src/debounce.ts`: wire `playground-elements`
   to the playground's state and decide when the preview rebuilds. The
   quiet-period debounce in `src/debounce.ts` backs the Update preview
@@ -80,12 +73,10 @@ jsDelivr at request time.
 - `src/slide-list.ts`: the slide list inside Deck settings: rename,
   regroup, reorder (drag, or Move up and Move down), and remove slides,
   applied on Done through `arrangeSlides` in `src/deck-model.ts`.
-- `src/modals.ts`: everything the playground adds to `nys-modal`. A
-  click outside a modal closes it, unless the modal holds changes only
-  Done applies; then an outside click or Escape moves focus to Done
-  instead. It also works around `nys-modal` 1.21.0 sending Shift+Tab to
-  the wrong control (remove that once `nys-modal` moves backward
-  correctly), and `ModalQuestion` drives the confirm and leave modals.
+- `src/modals.ts`: everything the playground adds to `nys-modal`:
+  closing on an outside click unless the modal holds changes only Done
+  applies, the Shift+Tab workaround for `nys-modal` 1.21.0, and
+  `ModalQuestion` for the confirm and leave modals.
 - `src/main.ts`: boots the app, routes between the home page, a deck, and
   the scratch pad (`routeFor`), and drives the toolbar, autosave, deck
   and slide settings modals, and Share.
@@ -224,7 +215,8 @@ no other spoken feedback through `announce` in `src/announce.ts`. A
 single-character shortcut goes through `routeKey`, so the Single-key
 shortcuts setting can turn it off. `nys-button` reflects its `id`
 property only when it renders, so set `id` as an attribute on a button
-you create in code if anything looks it up right away.
+you create in code if anything looks it up right away, and focus it with
+`focusWhenReady` in `src/focus.ts`.
 
 Automated checks (and any browser automation you use to verify a change)
 must never trigger `window.confirm`: the app never calls it. Delete

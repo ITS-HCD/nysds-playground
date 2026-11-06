@@ -122,7 +122,7 @@ immediately, and **Done** closes the modal.
 | Editor font size | Small (13px), medium (15px), or large (18px). |
 | Update preview | How soon an edit reaches the preview: on every pause in typing, only after a longer pause, or only when you ask. See Preview updates, below. |
 | Code drawer height | Small, medium, large, or extra large; the menu shows each one's share of the stage. Dragging the divider sets any height in between. |
-| Single-key shortcuts | Turns `c`, `e`, `t`, `n`, and `1` to `3` on, the default, or off. Turn them off if you use speech input, so dictated words don't trigger them. See Keyboard shortcuts, below. |
+| Single-key shortcuts | Turns the single-key shortcuts on, the default, or off. See [Keyboard shortcuts](#keyboard-shortcuts). |
 | Show prerelease versions | Includes prerelease versions in the version selector. |
 | Reset settings | Clears every remembered setting, back to the defaults. |
 
@@ -186,7 +186,7 @@ both, but where they work differs:
 | Home | Go to the first slide |
 | End | Go to the last slide |
 | Alt+arrow | Change slides even while the cursor is in an editor |
-| `c` | Hide or show the code drawer, the same as **Hide code** and **Show code** in the slide bar |
+| `c` | Hide or show the code drawer |
 | `e` | Switch between the tabs and side-by-side editor layouts |
 | `1`, `2`, `3` | Collapse or expand the HTML, CSS, or JS column (side-by-side layout only) |
 | `t` | Switch the editor theme between light and dark |
@@ -224,11 +224,11 @@ knowing if you use a keyboard, a screen reader, or speech input:
   announces the deck and slide. Leaving it returns focus to **Present**.
 - **Speech input.** Every icon button's name starts with the word its
   tooltip shows, so you can say what you see, such as "click Hide code".
-  Turn off **Single-key shortcuts** in Settings so dictation can't
-  trigger them.
+  To keep dictation from triggering shortcuts, turn off the
+  [single-key shortcuts](#keyboard-shortcuts).
 - **The preview.** The code drawer covers the bottom of the preview. If
-  something you tab to in the preview is behind it, hide the drawer with
-  **Hide code** or `c`, or make it shorter.
+  something you tab to in the preview is behind it, hide the drawer or
+  make it shorter, as described in [Editing a deck](#editing-a-deck).
 
 ## Share
 
@@ -287,10 +287,9 @@ opening a browser, run `nysds-playground link --html snippet.html` and
 share the printed link. Either one opens the scratch pad, so it never
 touches a saved deck.
 
-Build slides from NYSDS components first, then NYSDS utility classes for
-layout and spacing, then `var(--nys-…)` tokens for any custom CSS that
-remains. Don't invent your own layout classes or hard-code colors, sizes,
-and spacing. See `presets/README.md` for the reasoning and an example.
+Build slides from NYSDS components first, then utility classes, then
+tokens, as [Build slides with the design system](presets/README.md#build-slides-with-the-design-system)
+explains with an example.
 
 ## Starter decks and presets
 
