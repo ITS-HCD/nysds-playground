@@ -1018,14 +1018,21 @@ nys-toggle[hidden] {
 
 /* The slide list in Deck settings ------------------------------------ */
 
-/* The modal body clips at its edges, and a focus ring reaches 4px past a
-   button, so the list keeps that much room on each side. */
+/* A long list scrolls inside its own box, so its rows never pass under the
+   modal footer and its Done button. The box clips at its edges, and a focus
+   ring reaches 4px past a button, so the list keeps that much room on every
+   side. */
 .slide-list {
   display: flex;
   flex-direction: column;
   gap: 4px;
+  max-height: min(24rem, 45vh);
   margin: 0;
-  padding: 0 4px;
+  padding: var(--nys-space-50);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  border: var(--nys-border-width-sm) solid var(--nys-color-base);
+  border-radius: var(--nys-radius-md);
   list-style: none;
 }
 
