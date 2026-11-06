@@ -3,13 +3,15 @@
  */
 import type {StoredDeck} from './deck-model';
 import {relativeTime} from './deck-model';
+import {focusWhenReady} from './focus';
+import {PLAYGROUND_CONFIG} from './playground.config';
 
 /** Marks the one action whose glyph the design system does not ship. */
 const PLAY_ICON = 'play';
 
-/** Makes a deck id safe to put in an element id. */
-function slug(value: string): string {
-  return value.replace(/[^a-zA-Z0-9_-]/g, '-');
+/** The element id of one of a deck's buttons, as in `deck-talk-edit`. */
+function actionId(deck: StoredDeck, label: string): string {
+  return `deck-${deck.id.replace(/[^a-zA-Z0-9_-]/g, '-')}-${label.toLowerCase()}`;
 }
 
 /** What the home view asks the application to do. */
@@ -22,8 +24,8 @@ export interface HomeActions {
   duplicate(id: string): Promise<void>;
   /** Downloads a deck as JSON. */
   exportDeck(id: string): Promise<void>;
-  /** Asks to delete a deck, confirming first. */
-  remove(deck: StoredDeck): void;
+  /** Asks to delete a deck, confirming first. `index` is its place in the list. */
+  remove(deck: StoredDeck, index: number): void;
   /** Creates a deck from a title the person types. */
   create(): void;
   /** Imports one or more JSON files. */
@@ -55,7 +57,7 @@ export class HomeView {
   show(decks: StoredDeck[]): void {
     document.querySelector('#app')?.classList.add('app--home');
     this.root.hidden = false;
-    document.title = 'NYSDS Playground';
+    document.title = PLAYGROUND_CONFIG.title;
     this.render(decks);
   }
 
@@ -69,7 +71,6 @@ export class HomeView {
     const focusedId = this.list.contains(document.activeElement)
       ? (document.activeElement as HTMLElement).id
       : '';
-    this.lastFocusIndex = this.focusIndex();
     this.list.replaceChildren();
     if (decks.length === 0) {
       const empty = document.createElement('li');
@@ -78,36 +79,25 @@ export class HomeView {
       this.list.append(empty);
       return;
     }
-    for (const deck of decks) {
-      this.list.append(this.card(deck));
-    }
+    decks.forEach((deck, index) => this.list.append(this.card(deck, index)));
     const replacement = focusedId ? document.getElementById(focusedId) : null;
     if (replacement) {
-      focusWhenShown(replacement);
+      void focusWhenReady(replacement);
     }
   }
 
   /**
-   * Moves focus after a deck is deleted: to the deck that took its place in
-   * the list, the one before it at the end, or New deck when none are left.
+   * Moves focus after the deck at `index` is deleted: to the deck that took
+   * its place in the list, the one before it at the end, or New deck when
+   * none are left.
    */
-  focusAfterRemoval(): void {
+  focusAfterRemoval(index: number): void {
     const links = [...this.list.querySelectorAll<HTMLElement>('.deck-card__title a')];
-    const target = links[Math.min(this.lastFocusIndex, links.length - 1)];
+    const target = links[Math.min(index, links.length - 1)];
     (target ?? document.querySelector<HTMLElement>('#new-deck-button'))?.focus();
   }
 
-  /** The position of the card that holds focus, or of the last card focused. */
-  private lastFocusIndex = 0;
-
-  private focusIndex(): number {
-    const cards = [...this.list.querySelectorAll('nys-card')];
-    const active = document.activeElement;
-    const index = cards.findIndex((card) => active !== null && card.contains(active));
-    return index === -1 ? this.lastFocusIndex : index;
-  }
-
-  private card(deck: StoredDeck): HTMLElement {
+  private card(deck: StoredDeck, index: number): HTMLElement {
     const column = document.createElement('li');
     column.className =
       'nys-mobile-lg:nys-grid-col-6 nys-tablet:nys-grid-col-4 nys-display-flex';
@@ -147,7 +137,7 @@ export class HomeView {
         void this.actions.duplicate(deck.id),
       ),
       ...this.circle(deck, 'Export', 'download', () => void this.actions.exportDeck(deck.id)),
-      ...this.circle(deck, 'Delete', 'delete', () => this.actions.remove(deck)),
+      ...this.circle(deck, 'Delete', 'delete', () => this.actions.remove(deck, index)),
     );
     card.append(footer);
     column.append(card);
@@ -171,7 +161,7 @@ export class HomeView {
     // Set the attribute, not the property: the component reflects its `id`
     // property only when it first renders, so until then the element can't
     // be found by id.
-    button.setAttribute('id', `deck-${slug(deck.id)}-${label.toLowerCase()}`);
+    button.setAttribute('id', actionId(deck, label));
     button.setAttribute('size', 'sm');
     button.setAttribute('variant', variant);
     const hidden = document.createElement('span');
@@ -195,7 +185,7 @@ export class HomeView {
     icon: string,
     handler: () => void,
   ): HTMLElement[] {
-    const id = `deck-${slug(deck.id)}-${label.toLowerCase()}`;
+    const id = actionId(deck, label);
     const tooltip = document.createElement('nys-tooltip');
     tooltip.setAttribute('for', id);
     tooltip.setAttribute('text', label);
@@ -262,20 +252,6 @@ export class HomeView {
         void this.actions.importFiles(files);
       }
     });
-  }
-}
-
-/**
- * Focuses an element that was just added to the page.
- *
- * A card shows its footer, and the buttons in it, only after a render or two
- * of its own, and a button can't take focus before then. So this tries once a
- * frame for a short while.
- */
-function focusWhenShown(element: HTMLElement, frames = 20): void {
-  element.focus();
-  if (document.activeElement !== element && frames > 0) {
-    window.requestAnimationFrame(() => focusWhenShown(element, frames - 1));
   }
 }
 

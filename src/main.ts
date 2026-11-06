@@ -1427,7 +1427,7 @@ async function startHome(openSettings: () => void): Promise<void> {
         download(`${id}.json`, json);
       }
     },
-    remove: (deck) => {
+    remove: (deck, index) => {
       confirmAction(
         'Delete this deck?',
         `Delete the deck "${deck.title}"? This cannot be undone.`,
@@ -1436,7 +1436,7 @@ async function startHome(openSettings: () => void): Promise<void> {
           await refresh();
           // The card and its buttons are gone, so focus moves to the next
           // deck, or to New deck when the list is empty.
-          home.focusAfterRemoval();
+          home.focusAfterRemoval(index);
           announce(`Deleted "${deck.title}".`);
         },
       );

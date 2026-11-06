@@ -5,6 +5,8 @@
  * page and never hidden, so inserting an alert into it is the change that
  * gets announced. Warnings use the alert's own assertive region as well.
  */
+import type {RememberedFocus} from './focus';
+import {rememberFocus} from './focus';
 
 /**
  * How long a toast stays on screen, in milliseconds.
@@ -20,8 +22,8 @@ export type ToastType = 'success' | 'warning' | 'info' | 'danger';
 class Toaster {
   private readonly host: HTMLElement;
   private timer: number | undefined;
-  /** The element that had focus when the toast appeared. */
-  private opener: Element | null = null;
+  /** Where focus was when the toast appeared. */
+  private opener: RememberedFocus | undefined;
 
   constructor(host: HTMLElement) {
     this.host = host;
@@ -46,7 +48,7 @@ class Toaster {
     }
     alert.setAttribute('dismissible', '');
     alert.addEventListener('nys-close', () => this.hide());
-    this.opener = document.activeElement;
+    this.opener = rememberFocus();
     this.host.replaceChildren(alert);
     this.resumeTimer();
   }
@@ -57,9 +59,9 @@ class Toaster {
     const hadFocus = this.host.contains(document.activeElement);
     this.host.replaceChildren();
     const opener = this.opener;
-    this.opener = null;
-    if (hadFocus && opener instanceof HTMLElement && opener.isConnected) {
-      opener.focus();
+    this.opener = undefined;
+    if (hadFocus) {
+      opener?.restore();
     }
   }
 

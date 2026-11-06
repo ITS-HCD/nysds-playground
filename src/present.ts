@@ -7,6 +7,8 @@
  * the controls.
  */
 import {announce} from './announce';
+import type {RememberedFocus} from './focus';
+import {rememberFocus, usable} from './focus';
 import {anyModalOpen} from './modals';
 import type {Slide, StoredDeck} from './deck-model';
 import {slideIndex} from './deck-model';
@@ -58,7 +60,7 @@ export class Presentation {
   private collapsed = false;
   private notesOpen = false;
   /** Where focus was when the notes opened, to hand it back when they close. */
-  private notesOpener: Element | null = null;
+  private notesOpener: RememberedFocus | undefined;
   private presenting = false;
   private singleKeys = readFlag('singleKeys');
   /** Whether the slide bar's last press came from a pointer rather than a key. */
@@ -126,7 +128,7 @@ export class Presentation {
   enter(): void {
     void document.documentElement.requestFullscreen?.().catch(() => undefined);
     this.setPresenting(true);
-    this.takeFocus(true);
+    this.focusBar();
   }
 
   /**
@@ -139,16 +141,8 @@ export class Presentation {
     if (document.fullscreenElement) {
       void document.exitFullscreen?.().catch(() => undefined);
     }
-    const active = document.activeElement;
-    const stranded =
-      !active ||
-      active === document.body ||
-      active === this.caption ||
-      active.closest('.present-only') !== null;
     this.setPresenting(false);
-    if (stranded) {
-      document.querySelector<HTMLElement>('#present-button')?.focus();
-    }
+    this.settleFocus(document.body, document.querySelector<HTMLElement>('#present-button'));
   }
 
   /** Whether the playground is presenting. */
@@ -254,7 +248,7 @@ export class Presentation {
       this.closeNotes();
       this.target.loadPreset(preset);
       this.refresh();
-      this.takeFocus();
+      this.settleFocus(this.caption, this.caption);
       announce(this.slideSummary());
     }
   }
@@ -286,7 +280,6 @@ export class Presentation {
       return;
     }
     event.preventDefault();
-    this.pointer = false;
     this.run(action);
   }
 
@@ -340,7 +333,7 @@ export class Presentation {
       case 'toggle-code':
         this.setCodeHidden(!this.collapsed);
         // Focus may have been in the drawer that just went away.
-        this.takeFocus();
+        this.settleFocus(this.caption, this.caption);
         announce(this.collapsed ? 'Code hidden.' : 'Code shown.');
         break;
       case 'toggle-notes':
@@ -349,7 +342,7 @@ export class Presentation {
       case 'toggle-layout':
         this.panes.toggleLayout();
         this.refresh();
-        this.takeFocus();
+        this.settleFocus(this.caption, this.caption);
         announce(
           this.panes.layout === 'columns' ? 'Side-by-side editors.' : 'Tabbed editor.',
         );
@@ -367,7 +360,7 @@ export class Presentation {
         const pane = paneFor(action);
         if (pane) {
           this.panes.togglePane(pane);
-          this.takeFocus();
+          this.settleFocus(this.caption, this.caption);
           const name = PANE_FILES[pane].label;
           announce(this.panes.isCollapsed(pane) ? `${name} collapsed.` : `${name} expanded.`);
         }
@@ -380,7 +373,7 @@ export class Presentation {
   private toggleTheme(): void {
     const next = otherTheme(initialTheme());
     setEditorTheme(next);
-    this.takeFocus();
+    this.settleFocus(this.caption, this.caption);
     announce(next === 'dark' ? 'Dark editor theme.' : 'Light editor theme.');
   }
 
@@ -390,40 +383,27 @@ export class Presentation {
    * After a pointer press, focus moves to the slide bar, so Space and the
    * arrow keys keep changing slides. After a key press, focus stays on the
    * button, so its new state is read out and pressing it again repeats it.
+   * When the press disabled or hid it, as Next does on the last slide, focus
+   * moves to the arrow beside it, or to the slide bar.
    */
   private bindBarButton(selector: string, handler: () => void): void {
     const button = document.querySelector<BarButton>(selector);
     button?.addEventListener('nys-click', () => {
       handler();
-      const active = document.activeElement;
       // The handler may have sent focus somewhere on purpose, such as into
       // the notes. Only a press that left focus in the bar is settled here.
-      const inBar = active === document.body || (active !== null && this.caption.contains(active));
-      if (this.pointer && inBar) {
-        this.takeFocus(true);
-      } else if (!this.pointer && inBar) {
-        this.keepFocusOn(button);
+      const active = document.activeElement;
+      if (active !== document.body && !(active !== null && this.caption.contains(active))) {
+        return;
       }
-      this.pointer = false;
+      if (this.pointer) {
+        this.focusBar();
+        return;
+      }
+      const sibling =
+        button === this.nextButton ? this.prevButton : button === this.prevButton ? this.nextButton : null;
+      this.settleFocus(this.caption, sibling, this.caption);
     });
-  }
-
-  /**
-   * Leaves focus on a slide bar button, unless the press just disabled or hid
-   * it. Next goes quiet on the last slide, so focus moves to Previous, and
-   * the other way round.
-   */
-  private keepFocusOn(button: BarButton): void {
-    if (usable(button)) {
-      return;
-    }
-    const other =
-      button === this.nextButton ? this.prevButton : button === this.prevButton ? this.nextButton : null;
-    if (other && usable(other)) {
-      other.focus();
-      return;
-    }
-    this.takeFocus(true);
   }
 
   /**
@@ -462,7 +442,7 @@ export class Presentation {
       return;
     }
     this.notesOpen = true;
-    this.notesOpener = document.activeElement;
+    this.notesOpener = rememberFocus();
     this.notes.hidden = false;
     this.notesButton.setAttribute('ariaExpanded', 'true');
     this.notes.focus();
@@ -481,36 +461,45 @@ export class Presentation {
       return;
     }
     const opener = this.notesOpener;
-    this.notesOpener = null;
-    if (opener instanceof HTMLElement && opener !== document.body && usable(opener)) {
-      opener.focus();
+    this.notesOpener = undefined;
+    if (opener) {
+      opener.restore(() => this.focusBar());
     } else {
-      this.takeFocus(true);
+      this.focusBar();
     }
   }
 
   /**
-   * Moves focus to the caption bar.
+   * Moves focus to the slide bar.
    *
    * The preview is a cross-origin iframe. Once it holds focus, key events go
    * to the sandbox instead of this page, so the deck stops responding to the
-   * arrow keys. Reclaiming focus after every step keeps them working. Focus
-   * already on a slide bar control stays put, unless `force` is set, so a
-   * keyboard user keeps their place. After an edit, focus stays in the
-   * editor, which is what the presenter wants.
+   * arrow keys. Reclaiming focus after every step keeps them working.
    */
-  private takeFocus(force = false): void {
+  private focusBar(): void {
+    this.caption.focus({preventScroll: true});
+  }
+
+  /**
+   * Leaves focus where it is, or moves it to the first of `fallbacks` that can
+   * take it.
+   *
+   * Focus stays on a control inside `scope` that is still shown and enabled,
+   * so a keyboard user keeps their place. The slide bar itself and the page
+   * body never count as a place to stay: focus only lands there when it has
+   * nowhere better to be.
+   */
+  private settleFocus(scope: HTMLElement, ...fallbacks: (HTMLElement | null)[]): void {
     const active = document.activeElement;
-    if (
-      !force &&
+    const stays =
       active instanceof HTMLElement &&
       active !== this.caption &&
-      this.caption.contains(active) &&
-      usable(active)
-    ) {
-      return;
+      active !== document.body &&
+      scope.contains(active) &&
+      usable(active);
+    if (!stays) {
+      fallbacks.find((element) => element !== null && usable(element))?.focus({preventScroll: true});
     }
-    this.caption.focus({preventScroll: true});
   }
 
   /**
@@ -567,11 +556,6 @@ function pathFor(event: KeyboardEvent): PathEntry[] {
     role: element.getAttribute('role'),
     editable: element.isContentEditable,
   }));
-}
-
-/** Whether an element can hold focus right now: shown and not disabled. */
-function usable(element: HTMLElement & {disabled?: boolean}): boolean {
-  return element.isConnected && element.disabled !== true && element.getClientRects().length > 0;
 }
 
 /** Builds a span of text, hidden from screen readers or from sight. */

@@ -10,6 +10,7 @@
  * and a live region reads out each move.
  */
 import type {Slide, SlideEdit} from './deck-model';
+import {focusWhenReady} from './focus';
 
 type Control = 'handle' | 'up' | 'down' | 'remove' | 'restore';
 
@@ -55,14 +56,10 @@ export class SlideList {
     this.list.replaceChildren(...this.rows.map((row, index) => this.row(row, index)));
     if (focus) {
       const selector = `[data-id="${CSS.escape(focus.id)}"] [data-control="${focus.control}"]`;
-      const host = this.list.querySelector<HTMLElement & {updateComplete?: Promise<unknown>}>(
-        selector,
-      );
-      // The design system button does not delegate focus to its inner button,
-      // and that button only exists once the element has rendered.
-      void host?.updateComplete?.then(() => {
-        (host.shadowRoot?.querySelector<HTMLElement>('button') ?? host).focus();
-      });
+      const host = this.list.querySelector<HTMLElement>(selector);
+      if (host) {
+        void focusWhenReady(host);
+      }
     }
   }
 
