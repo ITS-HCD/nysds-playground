@@ -68,9 +68,6 @@ jsDelivr at request time.
   frame lands in the text box, where Tab indents, a keyboard trap. It
   imports `@codemirror/view`, which `vite.config.ts` keeps out of Vite's
   dependency pre-bundling so there is only one copy of CodeMirror.
-- `src/modal-tab.ts`: works around `nys-modal` 1.21.0 sending Shift+Tab
-  to the wrong control, by leaving Shift+Tab inside a modal's body to the
-  browser. Remove it once `nys-modal` moves backward correctly.
 - `src/playground.ts` and `src/debounce.ts`: wire `playground-elements`
   to the playground's state and decide when the preview rebuilds. The
   quiet-period debounce in `src/debounce.ts` backs the Update preview
@@ -83,12 +80,12 @@ jsDelivr at request time.
 - `src/slide-list.ts`: the slide list inside Deck settings: rename,
   regroup, reorder (drag, or Move up and Move down), and remove slides,
   applied on Done through `arrangeSlides` in `src/deck-model.ts`.
-- `src/modal-dismiss.ts`: closes a modal on a click outside it, which
-  `nys-modal` doesn't do itself. A modal holding unapplied changes stays
-  open on an outside click or Escape and moves focus to Done; the close
-  button still discards. `src/main.ts` says which modals can hold changes,
-  comparing against `deckDraftOf` and `slideDraftOf` in
-  `src/deck-model.ts`.
+- `src/modals.ts`: everything the playground adds to `nys-modal`. A
+  click outside a modal closes it, unless the modal holds changes only
+  Done applies; then an outside click or Escape moves focus to Done
+  instead. It also works around `nys-modal` 1.21.0 sending Shift+Tab to
+  the wrong control (remove that once `nys-modal` moves backward
+  correctly), and `ModalQuestion` drives the confirm and leave modals.
 - `src/main.ts`: boots the app, routes between the home page, a deck, and
   the scratch pad (`routeFor`), and drives the toolbar, autosave, deck
   and slide settings modals, and Share.

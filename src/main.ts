@@ -26,8 +26,8 @@ import {
 import * as store from './deck-store';
 import {announce} from './announce';
 import {makeEditorAccessible} from './editor-a11y';
-import {guardDismissal} from './modal-dismiss';
-import {repairModalShiftTab} from './modal-tab';
+import type {Modal} from './modals';
+import {ModalQuestion, bindModalKeys, guardDismissal, modal} from './modals';
 import type {ToastType} from './toast';
 import {showToast} from './toast';
 import {PANE_IDS} from './preset-schema';
@@ -128,7 +128,8 @@ class PlaygroundApp {
   private readonly updateModeSelect: HTMLElement;
   private readonly shortcutsToggle: HTMLElement & {checked?: boolean};
   private readonly drawerSizeSelect: HTMLElement;
-  private readonly settingsModal: HTMLElement & {open?: boolean};
+  private readonly settingsModal: Modal;
+  private readonly leaveQuestion: ModalQuestion;
   private readonly buildButton: HTMLElement;
   private readonly panes: EditorPanes;
   private readonly drawer: Drawer;
@@ -162,7 +163,6 @@ class PlaygroundApp {
   private theme: EditorTheme = initialTheme();
   private singleKeys = readSingleKeys();
   private readonly slideList: SlideList;
-  private leaveListeners: AbortController | undefined;
   private presentation: Presentation | undefined;
   /** Deck settings as it opened, to tell whether anything has changed since. */
   private deckDraftAtOpen: DeckDraft | null = null;
@@ -201,7 +201,8 @@ class PlaygroundApp {
     this.updateModeSelect = required('#update-mode-select');
     this.shortcutsToggle = required('#shortcuts-toggle');
     this.drawerSizeSelect = required('#drawer-size-select');
-    this.settingsModal = required('#settings-modal');
+    this.settingsModal = modal('#settings-modal');
+    this.leaveQuestion = new ModalQuestion(modal('#leave-modal'), '#leave-stay');
     this.buildButton = required('#build-button');
     this.savedIndicator = required('#saved-indicator');
     this.slideList = new SlideList(required('#slide-list'), required('#slide-list-status'));
@@ -348,7 +349,7 @@ class PlaygroundApp {
     bindClick('#deck-settings-button', () => this.openDeckSettings());
     required('#deck-title').addEventListener('click', () => this.openTitleEditor());
     bindClick('#deck-modal-done', () => {
-      required<HTMLElement & {open?: boolean}>('#deck-modal').open = false;
+      modal('#deck-modal').open = false;
       void this.applyDeckSettings();
     });
 
@@ -357,20 +358,20 @@ class PlaygroundApp {
     bindClick('#duplicate-slide-button', () => void this.duplicateSlide());
     bindClick('#delete-slide-button', () => this.deleteSlide());
     bindClick('#slide-modal-done', () => {
-      required<HTMLElement & {open?: boolean}>('#slide-modal').open = false;
+      modal('#slide-modal').open = false;
       void this.applySlideSettings();
     });
 
     bindClick('#share-deck-link', () => {
-      required<HTMLElement & {open?: boolean}>('#share-modal').open = false;
+      modal('#share-modal').open = false;
       void this.copyDeckLink();
     });
     bindClick('#share-code-link', () => {
-      required<HTMLElement & {open?: boolean}>('#share-modal').open = false;
+      modal('#share-modal').open = false;
       void this.copyStandaloneLink();
     });
     bindClick('#share-modal-done', () => {
-      required<HTMLElement & {open?: boolean}>('#share-modal').open = false;
+      modal('#share-modal').open = false;
     });
 
     bindClick('#save-as-deck-button', () => void this.saveAsDeck());
@@ -411,22 +412,22 @@ class PlaygroundApp {
    * with Stay, never with the action they ask about.
    */
   private bindDismissal(): void {
-    guardDismissal(required('#deck-modal'), {
+    guardDismissal(modal('#deck-modal'), {
       isDirty: () =>
         this.deckDraftAtOpen !== null &&
         !sameDeckDraft(this.deckDraftAtOpen, this.readDeckDraft()),
       done: required('#deck-modal-done'),
     });
-    guardDismissal(required('#slide-modal'), {
+    guardDismissal(modal('#slide-modal'), {
       isDirty: () =>
         this.slideDraftAtOpen !== null &&
         !sameSlideDraft(this.slideDraftAtOpen, this.readSlideDraft(this.slideDraftAtOpen)),
       done: required('#slide-modal-done'),
     });
     guardDismissal(this.settingsModal);
-    guardDismissal(required('#share-modal'));
-    guardDismissal(required('#confirm-modal'), {dismiss: closeConfirm});
-    guardDismissal(required('#leave-modal'), {dismiss: () => this.stay()});
+    guardDismissal(modal('#share-modal'));
+    guardDismissal(confirmQuestion.modal, {dismiss: () => confirmQuestion.close()});
+    guardDismissal(this.leaveQuestion.modal, {dismiss: () => this.leaveQuestion.close()});
   }
 
   private setTheme(theme: EditorTheme): void {
@@ -681,13 +682,12 @@ class PlaygroundApp {
 
   /** Opens the deck settings modal, which also renames the deck. */
   openDeckSettings(): void {
-    const modal = required<HTMLElement & {open?: boolean}>('#deck-modal');
     setFieldValue('#deck-title-input', this.deck.title);
     setFieldValue('#deck-description-input', this.deck.description);
     setFieldValue('#deck-base-css-input', this.deck.baseCss);
     this.slideList.load(this.deck.slides);
     this.deckDraftAtOpen = deckDraftOf(this.deck);
-    modal.open = true;
+    modal('#deck-modal').open = true;
   }
 
   /** Deck settings as the fields hold it now. */
@@ -748,7 +748,7 @@ class PlaygroundApp {
       box.checked = slide.editors?.includes(pane) ?? false;
     }
     this.slideDraftAtOpen = slideDraftOf(slide);
-    required<HTMLElement & {open?: boolean}>('#slide-modal').open = true;
+    modal('#slide-modal').open = true;
   }
 
   /**
@@ -914,37 +914,11 @@ class PlaygroundApp {
     return url.toString();
   }
 
-  /** Closes the leave modal without leaving, which is what Stay does. */
-  private stay(): void {
-    required<HTMLElement & {open?: boolean}>('#leave-modal').open = false;
-    this.leaveListeners?.abort();
-    this.leaveListeners = undefined;
-  }
-
   private askBeforeLeaving(destination: string): void {
-    const modal = required<HTMLElement & {open?: boolean}>('#leave-modal');
-    this.leaveListeners?.abort();
-    this.leaveListeners = new AbortController();
-    const {signal} = this.leaveListeners;
-    const close = (): void => this.stay();
-    required('#leave-stay').addEventListener('nys-click', close, {signal});
-    required('#leave-discard').addEventListener(
-      'nys-click',
-      () => {
-        close();
-        window.location.assign(destination);
-      },
-      {signal},
-    );
-    required('#leave-save').addEventListener(
-      'nys-click',
-      () => {
-        close();
-        void this.saveAsDeck(destination);
-      },
-      {signal},
-    );
-    modal.open = true;
+    this.leaveQuestion.ask({
+      '#leave-discard': () => window.location.assign(destination),
+      '#leave-save': () => void this.saveAsDeck(destination),
+    });
   }
 
   /* Share --------------------------------------------------------------- */
@@ -955,7 +929,7 @@ class PlaygroundApp {
       void this.copyStandaloneLink();
       return;
     }
-    required<HTMLElement & {open?: boolean}>('#share-modal').open = true;
+    modal('#share-modal').open = true;
   }
 
   private async copyDeckLink(): Promise<void> {
@@ -1264,8 +1238,8 @@ function setFieldValue(selector: string, value: string): void {
   required<HTMLElement & {value?: string}>(selector).value = value;
 }
 
-/** Drops the listeners from whichever question the modal asked last. */
-let confirmListeners: AbortController | undefined;
+/** The confirm modal. `main` sets it up before anything can ask. */
+let confirmQuestion: ModalQuestion;
 
 /**
  * Asks before doing something destructive.
@@ -1275,32 +1249,9 @@ let confirmListeners: AbortController | undefined;
  * dialog for screen readers, so it says what is about to be deleted.
  */
 function confirmAction(heading: string, message: string, onConfirm: () => void): void {
-  const modal = required<HTMLElement & {open?: boolean}>('#confirm-modal');
-  modal.setAttribute('heading', heading);
+  confirmQuestion.modal.setAttribute('heading', heading);
   required('#confirm-message').textContent = message;
-  // Dismissing the modal with its own close button or Escape skips the Cancel
-  // handler, so listeners from an earlier question would otherwise pile up and
-  // one confirmation would answer all of them.
-  confirmListeners?.abort();
-  confirmListeners = new AbortController();
-  const {signal} = confirmListeners;
-  required('#confirm-ok').addEventListener(
-    'nys-click',
-    () => {
-      closeConfirm();
-      onConfirm();
-    },
-    {signal},
-  );
-  required('#confirm-cancel').addEventListener('nys-click', closeConfirm, {signal});
-  modal.open = true;
-}
-
-/** Closes the confirm modal and forgets its question. On its own, that is Cancel. */
-function closeConfirm(): void {
-  required<HTMLElement & {open?: boolean}>('#confirm-modal').open = false;
-  confirmListeners?.abort();
-  confirmListeners = undefined;
+  confirmQuestion.ask({'#confirm-ok': onConfirm});
 }
 
 /** Hands the browser a file to save. */
@@ -1582,7 +1533,8 @@ async function main(): Promise<void> {
   applyEditorTheme(initialTheme());
   applyFontSize(initialFontSize());
 
-  repairModalShiftTab();
+  bindModalKeys();
+  confirmQuestion = new ModalQuestion(modal('#confirm-modal'), '#confirm-cancel');
 
   // The bundled decks and presets only seed an empty store.
   await store.seedStarters();
@@ -1591,7 +1543,7 @@ async function main(): Promise<void> {
   const route = routeFor(window.location.search, window.location.hash);
   if (route.kind === 'home') {
     await startHome(() => {
-      required<HTMLElement & {open?: boolean}>('#settings-modal').open = true;
+      modal('#settings-modal').open = true;
     });
     // The settings modal is shared with the editor, so bind its controls too.
     const project = required<PlaygroundProject>('#project');
