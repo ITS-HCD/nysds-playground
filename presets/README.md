@@ -6,7 +6,9 @@ in a browser, it copies them into that browser's own deck store (see
 `src/starters.ts`), and after that the app reads only from the store.
 Every file in `presets/` becomes one slide of a starter deck called
 **Component library**, in filename order. Every file in `decks/` becomes
-its own starter deck. Selecting **Restore starter decks** on the home
+its own starter deck. Each starter deck seeds once per browser, so a
+deleted starter stays deleted, and a new file in `decks/` still seeds
+once after you rebuild. Selecting **Restore starter decks** on the home
 page adds back any starter deck a browser is missing, including changes
 you make here after rebuilding.
 
@@ -115,8 +117,9 @@ out.
    like [Decks](#decks), below, with one slide in its `presets` array.
 5. Copy that one slide object out of the `presets` array, delete its
    `id` field, and save the rest as `presets/NN-slug.json`.
-6. Rebuild, or select **Restore starter decks** in a browser that already
-   seeded, to pick up the new file.
+6. Rebuild. A browser that already has the **Component library** deck
+   keeps its copy, so delete that deck and select **Restore starter
+   decks** to pick up the new file.
 
 ## Decks
 

@@ -2,7 +2,7 @@
  * The shape decks take in the browser store, and the pure helpers that build
  * and normalize them.
  *
- * Nothing here touches IndexedDB or the DOM, so `src/state.test.ts` can cover
+ * Nothing here touches IndexedDB or the DOM, so `src/decks.test.ts` can cover
  * id generation, import normalization, the export shape, and seed diffing
  * without a browser.
  */
@@ -247,7 +247,10 @@ export function normalizeImport(
   };
 }
 
-/** Returns the starter decks that are not in the store yet. */
+/**
+ * Returns the starter decks that are not in the store now, whether or not
+ * this browser received them before. **Restore starter decks** adds these.
+ */
 export function missingStarters(
   starters: readonly StoredDeck[],
   stored: readonly StoredDeck[],
@@ -263,6 +266,35 @@ export function missingStarters(
     additions.push({...starter, id, slides: starter.slides.map((slide) => ({...slide}))});
   }
   return additions;
+}
+
+/** What `startersToSeed` decides. */
+export interface SeedPlan {
+  /** The starter keys to add to the store now. */
+  seed: string[];
+  /** Every starter key this browser has received, to record for next time. */
+  seeded: string[];
+}
+
+/**
+ * Decides which starters to add when the app starts.
+ *
+ * Each starter seeds once per browser, so a starter someone deleted stays
+ * deleted, and a starter added in a later release still arrives once.
+ * `seededIds` is the record of starters this browser already received, or
+ * `undefined` before anything wrote that record. `storedIds` holds the
+ * starter keys of the decks in the store now. A starter already in the store
+ * counts as received, which leaves a browser that seeded before the record
+ * existed exactly as it is.
+ */
+export function startersToSeed(
+  starterIds: readonly string[],
+  seededIds: readonly string[] | undefined,
+  storedIds: readonly string[],
+): SeedPlan {
+  const received = new Set([...(seededIds ?? []), ...storedIds]);
+  const seed = starterIds.filter((id) => !received.has(id));
+  return {seed, seeded: [...received, ...seed]};
 }
 
 /** A starter key an earlier build seeded under a different file name. */

@@ -1,8 +1,9 @@
 /**
  * The decks and examples bundled with the build.
  *
- * These are starter content. They seed the browser store the first time the
- * playground runs; after that the app reads only from the store. Every JSON
+ * These are starter content. Each starter deck seeds the browser store once,
+ * the first time that browser runs a build that has it; after that the app
+ * reads only from the store. Every JSON
  * file in `decks/` becomes a starter deck, and all of `presets/` becomes one
  * starter deck called the component library.
  */

@@ -22,6 +22,7 @@ import {
   slideIndex,
   slugify,
   staleStarters,
+  startersToSeed,
   toDeckFile,
   uniqueId,
 } from './deck-model.ts';
@@ -172,6 +173,42 @@ test('missingStarters keeps a restored starter off an id already in use', () => 
   const starters = [deck('library', {starter: 'library'})];
   const stored = [deck('library')];
   assert.deepEqual(missingStarters(starters, stored).map((d) => d.id), ['library-2']);
+});
+
+test('startersToSeed seeds every starter into a new browser', () => {
+  assert.deepEqual(startersToSeed(['library', 'tour'], undefined, []), {
+    seed: ['library', 'tour'],
+    seeded: ['library', 'tour'],
+  });
+});
+
+test('startersToSeed leaves a browser that seeded before the record existed alone', () => {
+  // Earlier builds re-added every starter on each start, so these browsers
+  // hold all of them, renamed or not.
+  assert.deepEqual(startersToSeed(['library', 'tour'], undefined, ['tour', 'library']), {
+    seed: [],
+    seeded: ['tour', 'library'],
+  });
+});
+
+test('startersToSeed does not bring back a starter that was deleted', () => {
+  assert.deepEqual(startersToSeed(['library', 'tour'], ['library', 'tour'], ['tour']).seed, []);
+  assert.deepEqual(startersToSeed(['library', 'tour'], ['library', 'tour'], []).seed, []);
+});
+
+test('startersToSeed seeds a starter from a later release once', () => {
+  const first = startersToSeed(['library', 'tour', 'new'], ['library', 'tour'], ['library']);
+  assert.deepEqual(first.seed, ['new']);
+  assert.deepEqual(first.seeded, ['library', 'tour', 'new']);
+  // Deleted after it arrived, it stays gone.
+  assert.deepEqual(startersToSeed(['library', 'tour', 'new'], first.seeded, ['library']).seed, []);
+});
+
+test('startersToSeed records restored starters as received', () => {
+  assert.deepEqual(startersToSeed(['library'], [], ['library']), {
+    seed: [],
+    seeded: ['library'],
+  });
 });
 
 test('relativeTime reads as a person would say it', () => {

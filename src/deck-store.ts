@@ -2,8 +2,8 @@
  * The browser store that holds the user's decks.
  *
  * Decks live in IndexedDB, one entry per deck, so saving one deck never
- * rewrites the others. The bundled files in `decks/` and `presets/` only seed
- * the store on the first run.
+ * rewrites the others. The bundled files in `decks/` and `presets/` seed the
+ * store once per browser, starter by starter.
  */
 import {del, entries, get, set} from 'idb-keyval';
 
@@ -14,6 +14,7 @@ import {
   missingStarters,
   normalizeImport,
   staleStarters,
+  startersToSeed,
   toDeckFile,
 } from './deck-model';
 import {RETIRED_STARTERS, STARTER_DECKS} from './starters';
@@ -120,25 +121,73 @@ export async function exportDeck(id: string): Promise<string | undefined> {
   return deck ? `${JSON.stringify(toDeckFile(deck), null, 2)}\n` : undefined;
 }
 
-/**
- * Adds any bundled deck the store has not seen.
- *
- * First drops untouched copies of starters that now ship under a new name, so
- * a rename in `decks/` does not leave the old deck beside the new one.
- * Returns how many decks it added, so the home page can say so.
- */
-export async function seedStarters(): Promise<number> {
-  const stale = staleStarters(await listDecks(), RETIRED_STARTERS, STARTER_DECKS);
-  for (const deck of stale) {
-    await del(keyFor(deck.id));
-  }
-  const stored = await listDecks();
-  const additions = missingStarters(STARTER_DECKS, stored);
+/** Where the store records which starters this browser has received. */
+const SEEDED_KEY = 'nysds-playground:seeded-starters';
+
+async function seededStarters(): Promise<string[] | undefined> {
+  const value: unknown = await get(SEEDED_KEY);
+  return Array.isArray(value) ? value.filter((id): id is string => typeof id === 'string') : undefined;
+}
+
+/** The starter keys of the decks in the store now. */
+function starterKeys(decks: readonly StoredDeck[]): string[] {
+  return decks.map((deck) => deck.starter).filter((key): key is string => Boolean(key));
+}
+
+/** Writes starter decks into the store and records them as received. */
+async function addStarters(
+  additions: readonly StoredDeck[],
+  seeded: readonly string[],
+  before: readonly string[] | undefined,
+): Promise<void> {
   // Starters carry a fixed timestamp so seeding is deterministic. Stamp them
   // as they land so the home page reports when they arrived here.
   const stamp = new Date().toISOString();
   for (const deck of additions) {
     await set(keyFor(deck.id), {...deck, createdAt: stamp, updatedAt: stamp});
   }
+  // The record only grows, so a change in length is a change in content.
+  if (seeded.length !== before?.length) {
+    await set(SEEDED_KEY, [...seeded]);
+  }
+}
+
+/**
+ * Adds each bundled deck the first time this browser sees it.
+ *
+ * A starter seeds once per browser, so deleting one sticks, and a starter
+ * that a later release adds still arrives once. First drops untouched copies
+ * of starters that now ship under a new name, so a rename in `decks/` does
+ * not leave the old deck beside the new one.
+ */
+export async function seedStarters(): Promise<void> {
+  const stale = staleStarters(await listDecks(), RETIRED_STARTERS, STARTER_DECKS);
+  for (const deck of stale) {
+    await del(keyFor(deck.id));
+  }
+  const stored = await listDecks();
+  const before = await seededStarters();
+  const plan = startersToSeed(starterKeys(STARTER_DECKS), before, starterKeys(stored));
+  const wanted = new Set(plan.seed);
+  const additions = missingStarters(
+    STARTER_DECKS.filter((deck) => deck.starter !== undefined && wanted.has(deck.starter)),
+    stored,
+  );
+  await addStarters(additions, plan.seeded, before);
+}
+
+/**
+ * Adds back every bundled deck the store is missing, including ones that were
+ * deleted. Returns how many decks it added, so the home page can say so.
+ */
+export async function restoreStarters(): Promise<number> {
+  const stored = await listDecks();
+  const additions = missingStarters(STARTER_DECKS, stored);
+  const before = await seededStarters();
+  const plan = startersToSeed(starterKeys(STARTER_DECKS), before, [
+    ...starterKeys(stored),
+    ...starterKeys(additions),
+  ]);
+  await addStarters(additions, plan.seeded, before);
   return additions.length;
 }

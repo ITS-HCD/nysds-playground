@@ -14,11 +14,15 @@ jsDelivr at request time.
 - `src/deck-model.ts`: the `StoredDeck`/`Slide` shapes and the pure
   helpers around them — id generation, `makeDeck`/`copyOfDeck`,
   `normalizeImport` (accepts a deck file or a single preset), the
-  `DeckFile` export shape, and `missingStarters` for "Restore starter
-  decks". No IndexedDB or DOM, so `src/state.test.ts` covers it directly.
+  `DeckFile` export shape, `startersToSeed`, which picks the starters a
+  browser hasn't received yet, and `missingStarters` for "Restore starter
+  decks". No IndexedDB or DOM, so `src/decks.test.ts` covers it directly.
 - `src/deck-store.ts`: the only module that touches IndexedDB (through
-  `idb-keyval`). List, get, save, delete, duplicate, import, export, and
-  `seedStarters`, which copies `STARTER_DECKS` into an empty store.
+  `idb-keyval`). List, get, save, delete, duplicate, import, export,
+  `seedStarters`, and `restoreStarters`. `seedStarters` adds each starter
+  in `STARTER_DECKS` once per browser and records it in IndexedDB, so a
+  deleted starter stays deleted and a new one still arrives.
+  `restoreStarters` adds back every missing starter.
 - `src/starters.ts`: builds `STARTER_DECKS` from `presets/*.json` (one
   starter deck, "Component library") and `decks/*.json` (one starter deck
   each) at build time. This is the only place those directories are read;
@@ -85,9 +89,9 @@ jsDelivr at request time.
   `src/state.ts` from flags and local files, and is the source of truth
   for every CLI flag. `--deck`/`--preset` only resolve against a deck
   already in the browser that opens the link.
-- `presets/*.json` and `decks/*.json`: starter content. They seed a
-  browser's deck store the first time the playground runs there; they are
-  not read at runtime after that. See `presets/README.md` for the
+- `presets/*.json` and `decks/*.json`: starter content. Each starter deck
+  seeds a browser's deck store once, the first time that browser runs a
+  build that has it; the files are not read at runtime after that. See `presets/README.md` for the
   schema.
 - `public/fonts/`: the NYSDS app font bundle (Proxima Nova and D Sari)
   with its `nysds-fonts.css`. Licensed for NYS use only, so the `files`

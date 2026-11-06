@@ -41,7 +41,7 @@ browser, each with **Edit**, **Present**, **Duplicate**, **Export**, and
   something out before you commit to a deck. See Share, below, for how
   to turn it into one.
 - **Restore starter decks** adds back any bundled starter deck that is
-  missing from this browser.
+  missing from this browser, including one you deleted.
 - **Settings** opens the same settings modal as the editor.
 
 ## Decks live in your browser
@@ -51,10 +51,12 @@ in this repository. The JSON files in `presets/` and `decks/` are
 starter content: the first time the playground runs in a browser, it
 copies them into that browser's store as starter decks (the presets
 become one deck called **Component library**), and after that the app
-reads only from the store. Editing or adding a file in `presets/` or
-`decks/` and rebuilding has no effect on a browser that already seeded —
-select **Restore starter decks** on the home page to add back anything
-that changed or is missing.
+reads only from the store. Each starter deck seeds once per browser, so a
+starter you delete stays deleted. A new file in `decks/` seeds once in
+every browser after you rebuild, but editing a file, or adding one to
+`presets/`, has no effect on a browser that already has that deck —
+delete the deck and select **Restore starter decks** on the home page to
+get the new version.
 
 Decks do not sync between browsers or machines. Use **Export** on a deck
 card, or **Export deck** in the editor toolbar, to download a deck as
@@ -328,9 +330,10 @@ content.
   take the one object out of the downloaded file's `presets` array,
   drop its `id`, and save the rest as `presets/NN-slug.json`.
 
-Either way, the file only reaches this browser's own store, and any
-other browser, once you rebuild and it seeds fresh, or you select
-**Restore starter decks** here. Check every icon name you use against
+After you rebuild, a new deck file seeds once in every browser,
+including this one. A new preset reaches a browser that already has the
+**Component library** deck only after you delete that deck and select
+**Restore starter decks**. Check every icon name you use against
 the list at https://designsystem.ny.gov/components/icon/, mirrored in
 `src/icon-names.ts` and enforced by `npm test`. See `presets/README.md`
 for the full authoring guide, including the deck format and a worked

@@ -1447,7 +1447,7 @@ async function startHome(openSettings: () => void): Promise<void> {
     },
     importFiles: readFiles,
     restoreStarters: async () => {
-      const added = await store.seedStarters();
+      const added = await store.restoreStarters();
       await refresh();
       showToast(
         'success',
@@ -1491,7 +1491,8 @@ async function main(): Promise<void> {
   bindModalKeys();
   confirmQuestion = new ModalQuestion(modal('#confirm-modal'), '#confirm-cancel');
 
-  // The bundled decks and presets only seed an empty store.
+  // Each bundled starter deck seeds once per browser, so a starter someone
+  // deleted stays deleted until they select Restore starter decks.
   await store.seedStarters();
 
   const drawer = setupDrawer();
