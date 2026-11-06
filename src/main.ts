@@ -54,8 +54,10 @@ import {
   DEFAULTS,
   DRAWER_LIMITS,
   DRAWER_SIZES,
+  DRAWER_SIZE_NAMES,
   STORAGE_KEYS,
   applyFontSize,
+  clampRatio,
   clearAllSettings,
   drawerSizeText,
   initialFontSize,
@@ -191,6 +193,10 @@ class PlaygroundApp {
     this.updateModeSelect = required('#update-mode-select');
     this.shortcutsToggle = required('#shortcuts-toggle');
     this.drawerSizeSelect = required('#drawer-size-select');
+    // The menu takes its percentages from DRAWER_SIZES, so they can't drift.
+    this.drawerSizeSelect.innerHTML = (Object.entries(DRAWER_SIZES) as [DrawerSize, number][])
+      .map(([name, size]) => option(name, `${DRAWER_SIZE_NAMES[name]} (${size}%)`, false))
+      .join('');
     this.settingsModal = modal('#settings-modal');
     this.leaveQuestion = new ModalQuestion(modal('#leave-modal'), '#leave-stay');
     this.buildButton = required('#build-button');
@@ -1283,15 +1289,19 @@ function setupDrawer(): Drawer {
   const divider = required('#divider');
   const {min: MIN, max: MAX} = DRAWER_LIMITS;
   let size = readRatio(STORAGE_KEYS.drawerSize, DEFAULTS.drawerSize, MIN, MAX);
+  /** The whole percentage the divider last reported. */
+  let reported = Number.NaN;
 
-  const apply = (ratio: number): void => {
-    size = Math.min(Math.max(ratio, MIN), MAX);
-    stage.style.setProperty('--pg-drawer-size', `${size.toFixed(2)}%`);
-    divider.setAttribute('aria-valuenow', String(Math.round(size)));
-    divider.setAttribute('aria-valuetext', drawerSizeText(size));
-  };
   const set = (ratio: number, persist = true): void => {
-    apply(ratio);
+    size = clampRatio(ratio, MIN, MAX);
+    stage.style.setProperty('--pg-drawer-size', `${size.toFixed(2)}%`);
+    // A drag moves the drawer by fractions of a percent on every pointer
+    // move, so the divider only reports a change of a whole percent.
+    if (Math.round(size) !== reported) {
+      reported = Math.round(size);
+      divider.setAttribute('aria-valuenow', String(reported));
+      divider.setAttribute('aria-valuetext', drawerSizeText(size));
+    }
     if (persist) {
       writeRatio(STORAGE_KEYS.drawerSize, size);
     }
@@ -1299,7 +1309,7 @@ function setupDrawer(): Drawer {
 
   divider.setAttribute('aria-valuemin', String(MIN));
   divider.setAttribute('aria-valuemax', String(MAX));
-  apply(size);
+  set(size, false);
 
   let dragging = false;
   const move = (clientY: number): void => {
@@ -1307,7 +1317,8 @@ function setupDrawer(): Drawer {
     if (rect.height === 0) {
       return;
     }
-    set(((rect.bottom - clientY) / rect.height) * 100);
+    // Remember the height once, when the drag ends.
+    set(((rect.bottom - clientY) / rect.height) * 100, false);
   };
 
   divider.addEventListener('pointerdown', (event) => {
@@ -1325,6 +1336,7 @@ function setupDrawer(): Drawer {
       return;
     }
     dragging = false;
+    writeRatio(STORAGE_KEYS.drawerSize, size);
     try {
       divider.releasePointerCapture(event.pointerId);
     } catch {

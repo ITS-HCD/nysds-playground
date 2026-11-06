@@ -121,7 +121,7 @@ immediately, and **Done** closes the modal.
 | Side by side editors | Switches between the three-column layout, the default, and tabs, which show one file at a time. |
 | Editor font size | Small (13px), medium (15px), or large (18px). |
 | Update preview | How soon an edit reaches the preview: on every pause in typing, only after a longer pause, or only when you ask. See Preview updates, below. |
-| Code drawer height | Small (20%), medium (32%), large (50%), or extra large (70%) of the stage. Dragging the divider sets any height in between. |
+| Code drawer height | Small, medium, large, or extra large; the menu shows each one's share of the stage. Dragging the divider sets any height in between. |
 | Single-key shortcuts | Turns `c`, `e`, `t`, `n`, and `1` to `3` on, the default, or off. Turn them off if you use speech input, so dictated words don't trigger them. See Keyboard shortcuts, below. |
 | Show prerelease versions | Includes prerelease versions in the version selector. |
 | Reset settings | Clears every remembered setting, back to the defaults. |

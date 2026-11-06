@@ -68,6 +68,14 @@ export const DRAWER_SIZES = {
 /** One of the drawer heights the settings modal offers. */
 export type DrawerSize = keyof typeof DRAWER_SIZES;
 
+/** What the settings modal calls each drawer height, before its percentage. */
+export const DRAWER_SIZE_NAMES: Record<DrawerSize, string> = {
+  small: 'Small',
+  medium: 'Medium',
+  large: 'Large',
+  'x-large': 'Extra large',
+};
+
 /** Returns the preset closest to a drawer height, for the settings menu to show. */
 export function nearestDrawerSize(ratio: number): DrawerSize {
   let best: DrawerSize = 'medium';
