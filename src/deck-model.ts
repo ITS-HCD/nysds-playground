@@ -414,6 +414,26 @@ export function relativeTime(iso: string, now = new Date()): string {
   if (days < 30) {
     return `${days} days ago`;
   }
-  const months = Math.round(days / 30);
-  return months === 1 ? 'a month ago' : `${months} months ago`;
+  if (days < 365) {
+    const months = Math.min(11, Math.floor(days / 30));
+    return months === 1 ? 'a month ago' : `${months} months ago`;
+  }
+  const years = Math.floor(days / 365);
+  return years === 1 ? 'a year ago' : `${years} years ago`;
+}
+
+/** Timestamps before this are placeholders, such as the Unix epoch. */
+const EARLIEST_REAL_UPDATE = Date.UTC(2020, 0, 1);
+
+/**
+ * The "updated …" text for a deck card, or an empty string when `iso` is
+ * invalid or a placeholder. Older builds stamped starter decks with the Unix
+ * epoch, which would read as "56 years ago".
+ */
+export function updatedLabel(iso: string, now = new Date()): string {
+  const time = new Date(iso).getTime();
+  if (Number.isNaN(time) || time < EARLIEST_REAL_UPDATE) {
+    return '';
+  }
+  return `updated ${relativeTime(iso, now)}`;
 }

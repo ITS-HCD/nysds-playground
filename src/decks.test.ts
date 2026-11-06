@@ -20,6 +20,7 @@ import {
   nextSlideId,
   normalizeImport,
   relativeTime,
+  updatedLabel,
   slideIndex,
   slugify,
   staleStarters,
@@ -232,6 +233,24 @@ test('relativeTime reads as a person would say it', () => {
   assert.equal(relativeTime('2026-09-10T12:00:00.000Z', now), '6 days ago');
   assert.equal(relativeTime('2026-07-16T12:00:00.000Z', now), '2 months ago');
   assert.equal(relativeTime('not a date', now), 'unknown');
+});
+
+test('relativeTime switches units at month and year boundaries', () => {
+  const now = new Date('2026-09-16T12:00:00.000Z');
+  const ago = (days: number) => new Date(now.getTime() - days * 86400000).toISOString();
+  assert.equal(relativeTime(ago(29), now), '29 days ago');
+  assert.equal(relativeTime(ago(30), now), 'a month ago');
+  assert.equal(relativeTime(ago(364), now), '11 months ago');
+  assert.equal(relativeTime(ago(365), now), 'a year ago');
+  assert.equal(relativeTime(ago(800), now), '2 years ago');
+  assert.equal(relativeTime(new Date(0).toISOString(), now), '56 years ago');
+});
+
+test('updatedLabel hides epoch and invalid timestamps', () => {
+  const now = new Date('2026-09-16T12:00:00.000Z');
+  assert.equal(updatedLabel(new Date(0).toISOString(), now), '');
+  assert.equal(updatedLabel('not a date', now), '');
+  assert.equal(updatedLabel('2026-09-10T12:00:00.000Z', now), 'updated 6 days ago');
 });
 
 /* Confirm dialog handler lifetime ---------------------------------------- */
