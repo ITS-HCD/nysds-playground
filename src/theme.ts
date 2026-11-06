@@ -2,8 +2,9 @@
  * Light and dark editor themes.
  *
  * The preview always shows the design system as it is. Only the code editors
- * change. Light is the default because projectors wash out dark backgrounds.
- * Dark suits screen recordings, where a dark pane frames the light preview.
+ * change. Dark is the default (`DEFAULTS.theme` in `src/settings.ts`): a dark
+ * pane frames the light preview, which suits screen recordings. Light suits
+ * projectors, which wash out dark backgrounds.
  */
 import lightTheme from 'playground-elements/themes/eclipse.css.js';
 import darkTheme from 'playground-elements/themes/material-darker.css.js';
