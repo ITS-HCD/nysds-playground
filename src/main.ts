@@ -406,6 +406,8 @@ class PlaygroundApp {
     this.showPrereleases = DEFAULTS.prereleases;
     void this.renderVersionOptions();
     this.panes.reset();
+    // The stored choice is gone, so bring a hidden code drawer back too.
+    this.presentation?.setCodeHidden(false);
     this.syncSettingsControls();
     this.showToast('success', 'Settings reset', 'The playground is back to its defaults.');
   }

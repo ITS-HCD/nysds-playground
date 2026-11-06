@@ -69,6 +69,18 @@ export function isTypingContext(pathTagNames: readonly string[]): boolean {
   return pathTagNames.some((tag) => TYPING_TAGS.has(tag));
 }
 
+/**
+ * Reports whether a key press activates the button that has focus.
+ *
+ * Space presses a focused button, such as Hide code in the slide bar, so it
+ * must not also change slides. Arrow keys and letter shortcuts still work
+ * there. Pass the same tag names as `isTypingContext`; a `nys-button` puts
+ * its inner `button` on the path.
+ */
+export function isButtonPress(event: KeyLike, pathTagNames: readonly string[]): boolean {
+  return event.key === ' ' && pathTagNames.includes('button');
+}
+
 /** Maps `ArrowRight` and friends to a step, or returns `null`. */
 function stepFor(key: string): PresentationAction | null {
   switch (key) {

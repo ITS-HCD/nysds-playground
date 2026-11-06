@@ -43,8 +43,12 @@ jsDelivr at request time.
   routing. Editing and presenting share one layout — the drawer floats
   over the preview in both — so `Presentation` mainly toggles the
   toolbar, requests fullscreen, and swaps which slide-bar controls show.
+  It also owns the code drawer's hidden state: the `c` key and the slide
+  bar's Hide code button both go through `setCodeHidden`, which keeps
+  the button's label, tooltip, and `ariaExpanded` in step.
   `src/keys.ts` decides when a key changes slides versus reaching the
-  code editor, and its shortcuts are live whenever focus is outside an
+  code editor or a focused button (`isButtonPress` leaves Space to the
+  button), and its shortcuts are live whenever focus is outside an
   editor, not only while presenting.
 - `src/playground.ts` and `src/debounce.ts`: wire `playground-elements`
   to the playground's state and decide when the preview rebuilds. The

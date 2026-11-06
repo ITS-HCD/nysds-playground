@@ -12,7 +12,7 @@ import type {EditorPanes} from './editor-panes';
 import type {PaneId} from './editors';
 import {PANE_IDS} from './editors';
 import type {PresentationAction} from './keys';
-import {hintText, isTypingContext, routeKey} from './keys';
+import {hintText, isButtonPress, isTypingContext, routeKey} from './keys';
 import {applyEditorTheme, initialTheme, otherTheme, themeUrl, writeTheme} from './theme';
 import {STORAGE_KEYS, readKey, writeKey} from './settings';
 import {presentUrl} from './state';
@@ -50,6 +50,7 @@ export class Presentation {
   private readonly notesButton: HTMLElement;
   private readonly prevButton: HTMLElement & {disabled?: boolean};
   private readonly nextButton: HTMLElement & {disabled?: boolean};
+  private readonly codeButton: HTMLElement;
   private readonly panes: EditorPanes;
   private collapsed = false;
   private notesOpen = false;
@@ -73,6 +74,7 @@ export class Presentation {
     this.notesButton = required(root, '#notes-button');
     this.prevButton = required(root, '#prev-button');
     this.nextButton = required(root, '#next-button');
+    this.codeButton = required(root, '#code-toggle-button');
   }
 
   /** Binds the slide bar, then enters presentation mode when asked. */
@@ -89,6 +91,7 @@ export class Presentation {
     });
     bindClick('#notes-button', () => this.toggleNotes());
     bindClick('#notes-close', () => this.closeNotes());
+    this.bindCodeButton();
     window.addEventListener('keydown', (event) => this.onKeyDown(event), true);
     this.refresh();
     if (present) {
@@ -212,7 +215,11 @@ export class Presentation {
     if (!this.presenting && !event.altKey && !this.caption.contains(event.target as Node)) {
       return;
     }
-    const typing = isTypingContext(tagNamesFor(event));
+    const tags = tagNamesFor(event);
+    if (isButtonPress(event, tags)) {
+      return;
+    }
+    const typing = isTypingContext(tags);
     const action = routeKey(event, typing, this.panes.layout === 'columns');
     if (action === null) {
       return;
@@ -243,7 +250,12 @@ export class Presentation {
         this.goTo(this.target.getDeck().slides.length - 1);
         break;
       case 'toggle-code':
-        this.toggleCode();
+        this.setCodeHidden(!this.collapsed);
+        // Focus may have been in the drawer that just went away. Leave it
+        // alone when it is already in the slide bar, such as on Hide code.
+        if (!this.caption.contains(document.activeElement)) {
+          this.takeFocus();
+        }
         break;
       case 'toggle-notes':
         this.toggleNotes();
@@ -279,15 +291,57 @@ export class Presentation {
     this.takeFocus();
   }
 
-  private toggleCode(): void {
-    this.collapsed = !this.collapsed;
+  /**
+   * Binds Hide code in the slide bar.
+   *
+   * From the keyboard, focus stays on the button, so its new state is read
+   * out and pressing it again undoes it. A click hands focus to the slide
+   * bar, the way Next and Reset slide do, so Space and the arrow keys keep
+   * changing slides. `nys-click` doesn't say which input fired it, so a
+   * pointer press is noted first.
+   */
+  private bindCodeButton(): void {
+    let pointer = false;
+    this.codeButton.addEventListener('pointerdown', () => {
+      pointer = true;
+    });
+    this.codeButton.addEventListener('keydown', () => {
+      pointer = false;
+    });
+    this.codeButton.addEventListener('nys-click', () => {
+      this.setCodeHidden(!this.collapsed);
+      if (pointer) {
+        this.takeFocus();
+      }
+      pointer = false;
+    });
+  }
+
+  /**
+   * Hides or shows the code drawer and remembers the choice.
+   *
+   * The `c` key, the slide bar's Hide code button, and Reset settings all
+   * come through here, so the button always describes the drawer on screen.
+   */
+  setCodeHidden(hidden: boolean): void {
+    this.collapsed = hidden;
+    writeCollapsed(hidden);
     this.applyCollapsed();
-    writeCollapsed(this.collapsed);
-    this.takeFocus();
   }
 
   private applyCollapsed(): void {
     this.app.classList.toggle('app--code-collapsed', this.collapsed);
+    // The tooltip is the button's only visible text, so it starts with the
+    // accessible name and voice control users can say what they see.
+    const label = this.collapsed ? 'Show code' : 'Hide code';
+    this.codeButton.setAttribute('label', label);
+    // Set the attribute, not the property: before the element upgrades, the
+    // property is the browser's own ARIA reflection, which lands on the host
+    // where nothing reads it.
+    this.codeButton.setAttribute('ariaExpanded', String(!this.collapsed));
+    document
+      .querySelector('nys-tooltip[for="code-toggle-button"]')
+      ?.setAttribute('text', `${label} (c)`);
   }
 
   private toggleNotes(): void {

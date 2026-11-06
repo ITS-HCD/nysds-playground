@@ -67,12 +67,15 @@ Opening or creating a deck puts you in the editor. The preview fills the
 stage, and its own "Result" bar stays hidden — press Cmd+Enter or
 Ctrl+Enter, or Cmd+S or Ctrl+S, or use the manual-mode **Update preview**
 button, to force a rebuild. The HTML, CSS, and JS editors float in a
-drawer over the bottom of the stage — drag the divider to resize it, or
-press `c` to collapse it. The slide bar along the bottom shows a slide
-picker in place of a title, grouped the way your slides are grouped,
-with the slide count and **Slide settings** beside it. On the right sit
-**Add slide**, **Delete slide**, **Duplicate slide**, **Previous**, and
-**Next**. Previous and Next are disabled at the ends of the deck. On a
+drawer over the bottom of the stage — drag the divider to resize it. To
+hide the drawer, select **Hide code** (the code icon beside **Previous**
+in the slide bar) or press `c`. The same button, now **Show code**,
+brings it back, and the playground remembers your choice. The slide bar
+along the bottom shows a slide picker in place of a title, grouped the
+way your slides are grouped, with the slide count and **Slide settings**
+beside it. On the right sit **Add slide**, **Delete slide**,
+**Duplicate slide**, **Hide code**, **Previous**, and **Next**. Previous
+and Next are disabled at the ends of the deck. On a
 phone the bar takes two rows, with the actions on the second. Delete
 slide asks first only when the slide has something to lose: code in an
 editor, or a title, group, description, notes, version, or editor
@@ -151,7 +154,7 @@ place of the edit-only controls, the slide bar shows, in order, **Edit**
 editing), presenter **Notes**, **Reset slide** (discards this session's
 edits to the current slide and reloads what's saved), and **Settings**
 (opens the settings modal without leaving the presentation), followed by
-**Previous** and **Next**. Opening a
+**Hide code**, **Previous**, and **Next**. Opening a
 deck with `?present=1` presents it directly. Escape exits presentation
 mode, and leaves fullscreen with it.
 
@@ -171,7 +174,7 @@ as focus isn't inside an editor.
 | Home | Go to the first slide |
 | End | Go to the last slide |
 | Alt+arrow | Change slides even while the cursor is in an editor |
-| `c` | Collapse or expand the editor drawer |
+| `c` | Hide or show the code drawer, the same as **Hide code** and **Show code** in the slide bar |
 | `e` | Switch between the tabs and side-by-side editor layouts |
 | `1`, `2`, `3` | Collapse or expand the HTML, CSS, or JS column (side-by-side layout only, and only when focus is outside the editors) |
 | `t` | Switch the editor theme between light and dark |
@@ -180,6 +183,9 @@ as focus isn't inside an editor.
 
 Escape needs two presses while you're mid-edit: the first is caught by
 the code editor, and the second reaches presentation mode.
+
+When a button has keyboard focus, Space presses that button instead of
+changing slides. The arrow keys still change slides.
 
 ## Share
 

@@ -8,7 +8,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import {deckUrl, decodeState, encodeState, parseHash, presentUrl, slugify} from './state.ts';
-import {hintText, isTypingContext, routeKey} from './keys.ts';
+import {hintText, isButtonPress, isTypingContext, routeKey} from './keys.ts';
 import {parseDeck, parsePreset} from './preset-schema.ts';
 import {collapsedForPreset, layoutUrl, readLayoutParam} from './editors.ts';
 import {createQuietDebounce} from './debounce.ts';
@@ -267,6 +267,14 @@ test('isTypingContext spots the editors and form controls', () => {
   assert.equal(isTypingContext(['select', 'nys-select']), true);
   assert.equal(isTypingContext(['textarea']), true);
   assert.equal(isTypingContext(['nys-button', 'footer', 'body']), false);
+});
+
+test('isButtonPress leaves Space to a focused button', () => {
+  const onButton = ['button', 'nys-button', 'div', 'footer', 'body'];
+  assert.equal(isButtonPress({...KEY, key: ' '}, onButton), true);
+  assert.equal(isButtonPress({...KEY, key: ' '}, ['footer', 'body']), false);
+  assert.equal(isButtonPress({...KEY, key: 'ArrowRight'}, onButton), false);
+  assert.equal(isButtonPress({...KEY, key: 'c'}, onButton), false);
 });
 
 test('routeKey steps the deck when the presenter is not typing', () => {
