@@ -27,7 +27,7 @@ limitations.
 ## Home page
 
 The bare URL opens the home page: a card for every deck saved in this
-browser, each with **Open**, **Present**, **Duplicate**, **Export**, and
+browser, each with **Edit**, **Present**, **Duplicate**, **Export**, and
 **Delete**. Above the list:
 
 - **New deck** creates a deck named "Untitled" and opens it at once —
@@ -67,9 +67,11 @@ Opening or creating a deck puts you in the editor. The preview fills the
 stage, and its own "Result" bar stays hidden — press Cmd+Enter or
 Ctrl+Enter, or Cmd+S or Ctrl+S, or use the manual-mode **Update preview**
 button, to force a rebuild. The HTML, CSS, and JS editors float in a
-drawer over the bottom of the stage — drag the divider to resize it. To
-hide the drawer, select **Hide code** (the code icon in the slide bar)
-or press `c`. The same button, now **Show code**,
+drawer over the bottom of the stage. To resize it, drag the divider,
+focus the divider and press the up and down arrow keys (Home and End
+give the smallest and largest drawer), or pick **Code drawer height** in
+Settings. To hide the drawer, select **Hide code** (the code icon in the
+slide bar) or press `c`. The same button, now **Show code**,
 brings it back, and the playground remembers your choice. The slide bar
 along the bottom shows a slide picker in place of a title, grouped the
 way your slides are grouped, with the slide count and **Slide settings**
@@ -119,6 +121,8 @@ immediately, and **Done** closes the modal.
 | Side by side editors | Switches between the three-column layout, the default, and tabs, which show one file at a time. |
 | Editor font size | Small (13px), medium (15px), or large (18px). |
 | Update preview | How soon an edit reaches the preview: on every pause in typing, only after a longer pause, or only when you ask. See Preview updates, below. |
+| Code drawer height | Small (20%), medium (32%), large (50%), or extra large (70%) of the stage. Dragging the divider sets any height in between. |
+| Single-key shortcuts | Turns `c`, `e`, `t`, `n`, and `1` to `3` on, the default, or off. Turn them off if you use speech input, so dictated words don't trigger them. See Keyboard shortcuts, below. |
 | Show prerelease versions | Includes prerelease versions in the version selector. |
 | Reset settings | Clears every remembered setting, back to the defaults. |
 
@@ -162,9 +166,18 @@ edits are ephemeral: they last only for the browser session, and leaving
 presentation mode discards them and restores the saved slide, so a demo
 can never damage the deck.
 
-Because editing and presenting share one layout, most of these keyboard
-shortcuts work throughout the app, not only while presenting — as long
-as focus isn't inside an editor.
+### Keyboard shortcuts
+
+Editing and presenting share one layout, so the same shortcuts work in
+both, but where they work differs:
+
+- While presenting, they work anywhere except in a code editor, a text
+  field, or a menu.
+- While editing, they work when focus is in the slide bar, or when
+  nothing has focus, such as right after the page loads. They don't
+  fire from the toolbar or the code drawer, so a key pressed there does
+  what that control expects.
+- Alt plus an arrow key changes slides from anywhere, even mid-edit.
 
 | Key | Action |
 | --- | --- |
@@ -175,16 +188,47 @@ as focus isn't inside an editor.
 | Alt+arrow | Change slides even while the cursor is in an editor |
 | `c` | Hide or show the code drawer, the same as **Hide code** and **Show code** in the slide bar |
 | `e` | Switch between the tabs and side-by-side editor layouts |
-| `1`, `2`, `3` | Collapse or expand the HTML, CSS, or JS column (side-by-side layout only, and only when focus is outside the editors) |
+| `1`, `2`, `3` | Collapse or expand the HTML, CSS, or JS column (side-by-side layout only) |
 | `t` | Switch the editor theme between light and dark |
 | `n` | Show or hide presenter notes, when the slide has any |
 | Escape | Close presenter notes, then exit presentation mode |
+
+The single-character keys, `c`, `e`, `1` to `3`, `t`, and `n`, can be
+turned off with **Single-key shortcuts** in Settings. Speech input can
+type a dictated word as keystrokes, and each letter would fire a
+shortcut. The arrow keys, Page Up, Page Down, Home, End, Space, Escape,
+and Alt plus an arrow keep working either way.
 
 Escape needs two presses while you're mid-edit: the first is caught by
 the code editor, and the second reaches presentation mode.
 
 When a button has keyboard focus, Space presses that button instead of
-changing slides. The arrow keys still change slides.
+changing slides. The arrow keys still change slides. On the drawer's
+divider and on the tabs of the tabbed editor, the arrow keys, Home, and
+End stay with that control.
+
+## Accessibility
+
+The playground aims to meet WCAG 2.2 AA. A few behaviors are worth
+knowing if you use a keyboard, a screen reader, or speech input:
+
+- **Code editors.** Tab stops on each editor without entering it. Press
+  Enter to start editing, where Tab indents. Press Escape to stop
+  editing, then Tab to move on. Each editor is named after its file, for
+  example "HTML editor".
+- **Slide bar.** Pressing **Previous**, **Next**, or another slide bar
+  button from the keyboard keeps focus on that button, so you can press
+  it again. A slide change, a hidden or shown code drawer, and other
+  results without visible feedback are read aloud.
+- **Presentation mode.** Entering it moves focus to the slide bar and
+  announces the deck and slide. Leaving it returns focus to **Present**.
+- **Speech input.** Every icon button's name starts with the word its
+  tooltip shows, so you can say what you see, such as "click Hide code".
+  Turn off **Single-key shortcuts** in Settings so dictation can't
+  trigger them.
+- **The preview.** The code drawer covers the bottom of the preview. If
+  something you tab to in the preview is behind it, hide the drawer with
+  **Hide code** or `c`, or make it shorter.
 
 ## Share
 

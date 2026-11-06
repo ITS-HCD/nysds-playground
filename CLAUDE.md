@@ -36,20 +36,41 @@ jsDelivr at request time.
   default), and the collapsible HTML, CSS, and JS columns (`1`/`2`/`3`,
   or a slide's `editors` field).
 - `src/settings.ts`: owns every remembered setting and its URL query
-  parameter — theme, layout, font size, update mode, prereleases, and the
-  drawer size. `clearAllSettings` powers "Reset settings" in the settings
-  modal.
-- `src/present.ts` and `src/keys.ts`: presentation mode and its key
-  routing. Editing and presenting share one layout — the drawer floats
-  over the preview in both — so `Presentation` mainly toggles the
+  parameter — theme, layout, font size, update mode, prereleases,
+  single-key shortcuts, and the drawer size (`DRAWER_SIZES` are the
+  presets Settings offers). `clearAllSettings` powers "Reset settings" in
+  the settings modal.
+- `src/present.ts` and `src/keys.ts`: presentation mode, the slide bar,
+  and key routing. Editing and presenting share one layout — the drawer
+  floats over the preview in both — so `Presentation` mainly toggles the
   toolbar, requests fullscreen, and swaps which slide-bar controls show.
   It also owns the code drawer's hidden state: the `c` key and the slide
   bar's Hide code button both go through `setCodeHidden`, which keeps
-  the button's label, tooltip, and `ariaExpanded` in step.
-  `src/keys.ts` decides when a key changes slides versus reaching the
-  code editor or a focused button (`isButtonPress` leaves Space to the
-  button), and its shortcuts are live whenever focus is outside an
-  editor, not only while presenting.
+  the button's label, tooltip, and `ariaExpanded` in step. A slide bar
+  button pressed from the keyboard keeps focus (`keepFocusOn` moves it to
+  the other arrow when Next or Previous goes quiet); a pointer press hands
+  focus to the bar. `src/keys.ts` decides when a key changes slides
+  versus reaching a text field, a focused button (`isButtonPress`), or a
+  widget that owns the arrow keys (`isWidgetContext`). While presenting,
+  shortcuts are live anywhere outside those; while editing, only when
+  focus is in the slide bar or on nothing (`keysApply`). The single-key
+  shortcuts can be turned off in Settings (WCAG 2.1.4), so `routeKey`
+  takes `singleKeys`.
+- `src/announce.ts` and `src/toast.ts`: the two ways the app speaks.
+  `announce` writes one sentence to the `#announcer` live region, for
+  results with no other spoken feedback, such as a slide change from the
+  arrow keys; only announce what the person asked for. `showToast` shows
+  a `nys-alert` in the `#toast` live region, for anything a sighted user
+  also needs to see.
+- `src/editor-a11y.ts`: names each code editor and takes CodeMirror's
+  text box out of the tab order, so Tab passes an editor, Enter starts
+  editing, and Escape then Tab moves on. Without it, Tab from the editor's
+  frame lands in the text box, where Tab indents, a keyboard trap. It
+  imports `@codemirror/view`, which `vite.config.ts` keeps out of Vite's
+  dependency pre-bundling so there is only one copy of CodeMirror.
+- `src/modal-tab.ts`: works around `nys-modal` 1.21.0 sending Shift+Tab
+  to the wrong control, by leaving Shift+Tab inside a modal's body to the
+  browser. Remove it once `nys-modal` moves backward correctly.
 - `src/playground.ts` and `src/debounce.ts`: wire `playground-elements`
   to the playground's state and decide when the preview rebuilds. The
   quiet-period debounce in `src/debounce.ts` backs the Update preview
@@ -197,6 +218,16 @@ A change isn't done until `npm run build` passes. After touching
 the app injects around user code, check the preview in a browser — URL
 routing, deck loading and autosave, editor layout switching, and
 presentation key routing are easy to break in ways `tsc` won't catch.
+
+The app targets WCAG 2.2 AA. When you add or change UI, keep it
+keyboard-operable with visible focus and no traps, decide where focus
+goes when the control that had it disappears, give every icon button a
+name that starts with its tooltip text, and announce results that have
+no other spoken feedback through `announce` in `src/announce.ts`. A
+single-character shortcut goes through `routeKey`, so the Single-key
+shortcuts setting can turn it off. `nys-button` reflects its `id`
+property only when it renders, so set `id` as an attribute on a button
+you create in code if anything looks it up right away.
 
 Automated checks (and any browser automation you use to verify a change)
 must never trigger `window.confirm`: the app never calls it. Delete
