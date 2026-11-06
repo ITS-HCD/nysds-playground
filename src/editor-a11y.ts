@@ -16,7 +16,8 @@
  * `playground-code-editor` accepts through its `extensions` property. The
  * frame has no such hook, so its name is set on the element directly each
  * time focus reaches it, since the editor redraws the frame when it switches
- * between editable and read-only.
+ * between editable and read-only. The tabbed editor's names follow the file
+ * it shows, so they change again whenever it switches files.
  *
  * `playground-preview` titles its iframe "Project preview" whatever it shows,
  * and offers no way to change that, so `nameThePreview` sets the title on the
@@ -31,6 +32,8 @@ type PlaygroundHost = HTMLElement & {
   extensions?: unknown;
   filename?: string;
   updateComplete?: Promise<unknown>;
+  /** Lit's hook for code that runs after every update of the element. */
+  addController?: (controller: {hostUpdated?: () => void}) => void;
 };
 
 /** How to start and stop editing, read after the frame's name. */
@@ -58,6 +61,29 @@ export function makeEditorAccessible(editor: PlaygroundHost, name?: string): voi
   };
   editor.addEventListener('focusin', apply);
   whenRendered(editor, apply);
+  if (name === undefined) {
+    followFile(editor, apply);
+  }
+}
+
+/**
+ * Runs `apply` each time the tabbed editor switches files.
+ *
+ * The tab bar switches files by setting the editor's `filename`, and the
+ * editor picks the first file itself when a project loads. Neither sends an
+ * event, so this watches the editor's own updates through Lit's controller
+ * hook, then waits for the update to finish before renaming the editor.
+ */
+function followFile(editor: PlaygroundHost, apply: () => void): void {
+  let shown = editor.filename;
+  editor.addController?.({
+    hostUpdated: () => {
+      if (editor.filename !== shown) {
+        shown = editor.filename;
+        void editor.updateComplete?.then(apply);
+      }
+    },
+  });
 }
 
 /** Names the preview frame, which is what a screen reader reads on the way in. */
