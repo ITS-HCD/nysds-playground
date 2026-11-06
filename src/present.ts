@@ -204,7 +204,7 @@ export class Presentation {
       shown.setAttribute('aria-hidden', 'true');
       this.count.replaceChildren(
         shown,
-        visuallyHidden(index >= 0 ? describeSlide(index, total) : `${total} slides`),
+        visuallyHidden(describeSlide(index, total)),
       );
     }
     // The arrows go quiet at the ends of the deck. From a shared code link,

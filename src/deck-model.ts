@@ -141,16 +141,28 @@ export function slideIndex(deck: StoredDeck, id: string | null | undefined): num
   return id ? deck.slides.findIndex((slide) => slide.id === id) : -1;
 }
 
-/** Returns a slide by id. */
+/**
+ * Counts something in words, as in "1 slide" or "3 slides". `plural` defaults
+ * to `noun` with an "s".
+ */
+export function countOf(count: number, noun: string, plural = `${noun}s`): string {
+  return `${count} ${count === 1 ? noun : plural}`;
+}
+
 /**
  * Says where a slide sits in its deck, as in "Slide 2 of 8", or, given a
- * title, "Slide 2 of 8: Alert". `index` counts from 0.
+ * title, "Slide 2 of 8: Alert". `index` counts from 0. With no current slide
+ * (`index` is -1), it says how many slides the deck has, as in "1 slide".
  */
 export function describeSlide(index: number, total: number, title?: string): string {
+  if (index < 0) {
+    return countOf(total, 'slide');
+  }
   const position = `Slide ${index + 1} of ${total}`;
   return title === undefined ? position : `${position}: ${title}`;
 }
 
+/** Returns a slide by id. */
 export function getSlide(deck: StoredDeck, id: string | null | undefined): Slide | undefined {
   return id ? deck.slides.find((slide) => slide.id === id) : undefined;
 }

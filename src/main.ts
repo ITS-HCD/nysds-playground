@@ -12,6 +12,7 @@ import type {DeckDraft, Slide, SlideDraft, StoredDeck} from './deck-model';
 import {
   BLANK_SLIDE_HTML,
   arrangeSlides,
+  countOf,
   describeSlide,
   hasContent,
   getSlide,
@@ -1398,7 +1399,7 @@ async function startHome(openSettings: () => void): Promise<void> {
     }
     await refresh();
     if (added > 0) {
-      showToast('success', added === 1 ? 'Deck imported' : `${added} decks imported`);
+      showToast('success', added === 1 ? 'Deck imported' : `${countOf(added, 'deck')} imported`);
     } else {
       showToast('warning', 'Nothing imported', failure || 'That file is not a deck.');
     }
@@ -1451,7 +1452,7 @@ async function startHome(openSettings: () => void): Promise<void> {
       await refresh();
       showToast(
         'success',
-        added === 0 ? 'Nothing to restore' : `${added} starter deck${added === 1 ? '' : 's'} added`,
+        added === 0 ? 'Nothing to restore' : `${countOf(added, 'starter deck')} added`,
         added === 0 ? 'Every starter deck is already here.' : '',
       );
     },

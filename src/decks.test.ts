@@ -11,6 +11,7 @@ import test from 'node:test';
 import {
   arrangeSlides,
   copyOfDeck,
+  countOf,
   describeSlide,
   hasContent,
   makeDeck,
@@ -82,6 +83,19 @@ test('describeSlide counts from 1 and adds the title when there is one', () => {
   assert.equal(describeSlide(0, 8), 'Slide 1 of 8');
   assert.equal(describeSlide(1, 8, 'Alert'), 'Slide 2 of 8: Alert');
   assert.equal(describeSlide(7, 8, ''), 'Slide 8 of 8: ');
+});
+
+test('describeSlide counts the slides when none is current', () => {
+  assert.equal(describeSlide(-1, 1), '1 slide');
+  assert.equal(describeSlide(-1, 8), '8 slides');
+});
+
+test('countOf uses the singular only for one', () => {
+  assert.equal(countOf(0, 'deck'), '0 decks');
+  assert.equal(countOf(1, 'deck'), '1 deck');
+  assert.equal(countOf(2, 'starter deck'), '2 starter decks');
+  assert.equal(countOf(1, 'slide'), '1 slide');
+  assert.equal(countOf(3, 'person', 'people'), '3 people');
 });
 
 test('slideIndex finds a slide or reports -1', () => {

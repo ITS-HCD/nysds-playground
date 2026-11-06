@@ -3,7 +3,7 @@
  */
 import {visuallyHidden} from './announce';
 import type {StoredDeck} from './deck-model';
-import {relativeTime} from './deck-model';
+import {countOf, relativeTime} from './deck-model';
 import {focusWhenReady} from './focus';
 import {PLAYGROUND_CONFIG} from './playground.config';
 
@@ -117,8 +117,7 @@ export class HomeView {
 
     const meta = document.createElement('p');
     meta.className = 'deck-card__meta';
-    const slides = deck.slides.length === 1 ? '1 slide' : `${deck.slides.length} slides`;
-    meta.textContent = `${slides} · updated ${relativeTime(deck.updatedAt)}`;
+    meta.textContent = `${countOf(deck.slides.length, 'slide')} · updated ${relativeTime(deck.updatedAt)}`;
     card.append(heading, meta);
 
     if (deck.description) {
