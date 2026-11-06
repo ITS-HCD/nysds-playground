@@ -33,6 +33,7 @@ import {needsReboot, routeFor, slideIdFromHash} from './routing';
 import {PLAYGROUND_CONFIG, componentsUrl, stylesUrl} from './playground.config';
 import {PlaygroundHost} from './playground';
 import {Presentation} from './present';
+import {coverPreview} from './preview-focus';
 import {SlideList} from './slide-list';
 import type {PlaygroundState} from './state';
 import {
@@ -1561,6 +1562,15 @@ async function main(): Promise<void> {
   const presentation = new Presentation(app, panes);
   app.attachPresentation(presentation);
   presentation.start(present);
+
+  // The drawer floats over the bottom of the preview, so the preview needs to
+  // know how much of it is covered to keep keyboard focus in sight.
+  coverPreview(
+    required('#preview'),
+    required('#split'),
+    required('#editors'),
+    required('#divider'),
+  );
 
   // Warm the CDN cache check so the first preview paint is not the first
   // request for these URLs.

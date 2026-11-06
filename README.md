@@ -228,9 +228,15 @@ knowing if you use a keyboard, a screen reader, or speech input:
   tooltip shows, so you can say what you see, such as "click Hide code".
   To keep dictation from triggering shortcuts, turn off the
   [single-key shortcuts](#keyboard-shortcuts).
-- **The preview.** The code drawer covers the bottom of the preview. If
-  something you tab to in the preview is behind it, hide the drawer or
-  make it shorter, as described in [Editing a deck](#editing-a-deck).
+- **The preview.** The code drawer covers the bottom of the preview.
+  When you tab to something in the preview that's behind the drawer, the
+  preview scrolls it into view above the drawer, and keeps it there if
+  the drawer or the window changes size. A slide that fits the frame
+  gets room to scroll only while focus is in the preview, so nothing on
+  it moves until you tab in, and it goes back to how it looked when
+  focus leaves. Content pinned in place, such as an open modal dialog,
+  can't scroll; to reach it, hide the drawer or make it shorter, as
+  described in [Editing a deck](#editing-a-deck).
 
 ## Share
 

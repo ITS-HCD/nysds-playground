@@ -23,6 +23,13 @@ export interface WrapperOptions {
   baseCss?: string;
   /** The `<title>` of the preview document. */
   title?: string;
+  /**
+   * A script to run before anything else in the preview, such as
+   * `PREVIEW_FOCUS_SCRIPT` from `src/preview-focus.ts`.
+   *
+   * It goes inline as a classic script, so it must not contain `</script`.
+   */
+  headScript?: string;
 }
 
 /**
@@ -37,6 +44,7 @@ export function wrapUserHtml(userHtml: string, options: WrapperOptions): string 
     '<meta charset="utf-8">',
     '<meta name="viewport" content="width=device-width, initial-scale=1">',
     `<title>${escapeHtmlText(title)}</title>`,
+    options.headScript ? `<script>${options.headScript}</script>` : '',
     `<link rel="stylesheet" href="${options.stylesHref}">`,
     // The design system reset removes the body margin. Put the browser default
     // back so a lone button doesn't sit against the edge. Deck base CSS and the

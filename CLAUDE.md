@@ -69,6 +69,17 @@ jsDelivr at request time.
   to the playground's state and decide when the preview rebuilds. The
   quiet-period debounce in `src/debounce.ts` backs the Update preview
   setting (`typing`, `pause`, `manual`).
+- `src/preview-focus.ts`: keeps keyboard focus in the preview clear of
+  the code drawer (WCAG 2.4.11). `src/wrapper.ts` puts
+  `PREVIEW_FOCUS_SCRIPT` first in the preview's hidden `<head>`, and
+  `coverPreview` posts it a `nysds-playground:cover` message with the
+  drawer's covered height whenever the stage or drawer resizes, focus
+  enters or leaves the preview, or the preview reloads. The script sets
+  `scroll-padding-bottom`, scrolls a keyboard-focused element out from
+  behind the drawer, and adds out-of-flow room past the end of a slide
+  that can't scroll, only while focus is in the preview. It's serialized
+  with `toString`, so it can't use imports or anything at module scope.
+  `src/preview-focus.test.ts` covers the geometry.
 - `src/version-catalog.ts` and `src/versions.ts`: resolve a requested
   version, including `latest` or one the CDN doesn't list, to a version
   the preview can load.
@@ -206,10 +217,14 @@ A change isn't done until `npm run build` passes. After touching
 `src/state.ts`, `src/deck-model.ts`, `src/deck-store.ts`,
 `src/starters.ts`, `src/home.ts`, `src/preset-schema.ts`,
 `src/present.ts`, `src/keys.ts`, `src/editors.ts`, `src/editor-panes.ts`,
-`src/settings.ts`, `bin/cli.mjs`, `vite.config.ts`, or the HTML wrapper
-the app injects around user code, check the preview in a browser — URL
-routing, deck loading and autosave, editor layout switching, and
-presentation key routing are easy to break in ways `tsc` won't catch.
+`src/settings.ts`, `src/preview-focus.ts`, `bin/cli.mjs`,
+`vite.config.ts`, or the HTML wrapper the app injects around user code,
+check the preview in a browser — URL routing, deck loading and autosave,
+editor layout switching, presentation key routing, and keeping focus in
+the preview clear of the drawer are easy to break in ways `tsc` won't
+catch. For the last one, tab to something near the bottom of a slide
+with the drawer open, then tab out and confirm the slide looks as it did
+before.
 
 The app targets WCAG 2.2 AA. When you add or change UI, keep it
 keyboard-operable with visible focus and no traps, decide where focus

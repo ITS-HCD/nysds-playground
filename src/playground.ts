@@ -21,6 +21,7 @@ import {createQuietDebounce} from './debounce';
 import type {UpdateMode} from './settings';
 import {UPDATE_DELAYS} from './settings';
 import type {PlaygroundState} from './state';
+import {PREVIEW_FOCUS_SCRIPT} from './preview-focus';
 import {resolveHeadUrls, wrapUserHtml} from './wrapper';
 
 /** The hidden document the preview loads. */
@@ -205,6 +206,7 @@ export class PlaygroundHost {
       extraHeadHtml: resolveHeadUrls(PLAYGROUND_CONFIG.extraHeadHtml, document.baseURI),
       baseCss: this.baseCss,
       title: PLAYGROUND_CONFIG.title,
+      headScript: PREVIEW_FOCUS_SCRIPT,
     });
   }
 
