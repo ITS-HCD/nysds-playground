@@ -15,8 +15,8 @@ import type {PaneId} from './editors';
 import {PANE_FILES, PANE_IDS} from './editors';
 import type {KeyContext, PathEntry, PresentationAction} from './keys';
 import {hintText, isButtonContext, isTypingContext, isWidgetContext, routeKey} from './keys';
-import {applyEditorTheme, initialTheme, otherTheme, themeUrl, writeTheme} from './theme';
-import {STORAGE_KEYS, readKey, readSingleKeys, writeKey} from './settings';
+import {initialTheme, otherTheme, setEditorTheme} from './theme';
+import {readFlag, writeFlag} from './settings';
 import {presentUrl} from './state';
 
 /** What presentation mode needs from the application shell. */
@@ -60,7 +60,7 @@ export class Presentation {
   /** Where focus was when the notes opened, to hand it back when they close. */
   private notesOpener: Element | null = null;
   private presenting = false;
-  private singleKeys = readSingleKeys();
+  private singleKeys = readFlag('singleKeys');
   /** Whether the slide bar's last press came from a pointer rather than a key. */
   private pointer = false;
 
@@ -88,7 +88,7 @@ export class Presentation {
 
   /** Binds the slide bar, then enters presentation mode when asked. */
   start(present: boolean): void {
-    this.collapsed = readCollapsed();
+    this.collapsed = readFlag('codeCollapsed');
     this.applyCollapsed();
     this.hidePreviewToolbar();
     // A press in the slide bar from a pointer hands focus to the bar itself,
@@ -379,9 +379,7 @@ export class Presentation {
   /** Switches the editors between light and dark and remembers the choice. */
   private toggleTheme(): void {
     const next = otherTheme(initialTheme());
-    applyEditorTheme(next);
-    writeTheme(next);
-    window.history.replaceState(null, '', themeUrl(next, window.location.href));
+    setEditorTheme(next);
     this.takeFocus();
     announce(next === 'dark' ? 'Dark editor theme.' : 'Light editor theme.');
   }
@@ -436,7 +434,7 @@ export class Presentation {
    */
   setCodeHidden(hidden: boolean): void {
     this.collapsed = hidden;
-    writeCollapsed(hidden);
+    writeFlag('codeCollapsed', hidden);
     this.applyCollapsed();
   }
 
@@ -587,14 +585,6 @@ function span(text: string, options: {hidden?: boolean; className?: string}): HT
     element.className = options.className;
   }
   return element;
-}
-
-function readCollapsed(): boolean {
-  return readKey(STORAGE_KEYS.codeCollapsed) === '1';
-}
-
-function writeCollapsed(collapsed: boolean): void {
-  writeKey(STORAGE_KEYS.codeCollapsed, collapsed ? '1' : '0');
 }
 
 function bindClick(selector: string, handler: () => void): void {

@@ -81,7 +81,12 @@ export function applyEditorTheme(theme: EditorTheme): void {
   }
 }
 
-/** Remembers the theme for the next visit. */
-export function writeTheme(theme: EditorTheme): void {
+/**
+ * Switches the editor theme: applies it, remembers it for the next visit, and
+ * records it in the URL so a copied link opens the same way.
+ */
+export function setEditorTheme(theme: EditorTheme): void {
+  applyEditorTheme(theme);
   writeKey(STORAGE_KEYS.theme, theme);
+  window.history.replaceState(null, '', themeUrl(theme, window.location.href));
 }

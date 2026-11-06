@@ -60,17 +60,14 @@ import {
   initialFontSize,
   initialUpdateMode,
   nearestDrawerSize,
-  readPrereleases,
+  readFlag,
   readRatio,
-  readSingleKeys,
   settingUrl,
+  writeFlag,
   writeKey,
-  writePrereleases,
   writeRatio,
-  writeSingleKeys,
 } from './settings';
-import type {EditorTheme} from './theme';
-import {applyEditorTheme, initialTheme, writeTheme} from './theme';
+import {applyEditorTheme, initialTheme, setEditorTheme} from './theme';
 import {isPrerelease, loadVersions, resolveVersion} from './versions';
 
 /** How long to wait after a keystroke before writing the URL. */
@@ -153,11 +150,9 @@ class PlaygroundApp {
   private version: string;
   private activePresetId: string | null;
   private modified: boolean;
-  private showPrereleases = readPrereleases();
+  private showPrereleases = readFlag('prereleases');
   private fontSize: FontSize = initialFontSize();
   private updateMode: UpdateMode = initialUpdateMode();
-  private theme: EditorTheme = initialTheme();
-  private singleKeys = readSingleKeys();
   private readonly slideList: SlideList;
   private presentation: Presentation | undefined;
 
@@ -279,12 +274,11 @@ class PlaygroundApp {
 
   private syncSettingsControls(): void {
     this.syncColumnsToggle();
-    // The t key switches the theme without going through this class, so read
-    // the theme back rather than trusting the last one set here.
-    this.theme = initialTheme();
-    this.themeToggle.checked = this.theme === 'dark';
+    // The t key switches the theme from the slide bar, so read the theme and
+    // the shortcuts setting back rather than keeping copies here.
+    this.themeToggle.checked = initialTheme() === 'dark';
     this.prereleaseToggle.checked = this.showPrereleases;
-    this.shortcutsToggle.checked = this.singleKeys;
+    this.shortcutsToggle.checked = readFlag('singleKeys');
     this.setSelectValue(this.fontSizeSelect, this.fontSize);
     this.setSelectValue(this.updateModeSelect, this.updateMode);
     this.setSelectValue(this.drawerSizeSelect, nearestDrawerSize(this.drawer.size));
@@ -306,7 +300,7 @@ class PlaygroundApp {
     bindClick('#build-button', () => this.buildNow());
 
     this.themeToggle.addEventListener('nys-change', () => {
-      this.setTheme(this.themeToggle.checked === true ? 'dark' : 'light');
+      setEditorTheme(this.themeToggle.checked === true ? 'dark' : 'light');
     });
 
     this.fontSizeSelect.addEventListener('nys-change', (event) => {
@@ -416,16 +410,8 @@ class PlaygroundApp {
     guardDismissal(this.leaveQuestion.modal, {dismiss: () => this.leaveQuestion.close()});
   }
 
-  private setTheme(theme: EditorTheme): void {
-    this.theme = theme;
-    applyEditorTheme(theme);
-    writeTheme(theme);
-    replaceQuery('theme', theme);
-  }
-
   private setSingleKeys(on: boolean): void {
-    this.singleKeys = on;
-    writeSingleKeys(on);
+    writeFlag('singleKeys', on);
     this.presentation?.setSingleKeys(on);
   }
 
@@ -444,19 +430,21 @@ class PlaygroundApp {
     this.renderBuildButton(this.host.hasPendingChanges);
   }
 
-  /** Clears every remembered setting and reapplies the defaults in place. */
+  /**
+   * Reapplies the defaults in place, then clears every remembered setting, so
+   * the defaults apply without being remembered.
+   */
   private resetSettings(): void {
-    clearAllSettings();
-    this.setTheme(DEFAULTS.theme);
+    setEditorTheme(DEFAULTS.theme);
     this.setFontSize(DEFAULTS.fontSize);
     this.setUpdateMode(DEFAULTS.updateMode);
     this.showPrereleases = DEFAULTS.prereleases;
     this.setSingleKeys(DEFAULTS.singleKeys);
     this.drawer.set(DEFAULTS.drawerSize, false);
-    void this.renderVersionOptions();
     this.panes.reset();
-    // The stored choice is gone, so bring a hidden code drawer back too.
-    this.presentation?.setCodeHidden(false);
+    this.presentation?.setCodeHidden(DEFAULTS.codeCollapsed);
+    clearAllSettings();
+    void this.renderVersionOptions();
     this.syncSettingsControls();
     this.showToast('success', 'Settings reset', 'The playground is back to its defaults.');
   }
@@ -1139,7 +1127,7 @@ class PlaygroundApp {
 
     this.prereleaseToggle.addEventListener('nys-change', () => {
       this.showPrereleases = this.prereleaseToggle.checked === true;
-      writePrereleases(this.showPrereleases);
+      writeFlag('prereleases', this.showPrereleases);
       void this.renderVersionOptions();
     });
 

@@ -45,6 +45,7 @@ export const DEFAULTS = {
   updateMode: 'typing' as UpdateMode,
   prereleases: false,
   singleKeys: true,
+  codeCollapsed: false,
   drawerSize: 32,
 };
 
@@ -172,26 +173,22 @@ export function initialUpdateMode(search: string = window.location.search): Upda
   );
 }
 
-/** Whether the version menu lists prereleases. */
-export function readPrereleases(): boolean {
-  const stored = readKey(STORAGE_KEYS.prereleases);
-  return stored === null ? DEFAULTS.prereleases : stored === '1';
+/**
+ * The on/off settings: whether the version menu lists prereleases, whether
+ * the single-key shortcuts such as `c` are on, and whether the code drawer is
+ * hidden.
+ */
+export type Flag = 'prereleases' | 'singleKeys' | 'codeCollapsed';
+
+/** Reads an on/off setting, or its default when none is remembered. */
+export function readFlag(flag: Flag): boolean {
+  const stored = readKey(STORAGE_KEYS[flag]);
+  return stored === null ? DEFAULTS[flag] : stored === '1';
 }
 
-/** Remembers whether the version menu lists prereleases. */
-export function writePrereleases(on: boolean): void {
-  writeKey(STORAGE_KEYS.prereleases, on ? '1' : '0');
-}
-
-/** Whether the single-key shortcuts, such as `c` for the code drawer, are on. */
-export function readSingleKeys(): boolean {
-  const stored = readKey(STORAGE_KEYS.singleKeys);
-  return stored === null ? DEFAULTS.singleKeys : stored === '1';
-}
-
-/** Remembers whether the single-key shortcuts are on. */
-export function writeSingleKeys(on: boolean): void {
-  writeKey(STORAGE_KEYS.singleKeys, on ? '1' : '0');
+/** Remembers an on/off setting. */
+export function writeFlag(flag: Flag, on: boolean): void {
+  writeKey(STORAGE_KEYS[flag], on ? '1' : '0');
 }
 
 /** Reads a remembered pane ratio, clamped to the range the layout allows. */
