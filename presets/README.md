@@ -114,11 +114,41 @@ When several slides in a deck show stats, put these rules in the deck's
 **Base CSS** in **Deck settings** rather than repeating them on each
 slide.
 
+### Link to the docs
+
+When a slide covers something that has a page on designsystem.ny.gov,
+end the slide's HTML with one small link to that page, so anyone who
+wants to learn more can click through:
+
+```html
+<p class="nys-font-body-sm nys-margin-t-500"><a href="https://designsystem.ny.gov/components/button/" target="_blank" rel="noopener">Button docs</a></p>
+```
+
+- For one topic, write the link text as the topic plus "docs", such as
+  "Button docs" or "Tokens docs".
+- For two or more topics, start the same paragraph with "Docs:" and make
+  each topic its own link, separated by " · ". The link text is the topic
+  alone, and the "Docs:" label gives every link its context:
+
+  ```html
+  <p class="nys-font-body-sm nys-margin-t-500">Docs: <a href="https://designsystem.ny.gov/components/table/" target="_blank" rel="noopener">Table</a> · <a href="https://designsystem.ny.gov/components/pagination/" target="_blank" rel="noopener">Pagination</a></p>
+  ```
+- Keep `target="_blank"`. It opens the page in a new tab and leaves the
+  slide in the preview.
+- Put the link last in the slide's content. Don't position it with
+  `fixed` or `absolute`. If the slide wraps its content in a container,
+  put the link at the end of that container.
+- Before you use a URL, confirm that it returns 200:
+  `curl -s -o /dev/null -w "%{http_code}" -L <url>`. Component pages
+  live at `/components/<name>/`, such as `/components/button/`. If a
+  topic has no page, leave the link off.
+
 ## Naming and ordering
 
 Name files `NN-slug.json`, for example `01-button.json` or
-`12-form-validation.json`. The numeric prefix sets the order slides
-appear in the Component library deck. The slug becomes the slide's id.
+`11-form-validation.json`. The numeric prefix sets the order slides
+appear in the Component library deck. The slug becomes the slide's id,
+so keep the slug when you renumber a file.
 
 ## Author in the browser, then export
 
@@ -152,7 +182,7 @@ filename without its extension becomes the deck's id.
   "title": "Customizing components",
   "description": "One sentence describing the deck.",
   "boilerplate": {
-    "baseCss": "body { padding: 2rem; }"
+    "baseCss": "body { padding: var(--nys-space-400); }"
   },
   "presets": [
     {
@@ -172,8 +202,8 @@ A deck's `presets` array holds full slide objects, using the same fields
 as the preset schema, with one difference: each slide needs its own `id`,
 because it isn't loaded from a file of its own. `boilerplate.baseCss` is
 CSS injected into the hidden preview head for every slide in the deck —
-use it for shared layout, such as the `.stage` and `.card` helper classes
-in `decks/customizing-components.json`. Don't set `boilerplate.head`: the
+use it for shared layout, such as the `.stage` helper class in
+`decks/customizing-components.json`. Don't set `boilerplate.head`: the
 playground ignores it and logs a console warning, because the version
 selector, not the deck, controls what the preview loads.
 
@@ -194,6 +224,9 @@ downloaded file into `decks/` under the filename you want as its id.
   [Build slides with the design system](#build-slides-with-the-design-system):
   no custom layout classes, and no hard-coded colors, sizes, or spacing
   unless the slide demonstrates customization.
+- Check that the slide ends with a docs link in the form
+  [Link to the docs](#link-to-the-docs) describes, when the topic has a
+  page.
 - Keep examples short. Presentation mode puts the editors in a drawer
   over the bottom of the preview, and a slide that needs scrolling to
   read from the back of a room is too long.

@@ -1,0 +1,7 @@
+{
+  "title": "File input",
+  "description": "A file input that accepts one image, and a drag-and-drop zone that takes several files.",
+  "html": "<div class=\"nys-display-flex nys-flex-column nys-flex-gap-300\">\n  <nys-fileinput\n    id=\"photo-id\"\n    label=\"Upload a photo ID\"\n    description=\"Accepted file types: .jpg, .png\"\n    accept=\"image/png, image/jpeg\"\n    width=\"lg\"\n  ></nys-fileinput>\n\n  <nys-fileinput\n    id=\"supporting-docs\"\n    label=\"Upload supporting documents\"\n    description=\"Accepted file types: .jpg, .png, .pdf\"\n    accept=\"image/png, image/jpeg, .pdf\"\n    multiple\n    dropzone\n  ></nys-fileinput>\n</div>\n\n<p id=\"log\" role=\"status\" class=\"nys-margin-t-300\">Choose a file to see your selection here.</p>\n\n<p class=\"nys-font-body-sm nys-margin-t-500\"><a href=\"https://designsystem.ny.gov/components/fileinput/\" target=\"_blank\" rel=\"noopener\">File input docs</a></p>\n",
+  "css": "",
+  "js": "const log = document.getElementById('log');\n\n// nys-change fires once for each selection, drop, or removal. `files` holds\n// the whole current selection.\ndocument.querySelectorAll('nys-fileinput').forEach((input) => {\n  input.addEventListener('nys-change', (e) => {\n    const names = e.detail.files.map((file) => file.name);\n    log.textContent = `${input.label}: ${names.join(', ') || '(no files)'}`;\n  });\n});\n"
+}

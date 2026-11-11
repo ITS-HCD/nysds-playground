@@ -319,7 +319,7 @@ starter deck.
 | `version` | string | no | An NYSDS version to pin this slide to. |
 | `editors` | string array | no | Which columns to expand in the side-by-side layout, for example `["html", "css"]`. Columns left out start collapsed. Applies to that slide only; a slide without it shows the columns you chose. Ignored in the tabs layout. |
 
-Name preset files `NN-slug.json`, for example `03-alert.json`. The
+Name preset files `NN-slug.json`, for example `02-alert.json`. The
 numeric prefix sets the display order. Name deck files `<id>.json`, for
 example `customizing-components.json`; the filename becomes the starter deck's
 id, and each slide inside the deck's `presets` array needs its own `id`.

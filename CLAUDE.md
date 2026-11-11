@@ -190,6 +190,11 @@ keep it on tokens. NYSDS has no stat component, so build one: semantic
 markup where the number is not a heading, styled with token-based CSS.
 `presets/README.md` has a before/after example.
 
+When a slide covers something with a page on designsystem.ny.gov, end it
+with a small docs link: `Button docs` for one topic, or
+`Docs: Table · Pagination` for several. "Link to the docs" in
+`presets/README.md` has the exact markup.
+
 ## Add or edit a preset or deck
 
 There is no per-slide export in the app — only **Export deck**, which

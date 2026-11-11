@@ -1,0 +1,8 @@
+{
+  "title": "Video",
+  "description": "A YouTube video that shows a thumbnail first and loads the player only when you select play.",
+  "html": "<nys-video\n  videourl=\"https://www.youtube.com/watch?v=TBfFzt0150Q\"\n  titleText=\"IT'S a Tech Podcast, Episode 3: Human-Centered Design\"\n  size=\"md\"\n></nys-video>\n\n<p class=\"nys-font-body-sm nys-margin-t-500\"><a href=\"https://designsystem.ny.gov/components/video/\" target=\"_blank\" rel=\"noopener\">Video docs</a></p>\n",
+  "css": "",
+  "js": "",
+  "notes": "The thumbnail keeps the page light. The YouTube player loads only when someone selects play, so a page with several videos doesn't load several players up front. In the app, the first click loads the YouTube player and the second click plays it."
+}
