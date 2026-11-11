@@ -2,7 +2,7 @@
   "title": "Customizing components",
   "description": "Three ways a design system handles customization: lock it down, make it configurable, or write guidance and hope.",
   "boilerplate": {
-    "baseCss": "body { margin: 0; padding: 2rem; display: grid; gap: 2rem; font-family: var(--nys-font-family-body); }\n.stage { display: flex; gap: 1.5rem; align-items: center; flex-wrap: wrap; }"
+    "baseCss": "body { margin: 0; padding: var(--nys-space-400); display: grid; gap: var(--nys-space-400); font-family: var(--nys-font-family-body); }\n.stage { display: flex; gap: var(--nys-space-300); align-items: center; flex-wrap: wrap; }"
   },
   "presets": [
     {
@@ -10,16 +10,19 @@
       "group": "1. Lock it down",
       "title": "Drop in the header",
       "notes": "One tag. Nothing else. Let it render before you say anything.",
-      "html": "<nys-globalheader\n  appName=\"Design System Playground\"\n  agencyName=\"Office of Information Technology Services\"\n  homepageLink=\"/\"\n  nysLogo>\n  <ul>\n    <li><a href=\"/components\">Components</a></li>\n    <li><a href=\"/tokens\">Tokens</a></li>\n    <li><a href=\"/guidance\">Guidance</a></li>\n  </ul>\n</nys-globalheader>",
+      "html": "<nys-globalheader\n  appName=\"Design System Playground\"\n  agencyName=\"Office of Information Technology Services\"\n  homepageLink=\"/\"\n  nysLogo>\n  <ul>\n    <li><a href=\"/components\">Components</a></li>\n    <li><a href=\"/tokens\">Tokens</a></li>\n    <li><a href=\"/guidance\">Guidance</a></li>\n  </ul>\n</nys-globalheader>\n\n<p class=\"nys-font-body-sm nys-margin-t-500\"><a href=\"https://designsystem.ny.gov/components/globalheader/\" target=\"_blank\" rel=\"noopener\">Global header docs</a></p>",
       "css": "",
-      "js": ""
+      "js": "",
+      "editors": [
+        "html"
+      ]
     },
     {
       "id": "02-header-try-to-style",
       "group": "1. Lock it down",
       "title": "Try to restyle it",
       "notes": "Type the CSS live. Nothing changes. The component exposes no CSS custom properties and its styles live in shadow DOM. That's the point.",
-      "html": "<nys-globalheader\n  appName=\"Design System Playground\"\n  agencyName=\"Office of Information Technology Services\"\n  homepageLink=\"/\"\n  nysLogo>\n  <ul>\n    <li><a href=\"/components\">Components</a></li>\n    <li><a href=\"/tokens\">Tokens</a></li>\n    <li><a href=\"/guidance\">Guidance</a></li>\n  </ul>\n</nys-globalheader>",
+      "html": "<nys-globalheader\n  appName=\"Design System Playground\"\n  agencyName=\"Office of Information Technology Services\"\n  homepageLink=\"/\"\n  nysLogo>\n  <ul>\n    <li><a href=\"/components\">Components</a></li>\n    <li><a href=\"/tokens\">Tokens</a></li>\n    <li><a href=\"/guidance\">Guidance</a></li>\n  </ul>\n</nys-globalheader>\n\n<p class=\"nys-font-body-sm nys-margin-t-500\"><a href=\"https://designsystem.ny.gov/components/globalheader/\" target=\"_blank\" rel=\"noopener\">Global header docs</a></p>",
       "css": "/* Let's make it red. */\nnys-globalheader {\n  background: crimson;\n  font-family: \"Comic Sans MS\", cursive;\n}\n\nnys-globalheader a {\n  color: yellow;\n  text-decoration: underline wavy;\n}\n\n/* ...nothing happens. */",
       "js": "",
       "editors": [
@@ -32,17 +35,20 @@
       "group": "2. Make it configurable",
       "title": "The button, as shipped",
       "notes": "Someone asks for a red button. Here's what we have.",
-      "html": "<div class=\"stage\">\n  <nys-button label=\"Submit application\" variant=\"filled\"></nys-button>\n  <nys-button label=\"Save draft\" variant=\"outline\"></nys-button>\n</div>",
+      "html": "<div class=\"stage\">\n  <nys-button label=\"Submit application\" variant=\"filled\"></nys-button>\n  <nys-button label=\"Save draft\" variant=\"outline\"></nys-button>\n</div>\n\n<p class=\"nys-font-body-sm nys-margin-t-500\"><a href=\"https://designsystem.ny.gov/components/button/\" target=\"_blank\" rel=\"noopener\">Button docs</a></p>",
       "css": "",
-      "js": ""
+      "js": "",
+      "editors": [
+        "html"
+      ]
     },
     {
       "id": "04-button-override",
       "group": "2. Make it configurable",
       "title": "Add the sanctioned override",
       "notes": "Three custom properties, all documented on the component. Color only — nothing else is exposed. Add the class to the first button in the HTML, then type the CSS.",
-      "html": "<div class=\"stage\">\n  <nys-button class=\"danger\" label=\"Delete application\" variant=\"filled\"></nys-button>\n  <nys-button label=\"Save draft\" variant=\"outline\"></nys-button>\n</div>",
-      "css": "/* Documented on nys-button. Color is the only thing you can change. */\n.danger {\n  --nys-button-background-color: var(--nys-color-danger);\n  --nys-button-background-color--hover: var(--nys-color-danger-strong);\n  --nys-button-background-color--active: var(--nys-color-danger-strongest);\n}",
+      "html": "<div class=\"stage\">\n  <nys-button class=\"danger\" label=\"Delete application\" variant=\"filled\"></nys-button>\n  <nys-button label=\"Save draft\" variant=\"outline\"></nys-button>\n</div>\n\n<p class=\"nys-font-body-sm nys-margin-t-500\"><a href=\"https://designsystem.ny.gov/components/button/\" target=\"_blank\" rel=\"noopener\">Button docs</a></p>",
+      "css": "/* Documented on nys-button. Color is the only thing you can change. */\n.danger {\n  --nys-button-background-color: var(--nys-color-danger);\n  --nys-button-background-color--hover: var(--nys-color-danger-strong);\n  --nys-button-background-color--active: var(--nys-color-danger-strong);\n}",
       "js": "",
       "editors": [
         "html",
@@ -53,9 +59,9 @@
       "id": "05-system-change-flows-through",
       "group": "2. Make it configurable",
       "title": "Roll out a system change",
-      "notes": "Simulate next quarter's release: change the UI font and the radius at the token level. Both buttons update. The red one stays red and still gets the new font and radius. Verify which radius token nys-button consumes before recording (see README note).",
-      "html": "<div class=\"stage\">\n  <nys-button class=\"danger\" label=\"Delete application\" variant=\"filled\"></nys-button>\n  <nys-button label=\"Save draft\" variant=\"outline\"></nys-button>\n</div>",
-      "css": ".danger {\n  --nys-button-background-color: var(--nys-color-danger);\n  --nys-button-background-color--hover: var(--nys-color-danger-strong);\n  --nys-button-background-color--active: var(--nys-color-danger-strongest);\n}\n\n/* Pretend this is the next release of @nysds/styles. */\n:root {\n  --nys-font-family-ui: var(--nys-font-family-serif);\n  --nys-radius-xl: var(--nys-radius-round);\n}",
+      "notes": "Simulate next quarter's release: change the UI font and the radius at the token level. Both buttons update. The red one stays red and still gets the new font and radius.",
+      "html": "<div class=\"stage\">\n  <nys-button class=\"danger\" label=\"Delete application\" variant=\"filled\"></nys-button>\n  <nys-button label=\"Save draft\" variant=\"outline\"></nys-button>\n</div>\n\n<p class=\"nys-font-body-sm nys-margin-t-500\"><a href=\"https://designsystem.ny.gov/foundations/tokens/\" target=\"_blank\" rel=\"noopener\">Tokens docs</a></p>",
+      "css": ".danger {\n  --nys-button-background-color: var(--nys-color-danger);\n  --nys-button-background-color--hover: var(--nys-color-danger-strong);\n  --nys-button-background-color--active: var(--nys-color-danger-strong);\n}\n\n/* Pretend this is the next release of @nysds/styles. */\n:root {\n  --nys-font-family-ui: var(--nys-font-family-serif);\n  --nys-radius-xl: var(--nys-radius-round);\n}",
       "js": "",
       "editors": [
         "html",
@@ -66,12 +72,24 @@
       "id": "06-guidance-tokens",
       "group": "3. Write it down and hope",
       "title": "Guidance, not enforcement",
-      "notes": "Two nys-cards. The card is the system's: same border, radius, and heading on both. What you slot into it is yours. The left stat block uses tokens; the right one is hard-coded to the same values, so they look identical today. Nothing in the system stops the second one. Uncomment the :root block to release a system change and watch only the left one follow.",
-      "html": "<div class=\"stage\">\n  <nys-card heading=\"Uses tokens\" headingLevel=\"h3\">\n    <p class=\"stat stat--tokens\">\n      <strong>12,480</strong>\n      <span>applications processed this quarter</span>\n    </p>\n  </nys-card>\n  <nys-card heading=\"Hard-coded\" headingLevel=\"h3\">\n    <p class=\"stat stat--hardcoded\">\n      <strong>12,480</strong>\n      <span>applications processed this quarter</span>\n    </p>\n  </nys-card>\n</div>",
-      "css": "nys-card { width: 20rem; }\n.stat { display: grid; margin: 0; }\n.stat strong { display: block; line-height: 1.1; }\n\n/* The card is the system's. What you slot into it is yours. */\n\n/* What the guidance asks for */\n.stat--tokens {\n  gap: var(--nys-space-100);\n  padding: var(--nys-space-300);\n  border-left: var(--nys-border-width-md) solid var(--nys-color-theme);\n  background: var(--nys-color-theme-faint);\n  font-family: var(--nys-font-family-ui);\n  color: var(--nys-color-text);\n}\n.stat--tokens strong {\n  font-size: var(--nys-font-size-h2);\n  font-weight: var(--nys-font-weight-bold);\n}\n.stat--tokens span {\n  font-size: var(--nys-font-size-body-sm);\n  color: var(--nys-color-text-weak);\n}\n\n/* What the guidance can't prevent */\n.stat--hardcoded {\n  gap: 0.5rem;\n  padding: 1.5rem;\n  border-left: 2px solid #154973;\n  background: #f7fafd;\n  font-family: \"Proxima Nova\", Arial, sans-serif;\n  color: #1b1b1b;\n}\n.stat--hardcoded strong {\n  font-size: 2rem;\n  font-weight: 700;\n}\n.stat--hardcoded span {\n  font-size: 0.875rem;\n  color: #4a4d4f;\n}\n\n/* Uncomment to \"release\" a system change:\n:root {\n  --nys-font-family-ui: var(--nys-font-family-serif);\n  --nys-color-theme: var(--nys-color-danger);\n}\n*/",
+      "notes": "Two nys-cards. The card is the system's: same border, radius, and heading on both. What you slot into it is yours. The left stat block uses tokens; the right one is hard-coded to the same values, so they look identical today. Nothing in the system stops the second one. Uncomment the :root block to release a system change and watch only the left one follow. The next slide shows the same problem with a real agency theme.",
+      "html": "<div class=\"nys-grid-row nys-grid-gap-300\">\n  <div class=\"nys-grid-col-4\">\n    <nys-card heading=\"Uses tokens\" headingLevel=\"h3\">\n      <p class=\"stat stat--tokens\">\n        <strong>12,480</strong>\n        <span>applications processed this quarter</span>\n      </p>\n    </nys-card>\n  </div>\n  <div class=\"nys-grid-col-4\">\n    <nys-card heading=\"Hard-coded\" headingLevel=\"h3\">\n      <p class=\"stat stat--hardcoded\">\n        <strong>12,480</strong>\n        <span>applications processed this quarter</span>\n      </p>\n    </nys-card>\n  </div>\n</div>\n\n<p class=\"nys-font-body-sm nys-margin-t-500\"><a href=\"https://designsystem.ny.gov/foundations/tokens/\" target=\"_blank\" rel=\"noopener\">Tokens docs</a></p>",
+      "css": ".stat { display: grid; margin: 0; }\n.stat strong { display: block; line-height: var(--nys-font-lineheight-h2); }\n\n/* The card is the system's. What you slot into it is yours. */\n\n/* What the guidance asks for */\n.stat--tokens {\n  gap: var(--nys-space-100);\n  padding: var(--nys-space-300);\n  border-left: var(--nys-border-width-md) solid var(--nys-color-theme);\n  background: var(--nys-color-theme-faint);\n  font-family: var(--nys-font-family-ui);\n  color: var(--nys-color-text);\n}\n.stat--tokens strong {\n  font-size: var(--nys-font-size-h2);\n  font-weight: var(--nys-font-weight-bold);\n}\n.stat--tokens span {\n  font-size: var(--nys-font-size-body-sm);\n  color: var(--nys-color-text-weak);\n}\n\n/* What the guidance can't prevent */\n.stat--hardcoded {\n  gap: 0.5rem;\n  padding: 1.5rem;\n  border-left: 2px solid #154973;\n  background: #f7fafd;\n  font-family: \"Proxima Nova\", Arial, sans-serif;\n  color: #1b1b1b;\n}\n.stat--hardcoded strong {\n  font-size: 2rem;\n  font-weight: 700;\n}\n.stat--hardcoded span {\n  font-size: 0.875rem;\n  color: #4a4d4f;\n}\n\n/* Uncomment to \"release\" a system change:\n:root {\n  --nys-font-family-ui: var(--nys-font-family-serif);\n  --nys-color-theme: var(--nys-color-danger);\n}\n*/",
       "js": "",
       "editors": [
         "html",
+        "css"
+      ]
+    },
+    {
+      "id": "06b-theme-switch",
+      "group": "3. Write it down and hope",
+      "title": "Switch the agency theme",
+      "notes": "Same card, built twice. The left one takes its colors from theme tokens. The right one uses the same colors as hex values, copied from the default theme. Today they match. Select Agency theme, then Administration. To skip the list, tab to Agency theme and press A. Point at the header first: the whole page took the new theme. Then the left card: the banner and Renew now followed. Then the right card: the banner and Renew now are still NY.gov blue, next to a Check status button that turned rust. Two brands in one card, and no release can fix it. Someone has to find every copied hex value, in every app that copied it. Try Health too, then select Default (NY.gov) to show they matched all along.",
+      "html": "<nys-globalheader appName=\"Permit renewals\"></nys-globalheader>\n\n<nys-select id=\"agency-theme\" label=\"Agency theme\" width=\"md\" value=\"default\">\n  <option value=\"default\">Default (NY.gov)</option>\n  <option value=\"admin\">Administration</option>\n  <option value=\"business\">Business</option>\n  <option value=\"environment\">Environment</option>\n  <option value=\"health\">Health</option>\n  <option value=\"local\">Local Government</option>\n  <option value=\"safety\">Public Safety</option>\n  <option value=\"transportation\">Transportation</option>\n</nys-select>\n\n<div class=\"nys-grid-row nys-grid-gap-400\">\n  <div class=\"nys-grid-col-6\">\n    <nys-card class=\"tokens\" heading=\"Uses tokens\" headingLevel=\"h2\">\n      <p class=\"banner nys-font-h4\">Renewals close June 30.</p>\n      <div slot=\"footer\" class=\"nys-display-flex nys-flex-wrap nys-flex-gap-200\">\n        <nys-button class=\"cta\" label=\"Renew now\"></nys-button>\n        <nys-button label=\"Check status\" variant=\"outline\"></nys-button>\n      </div>\n    </nys-card>\n  </div>\n  <div class=\"nys-grid-col-6\">\n    <nys-card class=\"hardcoded\" heading=\"Hard-coded\" headingLevel=\"h2\">\n      <p class=\"banner nys-font-h4\">Renewals close June 30.</p>\n      <div slot=\"footer\" class=\"nys-display-flex nys-flex-wrap nys-flex-gap-200\">\n        <nys-button class=\"cta\" label=\"Renew now\"></nys-button>\n        <nys-button label=\"Check status\" variant=\"outline\"></nys-button>\n      </div>\n    </nys-card>\n  </div>\n</div>\n\n<p class=\"nys-font-body-sm nys-margin-t-500\">Docs: <a href=\"https://designsystem.ny.gov/foundations/themes/\" target=\"_blank\" rel=\"noopener\">Themes</a> · <a href=\"https://designsystem.ny.gov/foundations/tokens/\" target=\"_blank\" rel=\"noopener\">Tokens</a></p>",
+      "css": "/* Uses tokens: follows whatever theme the page gets. */\n.tokens .banner {\n  background: var(--nys-color-theme);\n  color: var(--nys-color-text-reverse);\n}\n.tokens .cta {\n  --nys-button-background-color: var(--nys-color-theme-strong);\n  --nys-button-background-color--hover: var(--nys-color-theme-stronger);\n  --nys-button-background-color--active: var(--nys-color-theme-stronger);\n}\n\n/* Hard-coded on purpose: the same colors, copied as hex values.\n   No theme can reach them. */\n.hardcoded .banner {\n  background: #154973;\n  color: #ffffff;\n}\n.hardcoded .cta {\n  --nys-button-background-color: #0e324f;\n  --nys-button-background-color--hover: #081b2b;\n  --nys-button-background-color--active: #081b2b;\n}\n\n/* The banner and the darker \"Renew now\" are the team's customizations.\n   The header, the cards, and \"Check status\" are the system's, untouched. */\n.banner {\n  margin: 0;\n  padding: var(--nys-space-200) var(--nys-space-300);\n  border-radius: var(--nys-radius-md);\n}\n\n/* A tighter gap than the deck's default keeps the buttons clear of the code drawer. */\nbody {\n  gap: var(--nys-space-200);\n}",
+      "js": "// Apply the theme the way an app does: one class on the root element.\nconst themes = ['admin', 'business', 'environment', 'health', 'local', 'safety', 'transportation'];\n\ndocument.querySelector('#agency-theme').addEventListener('nys-change', (event) => {\n  const root = document.documentElement;\n  root.classList.remove(...themes.map((id) => `nys-theme-${id}`));\n  if (themes.includes(event.detail.value)) {\n    root.classList.add(`nys-theme-${event.detail.value}`);\n  }\n});",
+      "editors": [
         "css"
       ]
     },
@@ -81,8 +99,11 @@
       "title": "Three levels, one agent",
       "notes": "Split view. Each column is a level; the caption is the one-liner from the script. The JS just cycles which caption is highlighted if you press a key, so you can walk them one at a time.",
       "html": "<div class=\"levels\">\n  <section>\n    <nys-globalheader appName=\"Locked\" agencyName=\"Zero decisions\" nysLogo></nys-globalheader>\n    <p class=\"caption\">Uses it. No decisions.</p>\n  </section>\n  <section>\n    <div class=\"stage\">\n      <nys-button label=\"Default\" variant=\"filled\"></nys-button>\n      <nys-button class=\"danger\" label=\"Override\" variant=\"filled\"></nys-button>\n    </div>\n    <p class=\"caption\">Defaults, with guarded exits.</p>\n  </section>\n  <section>\n    <pre class=\"doc\">## Using tokens\n\nPrefer <code>var(--nys-*)</code> over\nhard-coded values so your UI\ntracks system updates.</pre>\n    <p class=\"caption\">Hopefully it read the docs.</p>\n  </section>\n</div>",
-      "css": ".levels { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--nys-space-600); align-items: start; }\n.levels section { display: grid; gap: var(--nys-space-300); }\n.caption { font: var(--nys-font-weight-semibold) var(--nys-font-size-ui-lg) var(--nys-font-family-ui); color: var(--nys-color-text); margin: 0; }\n.caption.is-dim { opacity: 0.35; }\n.doc { padding: var(--nys-space-400); border: var(--nys-border-width-sm) solid var(--nys-color-neutral-300); border-radius: var(--nys-radius-xl); background: var(--nys-color-surface); font-family: var(--nys-font-family-monospace); font-size: var(--nys-font-size-sm); margin: 0; }\n.danger {\n  --nys-button-background-color: var(--nys-color-danger);\n  --nys-button-background-color--hover: var(--nys-color-danger-strong);\n  --nys-button-background-color--active: var(--nys-color-danger-strongest);\n}",
-      "js": "// Press Space to reveal captions one at a time.\nconst captions = [...document.querySelectorAll('.caption')];\ncaptions.forEach(c => c.classList.add('is-dim'));\nlet i = 0;\ndocument.addEventListener('keydown', (e) => {\n  if (e.code !== 'Space') return;\n  e.preventDefault();\n  if (captions[i]) captions[i].classList.remove('is-dim');\n  i += 1;\n});"
+      "css": ".levels { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--nys-space-600); align-items: start; }\n.levels section { display: grid; gap: var(--nys-space-300); }\n.caption { font: var(--nys-font-weight-semibold) var(--nys-font-size-ui-lg) var(--nys-font-family-ui); color: var(--nys-color-text); margin: 0; }\n.caption.is-dim { opacity: 0.35; }\n.doc { padding: var(--nys-space-400); border: var(--nys-border-width-sm) solid var(--nys-color-neutral-300); border-radius: var(--nys-radius-xl); background: var(--nys-color-surface); font-family: var(--nys-font-family-monospace); font-size: var(--nys-font-size-sm); margin: 0; }\n.danger {\n  --nys-button-background-color: var(--nys-color-danger);\n  --nys-button-background-color--hover: var(--nys-color-danger-strong);\n  --nys-button-background-color--active: var(--nys-color-danger-strong);\n}",
+      "js": "// Press Space to reveal captions one at a time.\nconst captions = [...document.querySelectorAll('.caption')];\ncaptions.forEach(c => c.classList.add('is-dim'));\nlet i = 0;\ndocument.addEventListener('keydown', (e) => {\n  if (e.code !== 'Space') return;\n  e.preventDefault();\n  if (captions[i]) captions[i].classList.remove('is-dim');\n  i += 1;\n});",
+      "editors": [
+        "html"
+      ]
     },
     {
       "id": "08-spectrum",
@@ -90,8 +111,11 @@
       "title": "The spectrum",
       "notes": "Static closing frame. 'How strict should this component be' — not the system.",
       "html": "<figure class=\"spectrum\">\n  <div class=\"line\"></div>\n  <ol>\n    <li style=\"--x: 8%\"><span>Locked</span><small>nys-globalheader</small></li>\n    <li style=\"--x: 50%\"><span>Configurable</span><small>nys-button + overrides</small></li>\n    <li style=\"--x: 92%\"><span>Guided</span><small>tokens + guidance</small></li>\n  </ol>\n  <figcaption>Pick a spot per component, not per system.</figcaption>\n</figure>",
-      "css": ".spectrum { position: relative; margin: 4rem 0 0; padding: 0 2rem; font-family: var(--nys-font-family-ui); }\n.line { height: var(--nys-border-width-md); background: var(--nys-color-neutral-400); border-radius: var(--nys-radius-round); }\n.spectrum ol { list-style: none; margin: 0; padding: 0; position: relative; height: 5rem; }\n.spectrum li { position: absolute; left: var(--x); top: 0; transform: translateX(-50%); text-align: center; display: grid; gap: var(--nys-space-100); }\n.spectrum li::before { content: ''; width: 1rem; height: 1rem; border-radius: var(--nys-radius-round); background: var(--nys-color-theme); justify-self: center; margin-top: -0.6rem; }\n.spectrum span { font-weight: var(--nys-font-weight-bold); font-size: var(--nys-font-size-ui-xl); }\n.spectrum small { color: var(--nys-color-text-weak); font-family: var(--nys-font-family-monospace); }\nfigcaption { margin-top: var(--nys-space-800); text-align: center; font-size: var(--nys-font-size-h4); color: var(--nys-color-text); }",
-      "js": ""
+      "css": ".spectrum { margin: var(--nys-space-800) 0 0; padding: 0 var(--nys-space-400); font-family: var(--nys-font-family-ui); }\n.line { height: var(--nys-border-width-md); background: var(--nys-color-neutral-400); border-radius: var(--nys-radius-round); }\n.spectrum ol { list-style: none; margin: 0; padding: 0; position: relative; height: 5rem; }\n.spectrum li { position: absolute; left: var(--x); top: 0; transform: translateX(-50%); text-align: center; display: grid; gap: var(--nys-space-100); }\n.spectrum li::before { content: ''; width: var(--nys-size-200); height: var(--nys-size-200); border-radius: var(--nys-radius-round); background: var(--nys-color-theme); justify-self: center; margin-top: -0.6rem; }\n.spectrum span { font-weight: var(--nys-font-weight-bold); font-size: var(--nys-font-size-ui-xl); }\n.spectrum small { color: var(--nys-color-text-weak); font-family: var(--nys-font-family-monospace); }\nfigcaption { margin-top: var(--nys-space-800); text-align: center; font-size: var(--nys-font-size-h4); color: var(--nys-color-text); }",
+      "js": "",
+      "editors": [
+        "html"
+      ]
     }
   ]
 }
