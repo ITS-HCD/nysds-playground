@@ -114,6 +114,40 @@ When several slides in a deck show stats, put these rules in the deck's
 **Base CSS** in **Deck settings** rather than repeating them on each
 slide.
 
+### Head each slide
+
+Start every Component library slide with an `<h1>` that matches the
+slide's title, so people always know which component they're looking
+at. When a slide shows more than one component, put an `<h2>` above each
+component's group:
+
+```html
+<h1 class="nys-font-h3">Badge and avatar</h1>
+
+<h2 class="nys-font-h5">Badge</h2>
+<!-- badges -->
+
+<h2 class="nys-font-h5">Avatar</h2>
+<!-- avatars -->
+```
+
+- The type classes keep the headings smaller than the browser defaults,
+  so more of the demo fits above the code drawer.
+- A heading inside a demo sits one level below the heading above it, such
+  as an `<h3>` under a component's `<h2>`.
+- A slide that shows a whole page, such as `21-page-structure`, uses the
+  page's own `<h1>` as the slide heading, because a page has only one.
+
+### Shared spacing goes in the base CSS
+
+The Component library deck's base CSS lives in `LIBRARY_BASE_CSS` in
+`src/starters.ts`, not in `presets/`. It pads the body and sets the
+margins on `h1` and `h2` for every slide, on `var(--nys-space-*)`
+tokens. Put spacing that every slide shares there, and don't repeat it in
+a slide's CSS or with utility classes on its headings. A browser that
+already has the Component library deck keeps its old copy, base CSS
+included, until you delete the deck and select **Restore starter decks**.
+
 ### Link to the docs
 
 When a slide covers something that has a page on designsystem.ny.gov,

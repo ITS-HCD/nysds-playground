@@ -34,11 +34,39 @@ const libraryPresets: Preset[] = Object.keys(presetModules)
   .filter((preset): preset is Preset => preset !== null)
   .map((preset) => makeSlide(preset));
 
+/**
+ * The Component library deck's base CSS: spacing every slide shares.
+ *
+ * It goes into each slide's hidden preview head, so no slide repeats it in its
+ * CSS tab. Keep it on tokens.
+ */
+const LIBRARY_BASE_CSS = [
+  'body {',
+  '  margin: 0;',
+  '  padding: var(--nys-space-300) var(--nys-space-400);',
+  '}',
+  '',
+  '/* One rhythm for the slide heading and each component heading. */',
+  'h1 {',
+  '  margin-block: 0 var(--nys-space-300);',
+  '}',
+  '',
+  'h2 {',
+  '  margin-block: var(--nys-space-400) var(--nys-space-200);',
+  '}',
+  '',
+  '/* The body padding, or the column, sets the space above a first heading. */',
+  'h2:first-child {',
+  '  margin-block-start: 0;',
+  '}',
+  '',
+].join('\n');
+
 const libraryDeck: StoredDeck = {
   id: LIBRARY_STARTER_ID,
   title: 'Component library',
   description: 'One example for every part of the design system.',
-  baseCss: '',
+  baseCss: LIBRARY_BASE_CSS,
   slides: libraryPresets,
   createdAt: SEEDED_AT,
   updatedAt: SEEDED_AT,
