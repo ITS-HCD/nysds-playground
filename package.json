@@ -24,8 +24,8 @@
   "type": "module",
   "dependencies": {
     "@codemirror/view": "^6.43.15",
-    "@nysds/components": "1.21.0",
-    "@nysds/styles": "1.21.0",
+    "@nysds/components": "1.23.1",
+    "@nysds/styles": "1.23.1",
     "idb-keyval": "6.2.2",
     "lz-string": "1.5.0",
     "playground-elements": "0.21.2",

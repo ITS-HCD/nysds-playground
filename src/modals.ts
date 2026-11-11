@@ -7,8 +7,9 @@
  *   and a modal holding changes that only Done applies stays open and moves
  *   focus to Done. The close button keeps working either way, so it stays the
  *   deliberate way to throw changes away.
- * - Shift+Tab: `nys-modal` 1.21.0 handles Shift+Tab itself, and from most of
- *   the controls in its body it goes to the wrong place. See `repairShiftTab`.
+ * - Shift+Tab: `nys-modal` 1.21.0 through 1.23.1 handles Shift+Tab itself, and
+ *   from most of the controls in its body it goes to the wrong place. See
+ *   `repairShiftTab`.
  * - Questions: the confirm and leave modals ask one question at a time. See
  *   `ModalQuestion`.
  */
@@ -62,8 +63,8 @@ export function bindModalKeys(): void {
 /**
  * Lets Shift+Tab move backward through a modal's fields.
  *
- * `nys-modal` 1.21.0 handles Shift+Tab itself, and from most of the controls
- * in its body it goes to the wrong place: from a `nys-textinput`,
+ * `nys-modal` 1.21.0 through 1.23.1 handles Shift+Tab itself, and from most of
+ * the controls in its body it goes to the wrong place: from a `nys-textinput`,
  * `nys-select`, or `nys-toggle` it jumps to the last button, it skips those
  * fields on the way back between buttons, and next to a disabled button it
  * doesn't move at all. Forward Tab, and Shift+Tab from the modal's own close

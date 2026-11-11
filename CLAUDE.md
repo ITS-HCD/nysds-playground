@@ -90,7 +90,8 @@ jsDelivr at request time.
   applied on Done through `arrangeSlides` in `src/deck-model.ts`.
 - `src/modals.ts`: everything the playground adds to `nys-modal`:
   closing on an outside click unless the modal holds changes only Done
-  applies, the Shift+Tab workaround for `nys-modal` 1.21.0, and
+  applies, the Shift+Tab workaround for `nys-modal` 1.21.0 through
+  1.23.1, and
   `ModalQuestion` for the confirm and leave modals.
 - `src/main.ts`: boots the app, routes between the home page, a deck, and
   the scratch pad (`routeFor`), and drives the toolbar, autosave, deck
@@ -135,7 +136,7 @@ Import, all use this slide shape (`Preset` in `src/preset-schema.ts`):
   "js": "",
   "group": "",
   "notes": "",
-  "version": "1.21.0",
+  "version": "1.23.1",
   "editors": null
 }
 ```
@@ -150,12 +151,18 @@ Use the NYSDS MCP server (`mcp__nysds__*`) for component names,
 attributes, and utility classes. Never read `node_modules/@nysds` for
 documentation — the MCP server is the authoritative source. NYSDS themes
 are applied with a `nys-theme-<id>` class or the `data-theme` attribute in
-every published stylesheet through 1.21.1. The MCP themes guide documents
-`data-nys-theme`, but no published stylesheet selects on it, so prefer
-the class, which both the guide and the shipped CSS support.
+every published stylesheet through 1.23.1. The themes are `admin`,
+`business`, `environment`, `health`, `local`, `safety`, and
+`transportation`; with none set, the default NY.gov theme applies. The
+MCP themes guide recommends `data-nys-theme`, but no published stylesheet
+selects on it (ITS-HCD/nysds#1989), so prefer the class, which both the
+guide and the shipped CSS support.
 
-`nys-radiogroup` did not reflect a programmatically set selection, so the
-settings modal uses `nys-select` for multi-option settings instead.
+In 1.21.0, `nys-radiogroup` didn't show a selection set from code, so the
+settings modal uses `nys-select` for multi-option settings. In 1.23.1,
+setting the group's `value` property selects the matching radio, so a
+radio group would work there now. Setting `checked` on a child
+`nys-radiobutton` from code still shows nothing.
 - Icons: NYSDS ships a curated subset of Material Symbols (82 names). Any
   other name renders as empty space. Check
   https://designsystem.ny.gov/components/icon/ or `src/icon-names.ts`

@@ -4,7 +4,9 @@
  * NYSDS bundles a curated subset of Material Symbols, not the whole set. An
  * icon name outside this list renders as empty space. Source:
  * https://designsystem.ny.gov/components/icon/ and the icon library in
- * @nysds/components 1.21.0. Update this list when a release adds icons.
+ * @nysds/components 1.21.0. That page doesn't show `height`, `refresh`, or
+ * `straight`, but all three render. No release through 1.23.1 adds or
+ * removes an icon. Update this list when a release adds icons.
  */
 export const NYSDS_ICON_NAMES: ReadonlySet<string> = new Set([
   'ac_unit',

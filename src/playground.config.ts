@@ -53,7 +53,7 @@ export const PLAYGROUND_CONFIG: PlaygroundAppConfig = {
   cdnBase: 'https://cdn.jsdelivr.net/npm',
   versionsApi: 'https://data.jsdelivr.com/v1/package/npm/',
   defaultVersion: 'latest',
-  fallbackVersions: ['1.21.1', '1.21.0', '1.20.1', '1.20.0', '1.19.4'],
+  fallbackVersions: ['1.23.1', '1.23.0', '1.22.3', '1.22.1', '1.22.0'],
   extraHeadHtml: '<link rel="stylesheet" href="./fonts/nysds-fonts.css">',
   showPrereleasesByDefault: false,
 };
