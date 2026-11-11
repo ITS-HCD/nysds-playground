@@ -226,11 +226,13 @@ class PlaygroundApp {
       writePresetHash(this.activePresetId);
     }
     // A deck that was just created arrives with its name waiting to be typed.
+    // The shell stays hidden until boot finishes, and a hidden field can't
+    // take focus, so the title editor opens once the shell is shown.
     if (this.hasDeck && new URLSearchParams(window.location.search).has('new')) {
       const url = new URL(window.location.href);
       url.searchParams.delete('new');
       window.history.replaceState(null, '', url.toString());
-      this.openTitleEditor();
+      void revealed.then(() => this.openTitleEditor());
     }
     await this.renderVersionOptions();
   }
@@ -1578,6 +1580,12 @@ async function main(): Promise<void> {
   void fetch(componentsUrl(state.version), {mode: 'no-cors'}).catch(() => undefined);
 }
 
+/** Settles once `revealApp` shows the shell, so its fields can take focus. */
+let markRevealed: () => void;
+const revealed = new Promise<void>((resolve) => {
+  markRevealed = resolve;
+});
+
 /**
  * Shows the shell and removes the splash.
  *
@@ -1591,6 +1599,7 @@ function revealApp(): void {
   if (splash) {
     splash.hidden = true;
   }
+  markRevealed();
 }
 
 void main()
