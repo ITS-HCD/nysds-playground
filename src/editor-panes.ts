@@ -98,17 +98,13 @@ export class EditorPanes {
   }
 
   /**
-   * Applies a slide's `editors` field.
+   * Shows the columns a slide asks for, without remembering them.
    *
-   * `null` means the slide said nothing about the columns, so whatever is on
-   * screen stays.
+   * Only `togglePane` and `reset` save the columns, so a slide's `editors`
+   * field lasts only while that slide is on screen.
    */
-  applyCollapsed(collapsed: Set<PaneId> | null): void {
-    if (collapsed === null) {
-      return;
-    }
+  applyCollapsed(collapsed: ReadonlySet<PaneId>): void {
     this.collapsed = new Set(collapsed);
-    writeCollapsedPanes(this.collapsed);
     this.render();
   }
 

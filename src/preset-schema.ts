@@ -35,9 +35,10 @@ export interface Preset {
    * Which editor columns to expand when this example loads, as any of
    * `"html"`, `"css"`, and `"js"`.
    *
-   * It applies only to the side-by-side layout, and every column not listed is
-   * collapsed. An empty array collapses all three. `null` means the file left
-   * the field out, which leaves the current columns as they are.
+   * It applies only to the side-by-side layout and only while this slide is on
+   * screen, and every column not listed is collapsed. An empty array collapses
+   * all three. `null` means the file left the field out, which shows the
+   * columns the person chose.
    */
   editors: PaneId[] | null;
 }

@@ -54,15 +54,19 @@ export function layoutUrl(layout: EditorLayout, href: string): string {
 }
 
 /**
- * Turns a preset's `editors` field into the set of columns to collapse.
+ * Picks the columns to collapse while a slide is on screen.
  *
- * Every column the preset does not list is collapsed, so a slide that names
- * `["html", "css"]` puts JavaScript out of the way. A preset that leaves the
- * field out returns `null`, which means "keep whatever is on screen".
+ * Every column a slide's `editors` field leaves out is collapsed, so a slide
+ * that names `["html", "css"]` puts JavaScript out of the way. A slide without
+ * the field shows `saved`, the columns the person chose, so one slide's columns
+ * never follow them to the next.
  */
-export function collapsedForPreset(editors: PaneId[] | null): Set<PaneId> | null {
+export function collapsedForPreset(
+  editors: PaneId[] | null,
+  saved: ReadonlySet<PaneId>,
+): Set<PaneId> {
   if (editors === null) {
-    return null;
+    return new Set(saved);
   }
   return new Set(PANE_IDS.filter((pane) => !editors.includes(pane)));
 }

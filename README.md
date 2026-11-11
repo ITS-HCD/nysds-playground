@@ -317,7 +317,7 @@ starter deck.
 | `group` | string | no | A section label shown in the caption. |
 | `notes` | string | no | Presenter notes, shown when you press `n`. |
 | `version` | string | no | An NYSDS version to pin this slide to. |
-| `editors` | string array | no | Which columns to expand in the side-by-side layout, for example `["html", "css"]`. Columns left out start collapsed. Ignored in the tabs layout. |
+| `editors` | string array | no | Which columns to expand in the side-by-side layout, for example `["html", "css"]`. Columns left out start collapsed. Applies to that slide only; a slide without it shows the columns you chose. Ignored in the tabs layout. |
 
 Name preset files `NN-slug.json`, for example `03-alert.json`. The
 numeric prefix sets the display order. Name deck files `<id>.json`, for

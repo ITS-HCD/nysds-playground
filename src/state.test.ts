@@ -11,6 +11,7 @@ import {deckUrl, decodeState, encodeState, parseHash, presentUrl, slugify} from 
 import type {KeyContext, PathEntry} from './keys.ts';
 import {hintText, isButtonContext, isTypingContext, isWidgetContext, routeKey} from './keys.ts';
 import {parseDeck, parsePreset} from './preset-schema.ts';
+import type {PaneId} from './editors.ts';
 import {collapsedForPreset, layoutUrl, readLayoutParam} from './editors.ts';
 import {createQuietDebounce} from './debounce.ts';
 import {
@@ -503,10 +504,18 @@ test('parsePreset reports an editors field that is not an array', () => {
 });
 
 test('collapsedForPreset collapses whatever the slide leaves out', () => {
-  assert.deepEqual([...(collapsedForPreset(['html', 'css']) ?? [])], ['js']);
-  assert.deepEqual([...(collapsedForPreset([]) ?? [])], ['html', 'css', 'js']);
-  assert.deepEqual([...(collapsedForPreset(['html', 'css', 'js']) ?? [])], []);
-  assert.equal(collapsedForPreset(null), null);
+  const saved = new Set<PaneId>(['css']);
+  assert.deepEqual([...collapsedForPreset(['html', 'css'], saved)], ['js']);
+  assert.deepEqual([...collapsedForPreset([], saved)], ['html', 'css', 'js']);
+  assert.deepEqual([...collapsedForPreset(['html', 'css', 'js'], saved)], []);
+});
+
+test('a slide without editors shows the saved columns and leaves them alone', () => {
+  const saved = new Set<PaneId>(['css']);
+  const shown = collapsedForPreset(null, saved);
+  assert.deepEqual([...shown], ['css']);
+  shown.add('js');
+  assert.deepEqual([...saved], ['css']);
 });
 
 test('readLayoutParam and layoutUrl handle the editors query parameter', () => {

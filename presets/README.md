@@ -26,7 +26,7 @@ Each file in `presets/` is a JSON object with these fields.
 | `group` | string | no | A section label shown in the caption, such as `1. Lock it down`. |
 | `notes` | string | no | Presenter notes. Press `n` to read them. Never shown in the preview. |
 | `version` | string | no | An NYSDS version to pin this slide to. Omit it, or use `latest`, to follow the app's default version. |
-| `editors` | string array | no | Which columns to expand in the side-by-side layout, for example `["html", "css"]`. Columns left out start collapsed. Ignored in the tabs layout. |
+| `editors` | string array | no | Which columns to expand in the side-by-side layout, for example `["html", "css"]`. Columns left out start collapsed. Applies to that slide only; a slide without it shows the columns you chose. Ignored in the tabs layout. |
 
 Don't put an `id` field in a file in this directory. The id comes from
 the filename instead.

@@ -47,7 +47,7 @@ import {
 } from './state';
 import {EditorPanes} from './editor-panes';
 import type {EditorLayout} from './editors';
-import {PANE_FILES, PANE_IDS, collapsedForPreset, layoutUrl} from './editors';
+import {PANE_FILES, PANE_IDS, collapsedForPreset, layoutUrl, readCollapsedPanes} from './editors';
 import {isBuildShortcut} from './keys';
 import type {DrawerSize, FontSize, UpdateMode} from './settings';
 import {
@@ -272,11 +272,14 @@ class PlaygroundApp {
     this.presentation?.refresh();
   }
 
-  /** Expands the columns a slide asks for and collapses the rest. */
+  /**
+   * Expands the columns a slide asks for and collapses the rest, or shows the
+   * person's own columns when the slide doesn't say.
+   */
   private applyPresetPanes(presetId: string | null): void {
     const preset = getSlide(this.deck, presetId);
     if (preset) {
-      this.panes.applyCollapsed(collapsedForPreset(preset.editors));
+      this.panes.applyCollapsed(collapsedForPreset(preset.editors, readCollapsedPanes()));
     }
   }
 
